@@ -1,33 +1,37 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-
-import { orpc } from "@/utils/orpc";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/")({
-  component: HomeComponent,
+  component: RouteComponent,
+  beforeLoad: async () => {
+    const session = await authClient.getSession();
+    if (!session.data) {
+      redirect({
+        to: "/login",
+        throw: true,
+      });
+    }
+    return { session };
+  },
 });
 
-function HomeComponent() {
-  const healthCheck = useQuery(orpc.health.healthz.queryOptions());
+function RouteComponent() {
+  const { session } = Route.useRouteContext();
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-2">
-      <div className="grid gap-6">
-        <section className="rounded-lg border p-4">
-          <h2 className="mb-2 font-medium">API Status</h2>
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${healthCheck.data?.status ? "bg-green-500" : "bg-red-500"}`}
-            />
-            <span className="text-sm text-muted-foreground">
-              {healthCheck.isLoading
-                ? "Checking..."
-                : healthCheck.data?.status
-                  ? "Connected"
-                  : "Disconnected"}
-            </span>
+    <div className="flex-1 p-6">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="p-6 bg-card rounded-lg border">
+            <h2 className="text-xl font-semibold mb-2">
+              Welcome {session.data?.user.name}
+            </h2>
+            <p className="text-muted-foreground">
+              This is the dashboard page. Navigate using the sidebar.
+            </p>
           </div>
-        </section>
+        </div>
       </div>
     </div>
   );

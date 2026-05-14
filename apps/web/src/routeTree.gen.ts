@@ -10,17 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WeightsIndexRouteImport } from './routes/weights/index'
+import { Route as SimulateIndexRouteImport } from './routes/simulate/index'
+import { Route as ReviewIndexRouteImport } from './routes/review/index'
+import { Route as RequestsIndexRouteImport } from './routes/requests/index'
+import { Route as OffersIndexRouteImport } from './routes/offers/index'
+import { Route as MatchesIndexRouteImport } from './routes/matches/index'
+import { Route as GroupsIndexRouteImport } from './routes/groups/index'
+import { Route as AuditIndexRouteImport } from './routes/audit/index'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -28,35 +30,134 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WeightsIndexRoute = WeightsIndexRouteImport.update({
+  id: '/weights/',
+  path: '/weights/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SimulateIndexRoute = SimulateIndexRouteImport.update({
+  id: '/simulate/',
+  path: '/simulate/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewIndexRoute = ReviewIndexRouteImport.update({
+  id: '/review/',
+  path: '/review/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequestsIndexRoute = RequestsIndexRouteImport.update({
+  id: '/requests/',
+  path: '/requests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OffersIndexRoute = OffersIndexRouteImport.update({
+  id: '/offers/',
+  path: '/offers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchesIndexRoute = MatchesIndexRouteImport.update({
+  id: '/matches/',
+  path: '/matches/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupsIndexRoute = GroupsIndexRouteImport.update({
+  id: '/groups/',
+  path: '/groups/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditIndexRoute = AuditIndexRouteImport.update({
+  id: '/audit/',
+  path: '/audit/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/audit/': typeof AuditIndexRoute
+  '/groups/': typeof GroupsIndexRoute
+  '/matches/': typeof MatchesIndexRoute
+  '/offers/': typeof OffersIndexRoute
+  '/requests/': typeof RequestsIndexRoute
+  '/review/': typeof ReviewIndexRoute
+  '/simulate/': typeof SimulateIndexRoute
+  '/weights/': typeof WeightsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/audit': typeof AuditIndexRoute
+  '/groups': typeof GroupsIndexRoute
+  '/matches': typeof MatchesIndexRoute
+  '/offers': typeof OffersIndexRoute
+  '/requests': typeof RequestsIndexRoute
+  '/review': typeof ReviewIndexRoute
+  '/simulate': typeof SimulateIndexRoute
+  '/weights': typeof WeightsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/audit/': typeof AuditIndexRoute
+  '/groups/': typeof GroupsIndexRoute
+  '/matches/': typeof MatchesIndexRoute
+  '/offers/': typeof OffersIndexRoute
+  '/requests/': typeof RequestsIndexRoute
+  '/review/': typeof ReviewIndexRoute
+  '/simulate/': typeof SimulateIndexRoute
+  '/weights/': typeof WeightsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/login'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/audit/'
+    | '/groups/'
+    | '/matches/'
+    | '/offers/'
+    | '/requests/'
+    | '/review/'
+    | '/simulate/'
+    | '/weights/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/login'
-  id: '__root__' | '/' | '/dashboard' | '/login'
+  to:
+    | '/'
+    | '/login'
+    | '/audit'
+    | '/groups'
+    | '/matches'
+    | '/offers'
+    | '/requests'
+    | '/review'
+    | '/simulate'
+    | '/weights'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/audit/'
+    | '/groups/'
+    | '/matches/'
+    | '/offers/'
+    | '/requests/'
+    | '/review/'
+    | '/simulate/'
+    | '/weights/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  AuditIndexRoute: typeof AuditIndexRoute
+  GroupsIndexRoute: typeof GroupsIndexRoute
+  MatchesIndexRoute: typeof MatchesIndexRoute
+  OffersIndexRoute: typeof OffersIndexRoute
+  RequestsIndexRoute: typeof RequestsIndexRoute
+  ReviewIndexRoute: typeof ReviewIndexRoute
+  SimulateIndexRoute: typeof SimulateIndexRoute
+  WeightsIndexRoute: typeof WeightsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,13 +169,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -82,13 +176,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/weights/': {
+      id: '/weights/'
+      path: '/weights'
+      fullPath: '/weights/'
+      preLoaderRoute: typeof WeightsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/simulate/': {
+      id: '/simulate/'
+      path: '/simulate'
+      fullPath: '/simulate/'
+      preLoaderRoute: typeof SimulateIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review/': {
+      id: '/review/'
+      path: '/review'
+      fullPath: '/review/'
+      preLoaderRoute: typeof ReviewIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/requests/': {
+      id: '/requests/'
+      path: '/requests'
+      fullPath: '/requests/'
+      preLoaderRoute: typeof RequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offers/': {
+      id: '/offers/'
+      path: '/offers'
+      fullPath: '/offers/'
+      preLoaderRoute: typeof OffersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/matches/': {
+      id: '/matches/'
+      path: '/matches'
+      fullPath: '/matches/'
+      preLoaderRoute: typeof MatchesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/groups/': {
+      id: '/groups/'
+      path: '/groups'
+      fullPath: '/groups/'
+      preLoaderRoute: typeof GroupsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit/': {
+      id: '/audit/'
+      path: '/audit'
+      fullPath: '/audit/'
+      preLoaderRoute: typeof AuditIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  AuditIndexRoute: AuditIndexRoute,
+  GroupsIndexRoute: GroupsIndexRoute,
+  MatchesIndexRoute: MatchesIndexRoute,
+  OffersIndexRoute: OffersIndexRoute,
+  RequestsIndexRoute: RequestsIndexRoute,
+  ReviewIndexRoute: ReviewIndexRoute,
+  SimulateIndexRoute: SimulateIndexRoute,
+  WeightsIndexRoute: WeightsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
