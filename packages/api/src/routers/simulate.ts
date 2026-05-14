@@ -7,6 +7,7 @@
  * - Complex business logic with AI parsing, scoring algorithms, and database insertions
  * - Ensure OpenAI package is available before using this router
  */
+import { ORPCError } from "@orpc/server";
 import { o } from "../index";
 import { prisma } from "@workspace/db";
 import { SimulateMessageBody } from "@workspace/schemas";
@@ -252,6 +253,20 @@ export const simulateRouter = o.router({
     let insertedId: string | null = null;
     if (insertIntoSystem && medName) {
       const insertStart = Date.now();
+
+      // Validate quantity and price before insertion
+      if (quantity <= 0) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Quantity must be greater than 0",
+        });
+      }
+
+      if (price !== null && price !== undefined && price < 0) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Price cannot be negative",
+        });
+      }
+
       try {
         if (parsedType === "offer") {
           const inserted = await prisma.offer.create({

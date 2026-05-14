@@ -28,7 +28,7 @@ export const offersRouter = o.router({
 
     return offers.map((o) => ({
       ...o,
-      price: o.price !== null ? Number(o.price) : null,
+      price: o.price !== null ? o.price.toString() : null,
     }));
   }),
 
@@ -43,7 +43,7 @@ export const offersRouter = o.router({
 
     return {
       ...offer,
-      price: offer.price !== null ? Number(offer.price) : null,
+      price: offer.price !== null ? offer.price.toString() : null,
     };
   }),
 });

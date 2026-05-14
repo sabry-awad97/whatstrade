@@ -4,7 +4,7 @@
  */
 import { ORPCError } from "@orpc/server";
 import { o } from "../index";
-import { prisma } from "@workspace/db";
+import { prisma, Prisma } from "@workspace/db";
 import {
   ApproveReviewItemParams,
   ApproveReviewItemBody,
@@ -21,41 +21,79 @@ export const reviewRouter = o.router({
   }),
 
   getReviewStats: o.handler(async () => {
-    const all = await prisma.reviewItem.findMany();
-    const total = all.length;
-    const pending = all.filter((r) => r.status === "pending").length;
-    const approved = all.filter((r) => r.status === "approved").length;
-    const rejected = all.filter((r) => r.status === "rejected").length;
-    return { total, pending, approved, rejected, avgProcessingTime: 3.4 };
+    // Run queries in parallel for better performance
+    const [total, statusCounts, avgProcessingTimeResult] = await Promise.all([
+      prisma.reviewItem.count(),
+      prisma.reviewItem.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      // Calculate average processing time from createdAt to updatedAt
+      prisma.$queryRaw<
+        Array<{ avg: number | null }>
+      >`SELECT AVG(EXTRACT(EPOCH FROM (updated_at - created_at))) as avg FROM review_items WHERE status != 'pending'`,
+    ]);
+
+    // Convert groupBy results to status counts
+    const statusMap = statusCounts.reduce(
+      (acc, item) => {
+        acc[item.status] = item._count._all;
+        return acc;
+      },
+      { pending: 0, approved: 0, rejected: 0 } as Record<string, number>,
+    );
+
+    const avgTime = avgProcessingTimeResult[0]?.avg;
+
+    return {
+      total,
+      pending: statusMap.pending,
+      approved: statusMap.approved,
+      rejected: statusMap.rejected,
+      avgProcessingTime:
+        avgTime !== null && avgTime !== undefined ? Number(avgTime) : 0,
+    };
   }),
 
   approveReviewItem: o
-    .input(ApproveReviewItemParams.merge(ApproveReviewItemBody))
+    .input(ApproveReviewItemParams.extend(ApproveReviewItemBody.shape))
     .handler(async ({ input }) => {
-      const item = await prisma.reviewItem.update({
-        where: { id: input.id },
-        data: { status: "approved" },
-      });
+      try {
+        const item = await prisma.reviewItem.update({
+          where: { id: input.id },
+          data: { status: "approved" },
+        });
 
-      if (!item) {
-        throw new ORPCError("NOT_FOUND");
+        return item;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          throw new ORPCError("NOT_FOUND");
+        }
+        throw error;
       }
-
-      return item;
     }),
 
   rejectReviewItem: o
-    .input(RejectReviewItemParams.merge(RejectReviewItemBody))
+    .input(RejectReviewItemParams.extend(RejectReviewItemBody.shape))
     .handler(async ({ input }) => {
-      const item = await prisma.reviewItem.update({
-        where: { id: input.id },
-        data: { status: "rejected" },
-      });
+      try {
+        const item = await prisma.reviewItem.update({
+          where: { id: input.id },
+          data: { status: "rejected" },
+        });
 
-      if (!item) {
-        throw new ORPCError("NOT_FOUND");
+        return item;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          throw new ORPCError("NOT_FOUND");
+        }
+        throw error;
       }
-
-      return item;
     }),
 });

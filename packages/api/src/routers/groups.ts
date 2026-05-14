@@ -4,7 +4,7 @@
  */
 import { ORPCError } from "@orpc/server";
 import { o } from "../index";
-import { prisma } from "@workspace/db";
+import { prisma, Prisma } from "@workspace/db";
 import {
   EnableGroupMonitoringParams,
   DisableGroupMonitoringParams,
@@ -28,30 +28,42 @@ export const groupsRouter = o.router({
   enableGroupMonitoring: o
     .input(EnableGroupMonitoringParams)
     .handler(async ({ input }) => {
-      const group = await prisma.group.update({
-        where: { jid: input.jid },
-        data: { isMonitored: true },
-      });
+      try {
+        const group = await prisma.group.update({
+          where: { jid: input.jid },
+          data: { isMonitored: true },
+        });
 
-      if (!group) {
-        throw new ORPCError("NOT_FOUND");
+        return group;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          throw new ORPCError("NOT_FOUND");
+        }
+        throw error;
       }
-
-      return group;
     }),
 
   disableGroupMonitoring: o
     .input(DisableGroupMonitoringParams)
     .handler(async ({ input }) => {
-      const group = await prisma.group.update({
-        where: { jid: input.jid },
-        data: { isMonitored: false },
-      });
+      try {
+        const group = await prisma.group.update({
+          where: { jid: input.jid },
+          data: { isMonitored: false },
+        });
 
-      if (!group) {
-        throw new ORPCError("NOT_FOUND");
+        return group;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          throw new ORPCError("NOT_FOUND");
+        }
+        throw error;
       }
-
-      return group;
     }),
 });

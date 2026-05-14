@@ -1,4 +1,45 @@
 // Requests schema
+//
+// ⚠️ SECURITY NOTICE: This model contains sensitive PII/PHI data
+// The following fields contain sensitive information and require special handling:
+// - medicationName: Health information (PHI under HIPAA/GDPR)
+// - senderPhone: Personal identifier (PII)
+// - rawText: May contain unstructured PII/PHI
+//
+// REQUIRED SECURITY CONTROLS:
+// 
+// 1. DATABASE ENCRYPTION:
+//    - Enable encryption-at-rest (TDE/CMK) at database provider level
+//    - Verify encryption is active before deploying to production
+//    - Document encryption configuration in deployment docs
+//
+// 2. ACCESS CONTROLS:
+//    - Implement role-based access control (RBAC) in service layer
+//    - Add Prisma middleware to enforce field-level access restrictions
+//    - Redact sensitive fields for unauthorized roles
+//    - See: packages/db/src/middleware/access-control.ts (TODO: implement)
+//
+// 3. AUDIT LOGGING:
+//    - Log all queries accessing medicationName, senderPhone, or rawText
+//    - Capture: user ID, timestamp, query type, accessed fields
+//    - Store audit logs in separate secure storage
+//    - See: packages/db/src/middleware/audit-logger.ts (TODO: implement)
+//
+// 4. DATA RETENTION:
+//    - Implement automated purge of rawText after 90 days (configurable)
+//    - Anonymize or delete fulfilled/expired requests after retention period
+//    - Schedule: Daily cleanup job via cron or scheduled task
+//    - See: packages/api/src/jobs/data-retention.ts (TODO: implement)
+//
+// 5. QUERY RESTRICTIONS:
+//    - Prevent SELECT * queries in production
+//    - Explicitly select only required fields
+//    - Use Prisma's select/omit to exclude sensitive fields by default
+//
+// COMPLIANCE NOTES:
+// - HIPAA: Medication data is PHI - requires BAA with database provider
+// - GDPR: Phone numbers are personal data - requires consent & right to erasure
+// - Data minimization: Only collect/retain what's necessary for business purpose
 
 enum RequestStatus {
     active
@@ -11,14 +52,14 @@ enum RequestStatus {
 
 model Request {
     id             String        @id @default(uuid()) @db.Uuid
-    medicationName String        @map("medication_name")
+    medicationName String        @map("medication_name") // ⚠️ PHI: Health information
     dosage         String?
     quantity       Int
     maxPrice       Decimal?      @map("max_price") @db.Decimal(10, 2)
     groupName      String        @map("group_name")
-    senderPhone    String        @map("sender_phone")
+    senderPhone    String        @map("sender_phone") // ⚠️ PII: Personal identifier
     status         RequestStatus @default(active)
-    rawText        String?       @map("raw_text")
+    rawText        String?       @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
     createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz()
     updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
 

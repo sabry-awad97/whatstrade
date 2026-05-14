@@ -175,9 +175,12 @@ export function Layout({ children }: LayoutProps) {
                     <DropdownMenuItem
                       key={item.label}
                       className="text-xs gap-2 cursor-pointer"
-                      onClick={
-                        item.label?.includes("Dark") ? toggleTheme : undefined
-                      }
+                      onClick={() => {
+                        if (item.label === "Light Mode") setTheme("light");
+                        else if (item.label === "Dark Mode") setTheme("dark");
+                        else if (item.label === "System Theme")
+                          setTheme("system");
+                      }}
                     >
                       {item.icon && (
                         <item.icon className="w-3.5 h-3.5 text-muted-foreground" />

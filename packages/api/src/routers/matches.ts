@@ -4,7 +4,7 @@
  */
 import { ORPCError } from "@orpc/server";
 import { o } from "../index";
-import { prisma, MatchStatus } from "@workspace/db";
+import { prisma, MatchStatus, Prisma } from "@workspace/db";
 import {
   ListMatchesQueryParams,
   GetMatchParams,
@@ -25,30 +25,45 @@ function parseMatch(m: any) {
 
 export const matchesRouter = o.router({
   getMatchStats: o.handler(async () => {
-    const all = await prisma.match.findMany();
-    const total = all.length;
-    const pending = all.filter((m) => m.status === "pending").length;
-    const confirmed = all.filter((m) => m.status === "confirmed").length;
-    const rejected = all.filter((m) => m.status === "rejected").length;
-    const autoConfirmed = all.filter(
-      (m) => m.status === "auto_confirmed",
-    ).length;
-    const avgScore =
-      total > 0 ? all.reduce((sum, m) => sum + Number(m.score), 0) / total : 0;
-    const bandBreakdown = {
-      auto: all.filter((m) => m.confidenceBand === "auto").length,
-      suggest: all.filter((m) => m.confidenceBand === "suggest").length,
-      review: all.filter((m) => m.confidenceBand === "review").length,
-      none: all.filter((m) => m.confidenceBand === "none").length,
-    };
+    // Run all queries in parallel for better performance
+    const [
+      total,
+      pending,
+      confirmed,
+      rejected,
+      autoConfirmed,
+      avgScoreResult,
+      bandBreakdown,
+    ] = await Promise.all([
+      prisma.match.count(),
+      prisma.match.count({ where: { status: "pending" } }),
+      prisma.match.count({ where: { status: "confirmed" } }),
+      prisma.match.count({ where: { status: "rejected" } }),
+      prisma.match.count({ where: { status: "auto_confirmed" } }),
+      prisma.match.aggregate({ _avg: { score: true } }),
+      Promise.all([
+        prisma.match.count({ where: { confidenceBand: "auto" } }),
+        prisma.match.count({ where: { confidenceBand: "suggest" } }),
+        prisma.match.count({ where: { confidenceBand: "review" } }),
+        prisma.match.count({ where: { confidenceBand: "none" } }),
+      ]),
+    ]);
+
     return {
       total,
       pending,
       confirmed,
       rejected,
       autoConfirmed,
-      avgScore,
-      bandBreakdown,
+      avgScore: avgScoreResult._avg.score
+        ? Number(avgScoreResult._avg.score)
+        : 0,
+      bandBreakdown: {
+        auto: bandBreakdown[0],
+        suggest: bandBreakdown[1],
+        review: bandBreakdown[2],
+        none: bandBreakdown[3],
+      },
     };
   }),
 
@@ -79,38 +94,50 @@ export const matchesRouter = o.router({
   }),
 
   confirmMatch: o
-    .input(ConfirmMatchParams.merge(ConfirmMatchBody))
+    .input(ConfirmMatchParams.extend(ConfirmMatchBody.shape))
     .handler(async ({ input }) => {
-      const match = await prisma.match.update({
-        where: { id: input.id },
-        data: {
-          status: "confirmed",
-          operatorNote: input.note ?? null,
-        },
-      });
+      try {
+        const match = await prisma.match.update({
+          where: { id: input.id },
+          data: {
+            status: "confirmed",
+            operatorNote: input.note ?? null,
+          },
+        });
 
-      if (!match) {
-        throw new ORPCError("NOT_FOUND");
+        return parseMatch(match);
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          throw new ORPCError("NOT_FOUND");
+        }
+        throw error;
       }
-
-      return parseMatch(match);
     }),
 
   rejectMatch: o
-    .input(RejectMatchParams.merge(RejectMatchBody))
+    .input(RejectMatchParams.extend(RejectMatchBody.shape))
     .handler(async ({ input }) => {
-      const match = await prisma.match.update({
-        where: { id: input.id },
-        data: {
-          status: "rejected",
-          operatorNote: input.note ?? null,
-        },
-      });
+      try {
+        const match = await prisma.match.update({
+          where: { id: input.id },
+          data: {
+            status: "rejected",
+            operatorNote: input.note ?? null,
+          },
+        });
 
-      if (!match) {
-        throw new ORPCError("NOT_FOUND");
+        return parseMatch(match);
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2025"
+        ) {
+          throw new ORPCError("NOT_FOUND");
+        }
+        throw error;
       }
-
-      return parseMatch(match);
     }),
 });

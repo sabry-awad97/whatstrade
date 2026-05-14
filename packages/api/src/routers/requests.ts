@@ -28,7 +28,7 @@ export const requestsRouter = o.router({
 
     return requests.map((r) => ({
       ...r,
-      maxPrice: r.maxPrice !== null ? Number(r.maxPrice) : null,
+      maxPrice: r.maxPrice !== null ? r.maxPrice.toString() : null,
     }));
   }),
 
@@ -43,7 +43,7 @@ export const requestsRouter = o.router({
 
     return {
       ...request,
-      maxPrice: request.maxPrice !== null ? Number(request.maxPrice) : null,
+      maxPrice: request.maxPrice !== null ? request.maxPrice.toString() : null,
     };
   }),
 });

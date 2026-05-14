@@ -1,4 +1,53 @@
 // Review items schema
+//
+// ⚠️ SECURITY NOTICE: This model contains sensitive PII/PHI data
+// The following fields contain sensitive information and require special handling:
+// - medicationName: Health information (PHI under HIPAA/GDPR)
+// - senderPhone: Personal identifier (PII) - CRITICAL: Never log or expose
+// - rawText: May contain unstructured PII/PHI
+// - parsedData: May contain extracted PII/PHI
+//
+// REQUIRED SECURITY CONTROLS:
+//
+// 1. DATABASE ENCRYPTION:
+//    - Enable encryption-at-rest (TDE/CMK) at database provider level
+//    - Consider column-level encryption for senderPhone field
+//    - Alternative: Store hashed/tokenized version of senderPhone
+//
+// 2. ACCESS CONTROLS:
+//    - NEVER use SELECT * - always explicitly select fields
+//    - Centralize senderPhone access in authorized repository functions only
+//    - Implement RBAC: Only admin/reviewer roles can access senderPhone
+//    - Add Prisma middleware to enforce field-level access restrictions
+//    - See: packages/db/src/middleware/review-access-control.ts (TODO: implement)
+//
+// 3. LOGGING & MASKING:
+//    - NEVER log senderPhone in application logs, error messages, or debug output
+//    - Mask senderPhone before any display (e.g., "***-***-1234")
+//    - Audit all queries accessing senderPhone (user ID, timestamp, purpose)
+//    - See: packages/db/src/utils/phone-masking.ts (TODO: implement)
+//
+// 4. DATA RETENTION:
+//    - Purge approved/rejected items after 30 days (configurable)
+//    - Anonymize senderPhone in archived records
+//    - Implement automated cleanup job
+//    - See: packages/api/src/jobs/review-retention.ts (TODO: implement)
+//
+// 5. QUERY RESTRICTIONS:
+//    - Use Prisma's omit() to exclude senderPhone by default
+//    - Only include senderPhone when explicitly required and authorized
+//    - Example: prisma.reviewItem.findMany({ omit: { senderPhone: true } })
+//
+// 6. TESTING & AUDIT:
+//    - Add tests to verify senderPhone is never in logs
+//    - Implement audit hooks to track all senderPhone access
+//    - Regular security reviews of query patterns
+//
+// COMPLIANCE NOTES:
+// - HIPAA: Medication data is PHI - requires BAA with database provider
+// - GDPR: Phone numbers are personal data - requires consent & right to erasure
+// - PCI DSS: If phone used for payment, additional controls may apply
+// - Data minimization: Consider if senderPhone is necessary for review process
 
 enum ReviewStatus {
     pending
@@ -19,14 +68,14 @@ enum ReviewType {
 model ReviewItem {
     id             String       @id @default(uuid()) @db.Uuid
     type           ReviewType
-    medicationName String       @map("medication_name")
+    medicationName String       @map("medication_name") // ⚠️ PHI: Health information
     dosage         String?
     quantity       Int?
-    rawText        String       @map("raw_text")
+    rawText        String       @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
     groupName      String       @map("group_name")
-    senderPhone    String       @map("sender_phone")
+    senderPhone    String       @map("sender_phone") // ⚠️ CRITICAL PII: Never log, always mask
     status         ReviewStatus @default(pending)
-    parsedData     String?      @map("parsed_data")
+    parsedData     String?      @map("parsed_data") // ⚠️ PII/PHI: May contain extracted sensitive data
     createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
     updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
 

@@ -18,6 +18,15 @@ export const auditRouter = o.router({
       const offset = (page - 1) * limit;
 
       const entries = await prisma.auditLog.findMany({
+        include: {
+          operator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
         orderBy: { createdAt: "desc" },
         take: limit,
         skip: offset,
