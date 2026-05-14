@@ -2,7 +2,11 @@
  * Medication request schemas
  */
 import { z } from "zod";
-import { IdParams, SearchablePaginationQueryParams } from "./common";
+import {
+  IdParams,
+  SearchablePaginationQueryParams,
+  UuidSchema,
+} from "./common";
 
 // Query parameters
 export const listRequestsQueryPageDefault = 1;
@@ -21,7 +25,7 @@ export const ListRequestsQueryParams = SearchablePaginationQueryParams.extend({
  * @summary Single request item in list response
  */
 export const ListRequestsResponseItem = z.object({
-  id: z.number(),
+  id: UuidSchema,
   medicationName: z.string(),
   dosage: z.string().nullish(),
   quantity: z.number(),
@@ -47,7 +51,7 @@ export const GetRequestParams = IdParams;
  * @summary Single request detail response
  */
 export const GetRequestResponse = z.object({
-  id: z.number(),
+  id: UuidSchema,
   medicationName: z.string(),
   dosage: z.string().nullish(),
   quantity: z.number(),

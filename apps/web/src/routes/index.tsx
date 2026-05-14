@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomeComponent() {
-  const healthCheck = useQuery(orpc.healthCheck.queryOptions());
+  const healthCheck = useQuery(orpc.health.healthz.queryOptions());
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-2">
@@ -17,12 +17,12 @@ function HomeComponent() {
           <h2 className="mb-2 font-medium">API Status</h2>
           <div className="flex items-center gap-2">
             <div
-              className={`h-2 w-2 rounded-full ${healthCheck.data ? "bg-green-500" : "bg-red-500"}`}
+              className={`h-2 w-2 rounded-full ${healthCheck.data?.status ? "bg-green-500" : "bg-red-500"}`}
             />
             <span className="text-sm text-muted-foreground">
               {healthCheck.isLoading
                 ? "Checking..."
-                : healthCheck.data
+                : healthCheck.data?.status
                   ? "Connected"
                   : "Disconnected"}
             </span>

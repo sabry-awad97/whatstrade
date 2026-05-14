@@ -2,7 +2,7 @@
  * Audit log schemas for tracking operator actions
  */
 import { z } from "zod";
-import { PaginationQueryParams } from "./common";
+import { PaginationQueryParams, UuidSchema } from "./common";
 
 // Query parameters
 export const listAuditLogQueryPageDefault = 1;
@@ -20,10 +20,10 @@ export const ListAuditLogQueryParams = PaginationQueryParams.extend({
  * @summary Single audit log entry
  */
 export const ListAuditLogResponseItem = z.object({
-  id: z.number(),
+  id: UuidSchema,
   action: z.string(),
   entityType: z.string(),
-  entityId: z.number(),
+  entityId: UuidSchema,
   operator: z.string(),
   details: z.string().nullish(),
   createdAt: z.coerce.date(),
