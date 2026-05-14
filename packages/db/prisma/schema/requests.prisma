@@ -1,0 +1,29 @@
+// Requests schema
+
+enum RequestStatus {
+    active
+    fulfilled
+    expired
+    cancelled
+
+    @@map("request_status")
+}
+
+model Request {
+    id             String        @id @default(uuid()) @db.Uuid
+    medicationName String        @map("medication_name")
+    dosage         String?
+    quantity       Int
+    maxPrice       Decimal?      @map("max_price") @db.Decimal(10, 2)
+    groupName      String        @map("group_name")
+    senderPhone    String        @map("sender_phone")
+    status         RequestStatus @default(active)
+    rawText        String?       @map("raw_text")
+    createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+    updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+    // Relations
+    matches Match[]
+
+    @@map("requests")
+}

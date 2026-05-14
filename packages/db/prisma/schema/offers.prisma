@@ -1,0 +1,29 @@
+// Offers schema
+
+enum OfferStatus {
+    active
+    matched
+    expired
+    cancelled
+
+    @@map("offer_status")
+}
+
+model Offer {
+    id             String      @id @default(uuid()) @db.Uuid
+    medicationName String      @map("medication_name")
+    dosage         String?
+    quantity       Int
+    price          Decimal?    @db.Decimal(10, 2)
+    groupName      String      @map("group_name")
+    senderPhone    String      @map("sender_phone")
+    status         OfferStatus @default(active)
+    rawText        String?     @map("raw_text")
+    createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+    updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+    // Relations
+    matches Match[]
+
+    @@map("offers")
+}

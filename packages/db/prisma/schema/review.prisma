@@ -1,0 +1,34 @@
+// Review items schema
+
+enum ReviewStatus {
+    pending
+    approved
+    rejected
+
+    @@map("review_status")
+}
+
+enum ReviewType {
+    offer
+    request
+    match
+
+    @@map("review_type")
+}
+
+model ReviewItem {
+    id             String       @id @default(uuid()) @db.Uuid
+    type           ReviewType
+    medicationName String       @map("medication_name")
+    dosage         String?
+    quantity       Int?
+    rawText        String       @map("raw_text")
+    groupName      String       @map("group_name")
+    senderPhone    String       @map("sender_phone")
+    status         ReviewStatus @default(pending)
+    parsedData     String?      @map("parsed_data")
+    createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+    updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+
+    @@map("review_items")
+}

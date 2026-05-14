@@ -1,0 +1,13 @@
+// Audit log schema
+
+model AuditLog {
+    id         String   @id @default(uuid()) @db.Uuid
+    action     String
+    entityType String   @map("entity_type")
+    entityId   String   @map("entity_id")
+    operator   String
+    details    String?
+    createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+    @@map("audit_log")
+}
