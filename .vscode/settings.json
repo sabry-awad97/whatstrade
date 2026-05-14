@@ -1,0 +1,7 @@
+{
+  "files.exclude": {
+    "**/node_modules": true
+  },
+  "typescript.autoClosingTags": false,
+  "rust-analyzer.linkedProjects": ["apps/web/src-tauri/Cargo.toml"]
+}

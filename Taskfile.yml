@@ -1,0 +1,236 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Workspace Task Runner
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Run 'task --list' to see all available tasks
+# ═══════════════════════════════════════════════════════════════════════════════
+
+version: "3"
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Variables & Environment
+# ─────────────────────────────────────────────────────────────────────────────
+vars:
+  BUN: bun
+  TURBO: "{{.BUN}} turbo"
+  WEB_DIR: apps/web
+  SERVER_DIR: apps/server
+  DB_DIR: packages/db
+  DATABASE_URL: "postgresql://postgres:password@localhost:5433/whatstrade"
+  DB_CONTAINER: whatstrade-postgres
+
+env:
+  DATABASE_URL: "{{.DATABASE_URL}}"
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Tasks
+# ─────────────────────────────────────────────────────────────────────────────
+tasks:
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  🚀 Development
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  dev:
+    desc: "🚀 Start all development servers (web + server)"
+    cmds:
+      - "{{.TURBO}} dev"
+
+  dev:web:
+    desc: "� Start web app development server"
+    cmds:
+      - "{{.TURBO}} -F web dev"
+
+  dev:server:
+    desc: "⚙️  Start backend server in development mode"
+    cmds:
+      - "{{.TURBO}} -F server dev"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  �🏗️ Build & Type Checking
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  build:
+    desc: "📦 Build all packages and applications"
+    cmds:
+      - "{{.TURBO}} build"
+
+  check:
+    desc: "✅ Run type checking across all packages"
+    cmds:
+      - "{{.TURBO}} check-types"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  🧪 Testing
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  test:
+    desc: "🧪 Run tests in watch mode"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}}x vitest"
+
+  test:run:
+    desc: "🚀 Run all tests once (CI mode)"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}}x vitest run"
+
+  test:ui:
+    desc: "🎨 Run tests with interactive UI"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}}x vitest --ui"
+
+  test:coverage:
+    desc: "📊 Generate test coverage report"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}}x vitest run --coverage"
+
+  test:changed:
+    desc: "� Run tests for changed files only"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}}x vitest --changed"
+
+  test:clear:
+    desc: "🧹 Clear Vitest cache"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}}x vitest --clearCache"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  🗄️ Database
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  db:start:
+    desc: "�️  Start PostgreSQL database (detached)"
+    dir: "{{.DB_DIR}}"
+    cmds:
+      - docker compose up -d
+
+  db:stop:
+    desc: "⏸️  Stop PostgreSQL database"
+    dir: "{{.DB_DIR}}"
+    cmds:
+      - docker compose stop
+
+  db:down:
+    desc: "🛑 Stop and remove database containers"
+    dir: "{{.DB_DIR}}"
+    cmds:
+      - docker compose down
+
+  db:logs:
+    desc: "📋 View database logs"
+    dir: "{{.DB_DIR}}"
+    cmds:
+      - docker compose logs -f postgres
+
+  db:push:
+    desc: "⬆️  Push database schema changes"
+    cmds:
+      - "{{.TURBO}} -F @workspace/db db:push"
+
+  db:generate:
+    desc: "🔧 Generate database migrations"
+    cmds:
+      - "{{.TURBO}} -F @workspace/db db:generate"
+
+  db:migrate:
+    desc: "🔄 Run database migrations"
+    cmds:
+      - "{{.TURBO}} -F @workspace/db db:migrate"
+
+  db:studio:
+    desc: "🎨 Open Drizzle Studio (database GUI)"
+    cmds:
+      - "{{.TURBO}} -F @workspace/db db:studio"
+
+  db:shell:
+    desc: "💻 Open PostgreSQL shell (psql)"
+    cmds:
+      - docker exec -it {{.DB_CONTAINER}} psql -U postgres -d whatstrade
+
+  db:reset:
+    desc: "🔄 Reset database (down + start + push)"
+    cmds:
+      - task: db:down
+      - task: db:start
+      - task: db:push
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  🖥️ Tauri Desktop App
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  tauri:dev:
+    desc: "🖥️  Start Tauri desktop app (web + native)"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}} run desktop:dev"
+
+  tauri:build:
+    desc: "📦 Build Tauri desktop app for production"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}} run desktop:build"
+
+  tauri:build:debug:
+    desc: "🐛 Build Tauri app with debug symbols"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}} tauri build --debug"
+
+  tauri:icon:
+    desc: "🎨 Generate app icons from source image"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}} tauri icon"
+
+  tauri:info:
+    desc: "ℹ️  Show Tauri environment information"
+    dir: "{{.WEB_DIR}}"
+    cmds:
+      - "{{.BUN}} tauri info"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  🧹 Cleanup
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  clean:
+    desc: "🧹 Remove all build artifacts and dependencies"
+    cmds:
+      - cmd: if exist node_modules rmdir /s /q node_modules
+        platforms: [windows]
+        ignore_error: true
+      - cmd: if exist apps\web\node_modules rmdir /s /q apps\web\node_modules
+        platforms: [windows]
+        ignore_error: true
+      - cmd: if exist apps\server\node_modules rmdir /s /q apps\server\node_modules
+        platforms: [windows]
+        ignore_error: true
+      - cmd: if exist apps\web\dist rmdir /s /q apps\web\dist
+        platforms: [windows]
+        ignore_error: true
+      - cmd: if exist apps\server\dist rmdir /s /q apps\server\dist
+        platforms: [windows]
+        ignore_error: true
+
+  clean:cache:
+    desc: "🗑️  Clear all caches (Turbo, Vitest, etc.)"
+    cmds:
+      - "{{.TURBO}} daemon clean"
+      - task: test:clear
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  #  📦 Dependencies
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  install:
+    desc: "📦 Install all dependencies"
+    cmds:
+      - "{{.BUN}} install"
+
+  update:
+    desc: "⬆️  Update all dependencies"
+    cmds:
+      - "{{.BUN}} update"
