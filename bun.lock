@@ -146,6 +146,17 @@
         "typescript": "catalog:",
       },
     },
+    "packages/schemas": {
+      "name": "@workspace/schemas",
+      "version": "0.1.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@workspace/config": "workspace:*",
+        "typescript": "catalog:",
+      },
+    },
     "packages/ui": {
       "name": "@workspace/ui",
       "version": "0.0.0",
@@ -605,6 +616,8 @@
     "@workspace/db": ["@workspace/db@workspace:packages/db"],
 
     "@workspace/env": ["@workspace/env@workspace:packages/env"],
+
+    "@workspace/schemas": ["@workspace/schemas@workspace:packages/schemas"],
 
     "@workspace/ui": ["@workspace/ui@workspace:packages/ui"],
 
