@@ -9,8 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
+import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppWeightsIndexRouteImport } from './routes/_app/weights/index'
 import { Route as AppSimulateIndexRouteImport } from './routes/_app/simulate/index'
@@ -21,13 +21,13 @@ import { Route as AppMatchesIndexRouteImport } from './routes/_app/matches/index
 import { Route as AppGroupsIndexRouteImport } from './routes/_app/groups/index'
 import { Route as AppAuditIndexRouteImport } from './routes/_app/audit/index'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginIndexRoute = LoginIndexRouteImport.update({
+  id: '/login/',
+  path: '/login/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -78,7 +78,7 @@ const AppAuditIndexRoute = AppAuditIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
-  '/login': typeof LoginRoute
+  '/login/': typeof LoginIndexRoute
   '/audit/': typeof AppAuditIndexRoute
   '/groups/': typeof AppGroupsIndexRoute
   '/matches/': typeof AppMatchesIndexRoute
@@ -89,8 +89,8 @@ export interface FileRoutesByFullPath {
   '/weights/': typeof AppWeightsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/login': typeof LoginRoute
   '/': typeof AppIndexRoute
+  '/login': typeof LoginIndexRoute
   '/audit': typeof AppAuditIndexRoute
   '/groups': typeof AppGroupsIndexRoute
   '/matches': typeof AppMatchesIndexRoute
@@ -103,8 +103,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteRouteWithChildren
-  '/login': typeof LoginRoute
   '/_app/': typeof AppIndexRoute
+  '/login/': typeof LoginIndexRoute
   '/_app/audit/': typeof AppAuditIndexRoute
   '/_app/groups/': typeof AppGroupsIndexRoute
   '/_app/matches/': typeof AppMatchesIndexRoute
@@ -118,7 +118,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/login'
+    | '/login/'
     | '/audit/'
     | '/groups/'
     | '/matches/'
@@ -129,8 +129,8 @@ export interface FileRouteTypes {
     | '/weights/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/login'
     | '/'
+    | '/login'
     | '/audit'
     | '/groups'
     | '/matches'
@@ -142,8 +142,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
-    | '/login'
     | '/_app/'
+    | '/login/'
     | '/_app/audit/'
     | '/_app/groups/'
     | '/_app/matches/'
@@ -156,23 +156,23 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
-  LoginRoute: typeof LoginRoute
+  LoginIndexRoute: typeof LoginIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_app': {
       id: '/_app'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login/': {
+      id: '/login/'
+      path: '/login'
+      fullPath: '/login/'
+      preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -271,7 +271,7 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
-  LoginRoute: LoginRoute,
+  LoginIndexRoute: LoginIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
