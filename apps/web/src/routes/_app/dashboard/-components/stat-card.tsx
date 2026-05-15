@@ -1,5 +1,6 @@
 import { Card } from "@workspace/ui/components/card";
 import type { LucideIcon } from "lucide-react";
+import { applyAlpha } from "@/utils/colors";
 
 interface StatCardProps {
   label: string;
@@ -35,7 +36,9 @@ export function StatCard({
         </div>
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ backgroundColor: `${color ?? "hsl(var(--primary))"}18` }}
+          style={{
+            backgroundColor: applyAlpha(color ?? "hsl(var(--primary))", 0.094),
+          }}
         >
           <Icon
             className="w-4 h-4"

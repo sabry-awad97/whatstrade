@@ -28,6 +28,7 @@ import { authClient } from "@/lib/auth-client";
 import { useGetDashboardStats } from "@/hooks/dashboard";
 import { useGetMatchStats, useListMatches } from "@/hooks/matches";
 import { useListOffers } from "@/hooks/offers";
+import { applyAlpha } from "@/utils/colors";
 import { StatCard } from "./-components/stat-card";
 
 const BAND_COLORS: Record<string, string> = {
@@ -365,7 +366,10 @@ function RouteComponent() {
                       variant="outline"
                       className="text-[9px] px-1.5 h-4"
                       style={{
-                        backgroundColor: `${BAND_COLORS[match.confidenceBand]}20`,
+                        backgroundColor: applyAlpha(
+                          BAND_COLORS[match.confidenceBand],
+                          0.125,
+                        ),
                         borderColor: BAND_COLORS[match.confidenceBand],
                         color: BAND_COLORS[match.confidenceBand],
                       }}
