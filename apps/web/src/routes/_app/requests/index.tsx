@@ -1,20 +1,104 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+
+import { authClient } from "@/lib/auth-client";
+import { useListRequests, useGetRequest } from "@/hooks/requests";
+import {
+  RequestsHeader,
+  RequestsFilterBar,
+  RequestsTable,
+  RequestDetailPanel,
+  type FilterOption,
+} from "./-components";
 
 export const Route = createFileRoute("/_app/requests/")({
   component: RouteComponent,
+  beforeLoad: async () => {
+    const session = await authClient.getSession();
+    if (!session.data) {
+      redirect({
+        to: "/login",
+        throw: true,
+      });
+    }
+    return { session };
+  },
 });
 
 function RouteComponent() {
+  // State management
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
+
+  // Fetch requests list
+  const { data: requests, isLoading } = useListRequests({
+    page: 1,
+    limit: 50,
+    search: debouncedSearch || undefined,
+  });
+
+  // Fetch selected request details
+  const { data: selectedRequest } = useGetRequest(selectedId!, {
+    enabled: !!selectedId,
+  });
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Handle request selection
+  const handleSelectRequest = (id: string) => {
+    setSelectedId(selectedId === id ? null : id);
+  };
+
+  // Handle closing detail panel
+  const handleCloseDetail = () => {
+    setSelectedId(null);
+  };
+
+  // Filter requests based on active filter
+  const filteredRequests =
+    activeFilter === "all"
+      ? requests
+      : requests?.filter((request) => request.status === activeFilter);
+
   return (
-    <div className="flex-1 p-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Requests</h1>
-        <div className="p-6 bg-card rounded-lg border">
-          <p className="text-muted-foreground">
-            View and manage pharmaceutical requests here.
-          </p>
-        </div>
+    <div className="flex h-full">
+      {/* List Panel */}
+      <div className="flex flex-col flex-1 min-w-0">
+        <RequestsHeader
+          totalCount={filteredRequests?.length}
+          search={search}
+          onSearchChange={setSearch}
+        />
+
+        <RequestsFilterBar
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
+
+        <RequestsTable
+          requests={filteredRequests}
+          isLoading={isLoading}
+          selectedId={selectedId}
+          onSelectRequest={handleSelectRequest}
+        />
       </div>
+
+      {/* Detail Panel */}
+      {selectedId && (
+        <RequestDetailPanel
+          request={selectedRequest}
+          onClose={handleCloseDetail}
+        />
+      )}
     </div>
   );
 }
