@@ -14,7 +14,9 @@ import {
   RejectMatchBody,
 } from "@workspace/schemas";
 
-function parseMatch(m: any) {
+type MatchWithDecimal = Prisma.MatchGetPayload<object>;
+
+function parseMatch(m: MatchWithDecimal) {
   return {
     ...m,
     score: Number(m.score),

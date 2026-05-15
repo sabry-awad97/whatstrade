@@ -4,8 +4,17 @@
  */
 import { ORPCError } from "@orpc/server";
 import { o } from "../index";
-import { prisma } from "@workspace/db";
+import { prisma, Prisma } from "@workspace/db";
 import { ListOffersQueryParams, GetOfferParams } from "@workspace/schemas";
+
+type OfferWithDecimal = Prisma.OfferGetPayload<object>;
+
+function parseOffer(offer: OfferWithDecimal) {
+  return {
+    ...offer,
+    price: offer.price !== null ? offer.price.toString() : null,
+  };
+}
 
 export const offersRouter = o.router({
   listOffers: o.input(ListOffersQueryParams).handler(async ({ input }) => {
@@ -26,10 +35,7 @@ export const offersRouter = o.router({
       skip: offset,
     });
 
-    return offers.map((o) => ({
-      ...o,
-      price: o.price !== null ? o.price.toString() : null,
-    }));
+    return offers.map(parseOffer);
   }),
 
   getOffer: o.input(GetOfferParams).handler(async ({ input }) => {
@@ -41,9 +47,6 @@ export const offersRouter = o.router({
       throw new ORPCError("NOT_FOUND");
     }
 
-    return {
-      ...offer,
-      price: offer.price !== null ? offer.price.toString() : null,
-    };
+    return parseOffer(offer);
   }),
 });

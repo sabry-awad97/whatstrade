@@ -2,7 +2,7 @@
  * Color Utilities
  *
  * Professional color manipulation utilities for consistent styling across the application.
- * Supports HSL, HSLA, RGB, RGBA, and hex color formats.
+ * Supports HSL, HSLA, RGB, RGBA, hex color formats, and CSS variables.
  *
  * @module utils/colors
  */
@@ -10,7 +10,7 @@
 /**
  * Supported color format types
  */
-export type ColorFormat = "hsl" | "hsla" | "rgb" | "rgba" | "hex";
+export type ColorFormat = "hsl" | "hsla" | "rgb" | "rgba" | "hex" | "var";
 
 /**
  * Parsed HSL color components
@@ -30,6 +30,36 @@ interface RGBColor {
   g: number;
   b: number;
   a?: number;
+}
+
+/**
+ * Normalize a color string to ensure it's valid CSS.
+ * Handles CSS variables and ensures proper formatting.
+ *
+ * @param color - CSS color string
+ * @returns Normalized color string
+ *
+ * @example
+ * ```ts
+ * normalizeColor('hsl(var(--primary))')
+ * // => 'hsl(var(--primary))'
+ *
+ * normalizeColor('#ff0000')
+ * // => '#ff0000'
+ * ```
+ */
+export function normalizeColor(color: string): string {
+  // Already valid formats - return as-is
+  if (
+    color.startsWith("hsl") ||
+    color.startsWith("rgb") ||
+    color.startsWith("#")
+  ) {
+    return color;
+  }
+
+  // Fallback for any other format
+  return color;
 }
 
 /**

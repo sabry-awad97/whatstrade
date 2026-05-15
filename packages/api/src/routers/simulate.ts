@@ -344,20 +344,32 @@ export const simulateRouter = o.router({
     if (insertIntoSystem && medName) {
       const insertStart = Date.now();
 
-      // Validate quantity and price before insertion
-      if (quantity <= 0) {
-        throw new ORPCError("BAD_REQUEST", {
-          message: "Quantity must be greater than 0",
-        });
-      }
-
-      if (price !== null && price !== undefined && price < 0) {
-        throw new ORPCError("BAD_REQUEST", {
-          message: "Price cannot be negative",
-        });
-      }
-
       try {
+        // Validate quantity and price before insertion
+        if (quantity <= 0) {
+          pipelineSteps.push({
+            step: "Insert Record",
+            status: "error",
+            detail: "Validation failed: Quantity must be greater than 0",
+            durationMs: Date.now() - insertStart,
+          });
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Quantity must be greater than 0",
+          });
+        }
+
+        if (price !== null && price !== undefined && price < 0) {
+          pipelineSteps.push({
+            step: "Insert Record",
+            status: "error",
+            detail: "Validation failed: Price cannot be negative",
+            durationMs: Date.now() - insertStart,
+          });
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Price cannot be negative",
+          });
+        }
+
         if (parsedType === "offer") {
           const inserted = await prisma.offer.create({
             data: {
@@ -395,6 +407,11 @@ export const simulateRouter = o.router({
           durationMs: Date.now() - insertStart,
         });
       } catch (err) {
+        // If it's an ORPCError (validation failure), re-throw it
+        if (err instanceof ORPCError) {
+          throw err;
+        }
+
         // Log the full error for debugging
         console.error("DB insert failed:", err);
 
