@@ -245,7 +245,7 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
                   key={header.id}
                   className={`px-3 py-2 text-[11px] font-medium text-muted-foreground first:px-4 ${
                     header.column.columnDef.meta?.align === "right"
-                      ? "text-right flex items-center justify-end"
+                      ? "text-right"
                       : "text-left"
                   }`}
                 >

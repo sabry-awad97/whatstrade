@@ -24,7 +24,7 @@ export function GroupRow({ group, onToggle, isPending }: GroupRowProps) {
         className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0
         ${group.isMonitored ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
       >
-        {group.name.slice(0, 2).toUpperCase()}
+        {group.name.trim().slice(0, 2).toUpperCase() || "??"}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{group.name}</p>

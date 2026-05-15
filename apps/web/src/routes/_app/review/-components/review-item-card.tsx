@@ -67,7 +67,14 @@ export function ReviewItemCard({
             Qty: <strong>{item.quantity}</strong>
           </span>
         )}
-        <span>{new Date(item.createdAt).toLocaleString()}</span>
+        <span>
+          {(() => {
+            const date = new Date(item.createdAt);
+            return isNaN(date.getTime())
+              ? "Unknown date"
+              : date.toLocaleString();
+          })()}
+        </span>
       </div>
 
       <div className="flex items-center gap-2 pt-1">

@@ -24,7 +24,7 @@ function RouteComponent() {
 
   return (
     <div className="flex flex-col h-full">
-      <AuditHeader totalCount={entries?.length} />
+      <AuditHeader showingCount={entries?.length} />
       <AuditTable entries={entries} isLoading={isLoading} />
     </div>
   );

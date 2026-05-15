@@ -39,7 +39,7 @@ function RouteComponent() {
 
   // Sync with fetched weights
   useEffect(() => {
-    if (weights) {
+    if (weights && !dirty) {
       setValues({
         medication: Number(weights.medication),
         quantity: Number(weights.quantity),
@@ -48,8 +48,7 @@ function RouteComponent() {
         recency: Number(weights.recency),
       });
     }
-  }, [weights]);
-
+  }, [weights, dirty]);
   // Handle slider change
   const handleChange = (key: WeightKey, val: number[]) => {
     setValues((prev) => ({ ...prev, [key]: val[0] }));
@@ -58,6 +57,14 @@ function RouteComponent() {
 
   // Handle save
   const handleSave = () => {
+    const total = Object.values(values).reduce((a, b) => a + b, 0);
+    if (Math.abs(total - 1) > 0.001) {
+      toast.error("Invalid weights", {
+        description: "Weights must sum to 100%",
+      });
+      return;
+    }
+
     updateMutation.mutate(values, {
       onSuccess: () => {
         setDirty(false);
@@ -72,11 +79,16 @@ function RouteComponent() {
       },
     });
   };
-
   // Handle reset to defaults
   const handleReset = () => {
+    // Only mark dirty if current values differ from defaults
+    const isDifferent = (Object.keys(DEFAULT_WEIGHTS) as WeightKey[]).some(
+      (key) => values[key] !== DEFAULT_WEIGHTS[key],
+    );
     setValues(DEFAULT_WEIGHTS);
-    setDirty(true);
+    if (isDifferent) {
+      setDirty(true);
+    }
   };
 
   return (

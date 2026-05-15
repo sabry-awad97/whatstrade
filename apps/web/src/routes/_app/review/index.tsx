@@ -58,7 +58,7 @@ function RouteComponent() {
       { id },
       {
         onSuccess: () => {
-          toast.error("Item rejected", {
+          toast.success("Item rejected", {
             description: `Review item rejected.`,
           });
         },
@@ -70,7 +70,6 @@ function RouteComponent() {
       },
     );
   };
-
   return (
     <div className="flex flex-col h-full">
       <ReviewHeader queueCount={queue?.length} stats={stats} />

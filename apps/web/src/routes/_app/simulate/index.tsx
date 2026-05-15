@@ -424,7 +424,7 @@ function RouteComponent() {
                       <div className="mt-4 pt-3 border-t border-border/40 flex items-start gap-2">
                         <Brain className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                         <p className="text-[11px] text-muted-foreground italic">
-                          AI Analysis:{" "}
+                          AI Analysis:
                           {topCandidate.confidenceBand === "auto"
                             ? "Optimal match — medication name, dosage, and quantity align well. Price within range."
                             : topCandidate.confidenceBand === "suggest"
@@ -462,7 +462,7 @@ function RouteComponent() {
                     No matching candidates found
                   </p>
                   <p className="text-xs mt-1 opacity-70">
-                    Score threshold is 20% — no existing{" "}
+                    Score threshold is 20% — no existing
                     {result.parsedType === "offer" ? "requests" : "offers"} are
                     close enough
                   </p>
