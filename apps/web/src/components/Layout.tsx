@@ -192,9 +192,7 @@ export function Layout({ children }: LayoutProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           ))}
-
           <div className="flex-1" />
-
           {/* Command bar items */}
           <button
             onClick={toggleTheme}
@@ -211,12 +209,17 @@ export function Layout({ children }: LayoutProps) {
           <button
             className="w-7 h-6 flex items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors relative"
             title="Notifications"
+            aria-label={
+              (stats?.pendingMatches ?? 0) > 0
+                ? `Notifications (${stats.pendingMatches} pending)`
+                : "Notifications"
+            }
           >
             <Bell className="w-3.5 h-3.5" />
             {(stats?.pendingMatches ?? 0) > 0 && (
               <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-destructive" />
             )}
-          </button>
+          </button>{" "}
         </div>
 
         {/* Main Content Area */}
