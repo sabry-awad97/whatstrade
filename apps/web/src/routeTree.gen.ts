@@ -19,6 +19,7 @@ import { Route as AppRequestsIndexRouteImport } from './routes/_app/requests/ind
 import { Route as AppOffersIndexRouteImport } from './routes/_app/offers/index'
 import { Route as AppMatchesIndexRouteImport } from './routes/_app/matches/index'
 import { Route as AppGroupsIndexRouteImport } from './routes/_app/groups/index'
+import { Route as AppDashboardIndexRouteImport } from './routes/_app/dashboard/index'
 import { Route as AppAuditIndexRouteImport } from './routes/_app/audit/index'
 
 const AppRouteRoute = AppRouteRouteImport.update({
@@ -70,6 +71,11 @@ const AppGroupsIndexRoute = AppGroupsIndexRouteImport.update({
   path: '/groups/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppDashboardIndexRoute = AppDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppAuditIndexRoute = AppAuditIndexRouteImport.update({
   id: '/audit/',
   path: '/audit/',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login/': typeof LoginIndexRoute
   '/audit/': typeof AppAuditIndexRoute
+  '/dashboard/': typeof AppDashboardIndexRoute
   '/groups/': typeof AppGroupsIndexRoute
   '/matches/': typeof AppMatchesIndexRoute
   '/offers/': typeof AppOffersIndexRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/login': typeof LoginIndexRoute
   '/audit': typeof AppAuditIndexRoute
+  '/dashboard': typeof AppDashboardIndexRoute
   '/groups': typeof AppGroupsIndexRoute
   '/matches': typeof AppMatchesIndexRoute
   '/offers': typeof AppOffersIndexRoute
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/login/': typeof LoginIndexRoute
   '/_app/audit/': typeof AppAuditIndexRoute
+  '/_app/dashboard/': typeof AppDashboardIndexRoute
   '/_app/groups/': typeof AppGroupsIndexRoute
   '/_app/matches/': typeof AppMatchesIndexRoute
   '/_app/offers/': typeof AppOffersIndexRoute
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login/'
     | '/audit/'
+    | '/dashboard/'
     | '/groups/'
     | '/matches/'
     | '/offers/'
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/audit'
+    | '/dashboard'
     | '/groups'
     | '/matches'
     | '/offers'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/login/'
     | '/_app/audit/'
+    | '/_app/dashboard/'
     | '/_app/groups/'
     | '/_app/matches/'
     | '/_app/offers/'
@@ -231,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppGroupsIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/dashboard/': {
+      id: '/_app/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof AppDashboardIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/_app/audit/': {
       id: '/_app/audit/'
       path: '/audit'
@@ -244,6 +263,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppAuditIndexRoute: typeof AppAuditIndexRoute
+  AppDashboardIndexRoute: typeof AppDashboardIndexRoute
   AppGroupsIndexRoute: typeof AppGroupsIndexRoute
   AppMatchesIndexRoute: typeof AppMatchesIndexRoute
   AppOffersIndexRoute: typeof AppOffersIndexRoute
@@ -256,6 +276,7 @@ interface AppRouteRouteChildren {
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppAuditIndexRoute: AppAuditIndexRoute,
+  AppDashboardIndexRoute: AppDashboardIndexRoute,
   AppGroupsIndexRoute: AppGroupsIndexRoute,
   AppMatchesIndexRoute: AppMatchesIndexRoute,
   AppOffersIndexRoute: AppOffersIndexRoute,

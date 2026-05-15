@@ -44,7 +44,7 @@ interface LayoutProps {
 }
 
 const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/offers", icon: Package, label: "Offers" },
   { path: "/requests", icon: ShoppingCart, label: "Requests" },
   { path: "/matches", icon: GitMerge, label: "Matches" },
