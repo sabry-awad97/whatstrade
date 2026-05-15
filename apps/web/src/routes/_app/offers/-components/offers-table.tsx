@@ -1,5 +1,12 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty";
 import { Package } from "lucide-react";
 import type { ListOffersResponseItem } from "@workspace/schemas";
 import { STATUS_COLORS } from "./constants";
@@ -15,7 +22,7 @@ interface OffersTableProps {
  * Offers Table Component
  *
  * Displays a table of medication offers with sortable columns.
- * Supports row selection and loading states.
+ * Supports row selection, loading states, and proper empty state handling.
  */
 export function OffersTable({
   offers,
@@ -23,38 +30,43 @@ export function OffersTable({
   selectedId,
   onSelectOffer,
 }: OffersTableProps) {
+  const renderTableHeader = () => (
+    <thead className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
+      <tr className="border-b border-border/60">
+        <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground w-20">
+          ID
+        </th>
+        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          Medication
+        </th>
+        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          Dosage
+        </th>
+        <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          Qty
+        </th>
+        <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          Price
+        </th>
+        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          Group
+        </th>
+        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          Status
+        </th>
+        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          Date
+        </th>
+      </tr>
+    </thead>
+  );
+
+  // Loading state
   if (isLoading) {
     return (
       <div className="flex-1 overflow-auto">
         <table className="w-full text-xs border-collapse">
-          <thead className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
-            <tr className="border-b border-border/60">
-              <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground w-8">
-                #
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Medication
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Dosage
-              </th>
-              <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Qty
-              </th>
-              <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Price
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Group
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Status
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Date
-              </th>
-            </tr>
-          </thead>
+          {renderTableHeader()}
           <tbody>
             {Array.from({ length: 8 }).map((_, i) => (
               <tr key={i}>
@@ -69,79 +81,33 @@ export function OffersTable({
     );
   }
 
+  // Empty state - no data at all
   if (!offers || offers.length === 0) {
     return (
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto flex flex-col">
         <table className="w-full text-xs border-collapse">
-          <thead className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
-            <tr className="border-b border-border/60">
-              <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground w-8">
-                #
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Medication
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Dosage
-              </th>
-              <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Qty
-              </th>
-              <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Price
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Group
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Status
-              </th>
-              <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-                Date
-              </th>
-            </tr>
-          </thead>
+          {renderTableHeader()}
         </table>
-        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-          <Package className="w-10 h-10 mb-3 opacity-20" />
-          <p className="text-sm font-medium">No offers found</p>
-          <p className="text-xs mt-1 opacity-70">Try adjusting your search</p>
-        </div>
+        <Empty className="flex-1">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Package className="w-4 h-4 opacity-40" />
+            </EmptyMedia>
+            <EmptyTitle>No offers found</EmptyTitle>
+            <EmptyDescription>
+              Try adjusting your search or filter criteria to find offers.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       </div>
     );
   }
 
+  // Data state - render table with offers
   return (
     <div className="flex-1 overflow-auto">
       <table className="w-full text-xs border-collapse">
-        <thead className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
-          <tr className="border-b border-border/60">
-            <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground w-20">
-              ID
-            </th>
-            <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-              Medication
-            </th>
-            <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-              Dosage
-            </th>
-            <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-              Qty
-            </th>
-            <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-              Price
-            </th>
-            <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-              Group
-            </th>
-            <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-              Status
-            </th>
-            <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-              Date
-            </th>
-          </tr>
-        </thead>
+        {renderTableHeader()}
         <tbody>
           {offers.map((offer) => (
             <tr

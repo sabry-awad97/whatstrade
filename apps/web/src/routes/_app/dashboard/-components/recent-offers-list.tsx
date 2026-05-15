@@ -1,6 +1,13 @@
 import { Card } from "@workspace/ui/components/card";
 import { Badge } from "@workspace/ui/components/badge";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty";
 import { Package } from "lucide-react";
 
 interface Offer {
@@ -18,11 +25,11 @@ interface RecentOffersListProps {
  * Recent Offers List Component
  *
  * Displays a list of the most recent medication offers.
- * Shows loading skeletons while data is being fetched.
+ * Shows loading skeletons while data is being fetched and proper empty states.
  */
 export function RecentOffersList({ offers, isLoading }: RecentOffersListProps) {
   return (
-    <Card className="p-4 border border-border/80">
+    <Card className="p-4 border border-border/80 flex flex-col">
       <h3 className="text-xs font-semibold mb-3 text-foreground">
         Recent Offers
       </h3>
@@ -53,9 +60,17 @@ export function RecentOffersList({ offers, isLoading }: RecentOffersListProps) {
           ))}
         </div>
       ) : (
-        <div className="flex items-center justify-center h-20 text-xs text-muted-foreground">
-          No offers yet
-        </div>
+        <Empty className="flex-1 min-h-[120px]">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Package className="w-4 h-4 opacity-40" />
+            </EmptyMedia>
+            <EmptyTitle>No offers yet</EmptyTitle>
+            <EmptyDescription>
+              Offers will appear here once they are created.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
     </Card>
   );

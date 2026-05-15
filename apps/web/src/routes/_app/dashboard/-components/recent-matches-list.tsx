@@ -1,6 +1,13 @@
 import { Card } from "@workspace/ui/components/card";
 import { Badge } from "@workspace/ui/components/badge";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "@workspace/ui/components/empty";
 import { GitMerge } from "lucide-react";
 import { applyAlpha } from "@/utils/colors";
 
@@ -29,7 +36,7 @@ export function RecentMatchesList({
   bandColors,
 }: RecentMatchesListProps) {
   return (
-    <Card className="p-4 border border-border/80">
+    <Card className="p-4 border border-border/80 flex flex-col">
       <h3 className="text-xs font-semibold mb-3 text-foreground">
         Recent Matches
       </h3>
@@ -71,9 +78,17 @@ export function RecentMatchesList({
           ))}
         </div>
       ) : (
-        <div className="flex items-center justify-center h-20 text-xs text-muted-foreground">
-          No matches yet
-        </div>
+        <Empty className="flex-1 min-h-[120px]">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <GitMerge className="w-4 h-4 opacity-40" />
+            </EmptyMedia>
+            <EmptyTitle>No matches yet</EmptyTitle>
+            <EmptyDescription>
+              Matches will appear here once offers and requests are paired.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
     </Card>
   );
