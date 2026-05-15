@@ -38,8 +38,8 @@ export const ListMatchesResponseItem = z.object({
   medicationName: z.string().optional(),
   offerQuantity: z.number().optional(),
   requestQuantity: z.number().optional(),
-  offerPrice: z.number().nullish(),
-  maxPrice: z.number().nullish(),
+  offerPrice: z.string().nullish(),
+  maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
 });
 
@@ -85,8 +85,8 @@ export const GetMatchResponse = z.object({
   medicationName: z.string().optional(),
   offerQuantity: z.number().optional(),
   requestQuantity: z.number().optional(),
-  offerPrice: z.number().nullish(),
-  maxPrice: z.number().nullish(),
+  offerPrice: z.string().nullish(),
+  maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
 });
 

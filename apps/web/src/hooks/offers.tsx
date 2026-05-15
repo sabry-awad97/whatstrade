@@ -41,7 +41,9 @@ export function useListOffers(params?: {
  *
  * @example
  * ```tsx
- * const { data: offer, isLoading, error } = useGetOffer("offer-id-123");
+ * const { data: offer, isLoading, error } = useGetOffer("offer-id-123", {
+ *   enabled: true
+ * });
  *
  * if (isLoading) return <Loader />;
  * if (error) return <Error />;
@@ -50,12 +52,14 @@ export function useListOffers(params?: {
  * ```
  *
  * @param id - The offer ID
+ * @param options - Query options including enabled flag
  * @returns TanStack Query result with offer details
  */
-export function useGetOffer(id: string) {
+export function useGetOffer(id: string, options?: { enabled?: boolean }) {
   return useQuery(
     orpc.offers.getOffer.queryOptions({
       input: { id },
+      enabled: options?.enabled ?? true,
     }),
   );
 }

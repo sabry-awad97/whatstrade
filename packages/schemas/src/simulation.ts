@@ -34,7 +34,7 @@ const SimulationCandidate = z.object({
   medicationName: z.string(),
   dosage: z.string().nullish(),
   quantity: z.number(),
-  price: z.number().nullish(),
+  price: z.string().nullish(),
   groupName: z.string().optional(),
   senderPhone: z.string().optional(),
   score: z.number(),

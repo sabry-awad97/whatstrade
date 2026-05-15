@@ -1,20 +1,101 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+
+import { authClient } from "@/lib/auth-client";
+import { useListOffers, useGetOffer } from "@/hooks/offers";
+import {
+  OffersHeader,
+  OffersFilterBar,
+  OffersTable,
+  OfferDetailPanel,
+  type FilterOption,
+} from "./-components";
 
 export const Route = createFileRoute("/_app/offers/")({
   component: RouteComponent,
+  beforeLoad: async () => {
+    const session = await authClient.getSession();
+    if (!session.data) {
+      redirect({
+        to: "/login",
+        throw: true,
+      });
+    }
+    return { session };
+  },
 });
 
 function RouteComponent() {
+  // State management
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
+
+  // Fetch offers list
+  const { data: offers, isLoading } = useListOffers({
+    page: 1,
+    limit: 50,
+    search: debouncedSearch || undefined,
+  });
+
+  // Fetch selected offer details
+  const { data: selectedOffer } = useGetOffer(selectedId!, {
+    enabled: !!selectedId,
+  });
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Handle offer selection
+  const handleSelectOffer = (id: string) => {
+    setSelectedId(selectedId === id ? null : id);
+  };
+
+  // Handle closing detail panel
+  const handleCloseDetail = () => {
+    setSelectedId(null);
+  };
+
+  // Filter offers based on active filter
+  const filteredOffers =
+    activeFilter === "all"
+      ? offers
+      : offers?.filter((offer) => offer.status === activeFilter);
+
   return (
-    <div className="flex-1 p-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Offers</h1>
-        <div className="p-6 bg-card rounded-lg border">
-          <p className="text-muted-foreground">
-            Manage and view pharmaceutical offers here.
-          </p>
-        </div>
+    <div className="flex h-full">
+      {/* List Panel */}
+      <div className="flex flex-col flex-1 min-w-0">
+        <OffersHeader
+          totalCount={filteredOffers?.length}
+          search={search}
+          onSearchChange={setSearch}
+        />
+
+        <OffersFilterBar
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
+
+        <OffersTable
+          offers={filteredOffers}
+          isLoading={isLoading}
+          selectedId={selectedId}
+          onSelectOffer={handleSelectOffer}
+        />
       </div>
+
+      {/* Detail Panel */}
+      {selectedId && (
+        <OfferDetailPanel offer={selectedOffer} onClose={handleCloseDetail} />
+      )}
     </div>
   );
 }
