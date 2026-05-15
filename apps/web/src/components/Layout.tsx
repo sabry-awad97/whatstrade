@@ -1,3 +1,4 @@
+import { useGetDashboardStats } from "@/hooks/dashboard";
 import { useTheme } from "@/components/theme-provider";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
@@ -62,13 +63,8 @@ export function Layout({ children }: LayoutProps) {
   const isDark = theme === "dark";
   const toggleTheme = () => setTheme(isDark ? "light" : "dark");
 
-  // Mock stats data - replace with actual API call when available
-  const stats = {
-    pendingMatches: 0,
-    totalMatches: 0,
-    activeGroups: 0,
-    todayMessages: 0,
-  };
+  // Fetch real-time dashboard statistics
+  const { data: stats } = useGetDashboardStats();
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -211,7 +207,7 @@ export function Layout({ children }: LayoutProps) {
             title="Notifications"
             aria-label={
               (stats?.pendingMatches ?? 0) > 0
-                ? `Notifications (${stats.pendingMatches} pending)`
+                ? `Notifications (${stats?.pendingMatches} pending)`
                 : "Notifications"
             }
           >

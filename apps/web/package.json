@@ -24,6 +24,7 @@
     "@tanstack/react-router": "^1.168.22",
     "@workspace/api": "workspace:*",
     "@workspace/env": "workspace:*",
+    "@workspace/schemas": "workspace:*",
     "@workspace/ui": "workspace:*",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
