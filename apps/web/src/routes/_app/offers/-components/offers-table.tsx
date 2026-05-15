@@ -1,5 +1,22 @@
+import { useMemo } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  type ColumnDef,
+} from "@tanstack/react-table";
 import { Badge } from "@workspace/ui/components/badge";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@workspace/ui/components/table";
 import {
   Empty,
   EmptyHeader,
@@ -7,9 +24,17 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "@workspace/ui/components/empty";
-import { Package } from "lucide-react";
+import { Package, ArrowUpDown } from "lucide-react";
 import type { ListOffersResponseItem } from "@workspace/schemas";
 import { STATUS_COLORS } from "./constants";
+
+// Extend TanStack Table meta type
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData, TValue> {
+    align?: "left" | "right" | "center";
+  }
+}
 
 interface OffersTableProps {
   offers: ListOffersResponseItem[] | undefined;
@@ -21,8 +46,8 @@ interface OffersTableProps {
 /**
  * Offers Table Component
  *
- * Displays a table of medication offers with sortable columns.
- * Supports row selection, loading states, and proper empty state handling.
+ * Professional table implementation using TanStack Table.
+ * Features: sorting, filtering, row selection, loading states, and empty state handling.
  */
 export function OffersTable({
   offers,
@@ -30,64 +55,215 @@ export function OffersTable({
   selectedId,
   onSelectOffer,
 }: OffersTableProps) {
-  const renderTableHeader = () => (
-    <thead className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
-      <tr className="border-b border-border/60">
-        <th className="text-left px-4 py-2 text-[11px] font-medium text-muted-foreground w-20">
-          ID
-        </th>
-        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-          Medication
-        </th>
-        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-          Dosage
-        </th>
-        <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-          Qty
-        </th>
-        <th className="text-right px-3 py-2 text-[11px] font-medium text-muted-foreground">
-          Price
-        </th>
-        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-          Group
-        </th>
-        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-          Status
-        </th>
-        <th className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground">
-          Date
-        </th>
-      </tr>
-    </thead>
+  // Define table columns
+  const columns = useMemo<ColumnDef<ListOffersResponseItem>[]>(
+    () => [
+      {
+        accessorKey: "id",
+        header: "ID",
+        cell: ({ getValue }) => {
+          const id = getValue<string>();
+          return (
+            <span className="text-muted-foreground font-mono text-[10px] truncate max-w-[80px] block">
+              {id.slice(0, 8)}...
+            </span>
+          );
+        },
+        size: 80,
+      },
+      {
+        accessorKey: "medicationName",
+        header: ({ column }) => {
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              Medication
+              <ArrowUpDown className="w-3 h-3" />
+            </button>
+          );
+        },
+        cell: ({ getValue }) => (
+          <span className="font-medium text-foreground">
+            {getValue<string>()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "dosage",
+        header: "Dosage",
+        cell: ({ getValue }) => {
+          const dosage = getValue<string | null>();
+          return <span className="text-muted-foreground">{dosage ?? "—"}</span>;
+        },
+      },
+      {
+        accessorKey: "quantity",
+        header: ({ column }) => {
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              Qty
+              <ArrowUpDown className="w-3 h-3" />
+            </button>
+          );
+        },
+        cell: ({ getValue }) => (
+          <span className="tabular-nums">{getValue<number>()}</span>
+        ),
+        meta: {
+          align: "right",
+        },
+      },
+      {
+        accessorKey: "price",
+        header: ({ column }) => {
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              Price
+              <ArrowUpDown className="w-3 h-3" />
+            </button>
+          );
+        },
+        cell: ({ getValue }) => {
+          const price = getValue<string | null>();
+          return (
+            <span className="tabular-nums">
+              {price != null ? `EGP ${price}` : "—"}
+            </span>
+          );
+        },
+        meta: {
+          align: "right",
+        },
+      },
+      {
+        accessorKey: "groupName",
+        header: "Group",
+        cell: ({ getValue }) => (
+          <span className="text-muted-foreground truncate max-w-[140px] block">
+            {getValue<string>()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: ({ getValue }) => {
+          const status = getValue<string>();
+          return (
+            <Badge
+              variant="outline"
+              className={`text-[9px] h-4 px-1.5 ${STATUS_COLORS[status] ?? ""}`}
+            >
+              {status}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "createdAt",
+        header: ({ column }) => {
+          return (
+            <button
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
+              onClick={() =>
+                column.toggleSorting(column.getIsSorted() === "asc")
+              }
+            >
+              Date
+              <ArrowUpDown className="w-3 h-3" />
+            </button>
+          );
+        },
+        cell: ({ getValue }) => {
+          const date = getValue<Date>();
+          return (
+            <span className="text-muted-foreground">
+              {new Date(date).toLocaleDateString()}
+            </span>
+          );
+        },
+      },
+    ],
+    [],
   );
+
+  // Initialize table instance
+  const table = useReactTable({
+    data: offers ?? [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  });
 
   // Loading state
   if (isLoading) {
     return (
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-xs border-collapse">
-          {renderTableHeader()}
-          <tbody>
+        <Table>
+          <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
+            <TableRow className="border-b border-border/60">
+              {columns.map((column, i) => (
+                <TableHead
+                  key={i}
+                  className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground first:px-4"
+                >
+                  {typeof column.header === "string" ? column.header : ""}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {Array.from({ length: 8 }).map((_, i) => (
-              <tr key={i}>
-                <td colSpan={8} className="px-4 py-1.5">
+              <TableRow key={i}>
+                <TableCell colSpan={columns.length} className="px-4 py-1.5">
                   <Skeleton className="h-5 w-full" />
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     );
   }
 
-  // Empty state - no data at all
+  // Empty state
   if (!offers || offers.length === 0) {
     return (
       <div className="flex-1 overflow-auto flex flex-col">
-        <table className="w-full text-xs border-collapse">
-          {renderTableHeader()}
-        </table>
+        <Table>
+          <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
+            <TableRow className="border-b border-border/60">
+              {table.getHeaderGroups()[0]?.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className="text-left px-3 py-2 text-[11px] font-medium text-muted-foreground first:px-4"
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+        </Table>
         <Empty className="flex-1">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -103,56 +279,64 @@ export function OffersTable({
     );
   }
 
-  // Data state - render table with offers
+  // Data state - render table with TanStack Table
   return (
     <div className="flex-1 overflow-auto">
-      <table className="w-full text-xs border-collapse">
-        {renderTableHeader()}
-        <tbody>
-          {offers.map((offer) => (
-            <tr
-              key={offer.id}
-              onClick={() => onSelectOffer(offer.id)}
+      <Table>
+        <TableHeader className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow
+              key={headerGroup.id}
+              className="border-b border-border/60"
+            >
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  className={`px-3 py-2 text-[11px] font-medium text-muted-foreground first:px-4 ${
+                    header.column.columnDef.meta?.align === "right"
+                      ? "text-right"
+                      : "text-left"
+                  }`}
+                >
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
+            <TableRow
+              key={row.id}
+              onClick={() => onSelectOffer(row.original.id)}
               className={`border-b border-border/30 cursor-pointer transition-colors hover:bg-accent/40 ${
-                selectedId === offer.id
+                selectedId === row.original.id
                   ? "bg-primary/5 border-l-2 border-l-primary"
                   : ""
               }`}
-              data-testid={`row-offer-${offer.id}`}
+              data-testid={`row-offer-${row.original.id}`}
             >
-              <td className="px-4 py-2 text-muted-foreground font-mono text-[10px] truncate max-w-[80px]">
-                {offer.id.slice(0, 8)}...
-              </td>
-              <td className="px-3 py-2 font-medium text-foreground">
-                {offer.medicationName}
-              </td>
-              <td className="px-3 py-2 text-muted-foreground">
-                {offer.dosage ?? "—"}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {offer.quantity}
-              </td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {offer.price != null ? `EGP ${offer.price}` : "—"}
-              </td>
-              <td className="px-3 py-2 text-muted-foreground truncate max-w-[140px]">
-                {offer.groupName}
-              </td>
-              <td className="px-3 py-2">
-                <Badge
-                  variant="outline"
-                  className={`text-[9px] h-4 px-1.5 ${STATUS_COLORS[offer.status] ?? ""}`}
+              {row.getVisibleCells().map((cell) => (
+                <TableCell
+                  key={cell.id}
+                  className={`px-3 py-2 first:px-4 ${
+                    cell.column.columnDef.meta?.align === "right"
+                      ? "text-right"
+                      : ""
+                  }`}
                 >
-                  {offer.status}
-                </Badge>
-              </td>
-              <td className="px-3 py-2 text-muted-foreground">
-                {new Date(offer.createdAt).toLocaleDateString()}
-              </td>
-            </tr>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
