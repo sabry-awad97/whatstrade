@@ -34,7 +34,7 @@ export interface SimulateCandidate {
   medicationName: string;
   dosage: string | null;
   quantity: number;
-  price: number | null;
+  price: string | null;
   groupName: string;
   senderPhone: string;
   score: number;
@@ -280,7 +280,7 @@ export const simulateRouter = o.router({
             medicationName: req.medicationName,
             dosage: req.dosage,
             quantity: req.quantity,
-            price: req.maxPrice !== null ? Number(req.maxPrice) : null,
+            price: req.maxPrice !== null ? req.maxPrice.toString() : null,
             groupName: req.groupName,
             senderPhone: maskPhone(req.senderPhone),
             score: Math.round(score * 1000) / 1000,
@@ -320,7 +320,7 @@ export const simulateRouter = o.router({
             medicationName: offer.medicationName,
             dosage: offer.dosage,
             quantity: offer.quantity,
-            price: offer.price !== null ? Number(offer.price) : null,
+            price: offer.price !== null ? offer.price.toString() : null,
             groupName: offer.groupName,
             senderPhone: maskPhone(offer.senderPhone),
             score: Math.round(score * 1000) / 1000,

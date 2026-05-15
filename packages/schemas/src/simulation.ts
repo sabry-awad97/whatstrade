@@ -2,6 +2,7 @@
  * Message simulation schemas for testing AI parsing and matching
  */
 import { z } from "zod";
+import { UuidSchema } from "./common";
 
 /**
  * @summary Simulate message request body
@@ -30,7 +31,7 @@ const ScoreBreakdown = z.object({
  * @summary Match candidate in simulation response
  */
 const SimulationCandidate = z.object({
-  id: z.number(),
+  id: UuidSchema,
   medicationName: z.string(),
   dosage: z.string().nullish(),
   quantity: z.number(),
@@ -70,7 +71,7 @@ export const SimulateMessageResponse = z.object({
   parsedFields: z.array(ParsedField),
   aiReasoning: z.string(),
   candidates: z.array(SimulationCandidate),
-  insertedId: z.number().nullable(),
+  insertedId: UuidSchema.nullable(),
   pipelineSteps: z.array(PipelineStep),
 });
 
