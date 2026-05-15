@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import {
   TrendingUp,

@@ -115,8 +115,27 @@ export function applyAlpha(color: string, alpha: number): string {
 
   // Handle hex format
   if (color.startsWith("#")) {
-    // Remove existing alpha if present (8-char hex)
-    const baseHex = color.length === 9 ? color.slice(0, 7) : color;
+    const hex = color.slice(1); // Remove #
+
+    // Normalize to 6-char hex (RRGGBB) by expanding or stripping alpha
+    let baseHex: string;
+    if (hex.length === 3) {
+      // Expand #RGB to #RRGGBB
+      baseHex = `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+    } else if (hex.length === 4) {
+      // Expand #RGBA to #RRGGBB (strip alpha)
+      baseHex = `#${hex[0]}${hex[0]}${hex[1]}${hex[1]}${hex[2]}${hex[2]}`;
+    } else if (hex.length === 6) {
+      baseHex = color; // Already 6-char
+    } else if (hex.length === 8) {
+      baseHex = color.slice(0, 7); // Strip alpha from 8-char
+    } else {
+      // Invalid hex format
+      console.warn(
+        `applyAlpha: Invalid hex format "${color}". Returning original color.`,
+      );
+      return color;
+    }
 
     // Convert alpha to 2-digit hex (00-FF)
     const alphaHex = Math.round(clampedAlpha * 255)
@@ -125,7 +144,6 @@ export function applyAlpha(color: string, alpha: number): string {
 
     return `${baseHex}${alphaHex}`;
   }
-
   // Fallback: return original color if format is not recognized
   console.warn(
     `applyAlpha: Unrecognized color format "${color}". Returning original color.`,

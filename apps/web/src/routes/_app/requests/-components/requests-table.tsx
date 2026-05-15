@@ -105,7 +105,7 @@ export function RequestsTable({
         header: ({ column }) => {
           return (
             <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
               onClick={() =>
                 column.toggleSorting(column.getIsSorted() === "asc")
               }
@@ -127,7 +127,7 @@ export function RequestsTable({
         header: ({ column }) => {
           return (
             <button
-              className="flex items-center gap-1 hover:text-foreground transition-colors ml-auto"
+              className="flex items-center gap-1 hover:text-foreground transition-colors"
               onClick={() =>
                 column.toggleSorting(column.getIsSorted() === "asc")
               }
@@ -296,7 +296,7 @@ export function RequestsTable({
                     header.column.columnDef.meta?.align === "right"
                       ? "text-right"
                       : "text-left"
-                  }`}
+                  } ${header.column.columnDef.meta?.align === "right" ? "flex items-center justify-end" : ""}`}
                 >
                   {header.isPlaceholder
                     ? null

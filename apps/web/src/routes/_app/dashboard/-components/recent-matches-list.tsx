@@ -65,15 +65,18 @@ export function RecentMatchesList({
                 className="text-[9px] px-1.5 h-4"
                 style={{
                   backgroundColor: applyAlpha(
-                    bandColors[match.confidenceBand],
+                    bandColors[match.confidenceBand] ?? "hsl(var(--muted))",
                     0.125,
                   ),
-                  borderColor: bandColors[match.confidenceBand],
-                  color: bandColors[match.confidenceBand],
+                  borderColor:
+                    bandColors[match.confidenceBand] ?? "hsl(var(--muted))",
+                  color:
+                    bandColors[match.confidenceBand] ??
+                    "hsl(var(--muted-foreground))",
                 }}
               >
                 {match.confidenceBand.toUpperCase()}
-              </Badge>
+              </Badge>{" "}
             </div>
           ))}
         </div>

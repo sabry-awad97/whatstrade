@@ -40,9 +40,8 @@ describe("applyAlpha", () => {
   });
 
   test("applies alpha to 3-char hex color", () => {
-    expect(applyAlpha("#f00", 0.5)).toBe("#f0080");
+    expect(applyAlpha("#f00", 0.5)).toBe("#ff000080");
   });
-
   test("replaces existing alpha in 8-char hex color", () => {
     expect(applyAlpha("#ff0000ff", 0.125)).toBe("#ff000020");
   });

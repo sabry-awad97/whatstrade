@@ -358,18 +358,18 @@ export const simulateRouter = o.router({
           });
         }
 
-        if (price !== null && price !== undefined && price < 0) {
+        if (price !== null && (Number.isNaN(price) || price < 0)) {
           pipelineSteps.push({
             step: "Insert Record",
             status: "error",
-            detail: "Validation failed: Price cannot be negative",
+            detail:
+              "Validation failed: Price must be a valid non-negative number",
             durationMs: Date.now() - insertStart,
           });
           throw new ORPCError("BAD_REQUEST", {
-            message: "Price cannot be negative",
+            message: "Price must be a valid non-negative number",
           });
         }
-
         if (parsedType === "offer") {
           const inserted = await prisma.offer.create({
             data: {
