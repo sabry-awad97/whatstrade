@@ -1,0 +1,46 @@
+// Offers schema
+//
+// ⚠️ SECURITY NOTICE: This model contains sensitive PII/PHI data
+// The following fields contain sensitive information and require special handling:
+// - medicationName: Health information (PHI under HIPAA/GDPR)
+// - senderPhone: Personal identifier (PII)
+// - rawText: May contain unstructured PII/PHI
+//
+// REQUIRED SECURITY CONTROLS:
+// See packages/db/prisma/schema/requests.prisma for detailed security requirements.
+// The same controls apply to this model:
+// 1. Database encryption-at-rest (TDE/CMK)
+// 2. Role-based access control (RBAC) with field-level restrictions
+// 3. Audit logging for all sensitive field access
+// 4. Data retention and automated purge policies
+// 5. Query restrictions (no SELECT *, explicit field selection)
+//
+// COMPLIANCE: HIPAA (PHI), GDPR (Personal Data)
+
+enum OfferStatus {
+    active
+    matched
+    expired
+    cancelled
+
+    @@map("offer_status")
+}
+
+model Offer {
+    id             String      @id @default(uuid()) @db.Uuid
+    medicationName String      @map("medication_name") // ⚠️ PHI: Health information
+    dosage         String?
+    quantity       Int
+    price          Decimal?    @db.Decimal(10, 2)
+    groupName      String      @map("group_name")
+    senderPhone    String      @map("sender_phone") // ⚠️ PII: Personal identifier
+    status         OfferStatus @default(active)
+    rawText        String?     @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
+    createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+    updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz()
+
+    // Relations
+    matches Match[]
+
+    @@map("offers")
+}

@@ -2,13 +2,13 @@
  * Review queue schemas for manual review of parsed messages
  */
 import { z } from "zod";
-import { IdParams } from "./common";
+import { IdParams, UuidSchema } from "./common";
 
 /**
  * @summary Single review item in queue
  */
 export const GetReviewQueueResponseItem = z.object({
-  id: z.number(),
+  id: UuidSchema,
   type: z.string(),
   medicationName: z.string(),
   dosage: z.string().nullish(),

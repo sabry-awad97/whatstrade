@@ -4,6 +4,11 @@
 import { z } from "zod";
 
 /**
+ * UUID identifier schema
+ */
+export const UuidSchema = z.string().uuid();
+
+/**
  * Standard pagination query parameters
  */
 export const PaginationQueryParams = z.object({
@@ -19,10 +24,10 @@ export const SearchablePaginationQueryParams = PaginationQueryParams.extend({
 });
 
 /**
- * Common ID parameter for route params
+ * Common ID parameter for route params (UUID)
  */
 export const IdParams = z.object({
-  id: z.coerce.number(),
+  id: UuidSchema,
 });
 
 /**
@@ -40,6 +45,7 @@ export const OptionalNoteBody = z.object({
 });
 
 // Type exports
+export type UuidSchema = z.infer<typeof UuidSchema>;
 export type PaginationQueryParams = z.infer<typeof PaginationQueryParams>;
 export type SearchablePaginationQueryParams = z.infer<
   typeof SearchablePaginationQueryParams

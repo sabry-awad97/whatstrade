@@ -2,7 +2,12 @@
  * Match-related schemas for offer-request matching
  */
 import { z } from "zod";
-import { IdParams, OptionalNoteBody, PaginationQueryParams } from "./common";
+import {
+  IdParams,
+  OptionalNoteBody,
+  PaginationQueryParams,
+  UuidSchema,
+} from "./common";
 
 // Query parameters
 export const listMatchesQueryPageDefault = 1;
@@ -23,9 +28,9 @@ export const ListMatchesQueryParams = PaginationQueryParams.extend({
  * @summary Single match item in list response
  */
 export const ListMatchesResponseItem = z.object({
-  id: z.number(),
-  offerId: z.number(),
-  requestId: z.number(),
+  id: UuidSchema,
+  offerId: UuidSchema,
+  requestId: UuidSchema,
   score: z.number(),
   confidenceBand: z.string(),
   status: z.string(),
@@ -33,8 +38,8 @@ export const ListMatchesResponseItem = z.object({
   medicationName: z.string().optional(),
   offerQuantity: z.number().optional(),
   requestQuantity: z.number().optional(),
-  offerPrice: z.number().nullish(),
-  maxPrice: z.number().nullish(),
+  offerPrice: z.string().nullish(),
+  maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
 });
 
@@ -70,9 +75,9 @@ export const GetMatchParams = IdParams;
  * @summary Detailed match response
  */
 export const GetMatchResponse = z.object({
-  id: z.number(),
-  offerId: z.number(),
-  requestId: z.number(),
+  id: UuidSchema,
+  offerId: UuidSchema,
+  requestId: UuidSchema,
   score: z.number(),
   confidenceBand: z.string(),
   status: z.string(),
@@ -80,8 +85,8 @@ export const GetMatchResponse = z.object({
   medicationName: z.string().optional(),
   offerQuantity: z.number().optional(),
   requestQuantity: z.number().optional(),
-  offerPrice: z.number().nullish(),
-  maxPrice: z.number().nullish(),
+  offerPrice: z.string().nullish(),
+  maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
 });
 

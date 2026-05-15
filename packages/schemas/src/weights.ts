@@ -3,6 +3,7 @@
  * Controls how different factors are weighted in the matching algorithm
  */
 import { z } from "zod";
+import { UuidSchema } from "./common";
 
 // Weight constraints (all weights must be between 0 and 1)
 export const updateWeightsBodyMedicationMin = 0;
@@ -32,7 +33,7 @@ const WeightConfigBase = z.object({
  * @summary Get current matching weights response
  */
 export const GetWeightsResponse = WeightConfigBase.extend({
-  id: z.number(),
+  id: UuidSchema,
   updatedAt: z.coerce.date(),
 });
 

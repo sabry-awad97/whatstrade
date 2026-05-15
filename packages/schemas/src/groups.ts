@@ -2,14 +2,14 @@
  * WhatsApp group management schemas
  */
 import { z } from "zod";
-import { JidParams } from "./common";
+import { JidParams, UuidSchema } from "./common";
 
 /**
  * @summary Base group response schema
  * Shared structure for all group-related responses
  */
 const GroupResponseBase = z.object({
-  id: z.number(),
+  id: UuidSchema,
   jid: z.string(),
   name: z.string(),
   isMonitored: z.boolean(),

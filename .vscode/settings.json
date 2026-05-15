@@ -1,6 +1,9 @@
 {
   "files.exclude": {
-    "**/node_modules": true
+    "**/node_modules": true,
+    "**/.turbo": true,
+    "**/.tanstack": true,
+    "**/dist": true,
   },
   "typescript.autoClosingTags": false,
   "rust-analyzer.linkedProjects": ["apps/web/src-tauri/Cargo.toml"]
