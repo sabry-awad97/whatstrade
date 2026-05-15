@@ -1,6 +1,6 @@
 /**
- * Dashboard Statistics Hook
- * Provides real-time dashboard metrics using oRPC + TanStack Query
+ * Dashboard Hooks
+ * React Query hooks for dashboard statistics using oRPC
  */
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
@@ -11,6 +11,13 @@ import { orpc } from "@/utils/orpc";
 /**
  * Hook to fetch dashboard statistics
  *
+ * Provides overview metrics including:
+ * - Total offers, requests, and matches
+ * - Pending and auto-confirmed matches
+ * - Average match score and match rate
+ * - Active monitored groups
+ * - Today's message count
+ *
  * @example
  * ```tsx
  * const { data: stats, isLoading, error } = useGetDashboardStats();
@@ -18,7 +25,12 @@ import { orpc } from "@/utils/orpc";
  * if (isLoading) return <Loader />;
  * if (error) return <Error message={error.message} />;
  *
- * return <div>Total Matches: {stats.totalMatches}</div>;
+ * return (
+ *   <div>
+ *     <p>Total Matches: {stats.totalMatches}</p>
+ *     <p>Match Rate: {stats.matchRate.toFixed(1)}%</p>
+ *   </div>
+ * );
  * ```
  *
  * @returns TanStack Query result with dashboard statistics
