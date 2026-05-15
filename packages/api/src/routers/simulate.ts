@@ -49,10 +49,20 @@ export interface PipelineStep {
   durationMs: number;
 }
 
+// Utility function to mask phone numbers (show only last 4 digits)
+function maskPhone(phone: string): string {
+  if (phone.length <= 4) return "****";
+  return "*".repeat(phone.length - 4) + phone.slice(-4);
+}
+
 // Scoring utility functions
 function similarity(a: string, b: string): number {
   const na = a.toLowerCase().trim();
   const nb = b.toLowerCase().trim();
+
+  // Guard against empty strings
+  if (na.length === 0 || nb.length === 0) return 0;
+
   if (na === nb) return 1;
   if (na.includes(nb) || nb.includes(na)) return 0.85;
   let common = 0;
@@ -69,8 +79,9 @@ function dosageSim(a: string | null, b: string | null): number {
 }
 
 function quantityScore(offered: number, requested: number): number {
-  const ratio = Math.min(offered, requested) / Math.max(offered, requested);
-  return ratio;
+  const max = Math.max(offered, requested);
+  if (max === 0) return 1; // Both quantities are zero, treat as perfect match
+  return Math.min(offered, requested) / max;
 }
 
 function priceScore(
@@ -112,11 +123,90 @@ export const simulateRouter = o.router({
     const parseStart = Date.now();
     const parsedType = messageType === "auto" ? "offer" : messageType;
     const parsedFields: ParsedField[] = [];
-    const aiReasoning = "AI parsing not yet configured — using fallback.";
+    let aiReasoning = "AI parsing not yet configured — using fallback.";
+
+    // Fallback: Basic regex extraction until OpenAI is integrated
+    if (!parsedFields.length) {
+      // Extract medication name (look for common patterns)
+      const medMatch = rawText.match(
+        /(?:medication|med|drug|medicine)[\s:]+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/i,
+      );
+      if (medMatch?.[1]) {
+        parsedFields.push({
+          field: "medicationName",
+          value: medMatch[1].trim(),
+          confidence: 0.6,
+        });
+      } else {
+        // Try to find capitalized words that might be medication names
+        const words = rawText.split(/\s+/);
+        const capitalizedWord = words.find(
+          (w) => w.length > 3 && /^[A-Z][a-z]+/.test(w),
+        );
+        if (capitalizedWord) {
+          parsedFields.push({
+            field: "medicationName",
+            value: capitalizedWord,
+            confidence: 0.4,
+          });
+        }
+      }
+
+      // Extract dosage (e.g., "10mg", "500 mg", "2.5mg")
+      const dosageMatch = rawText.match(/(\d+(?:\.\d+)?\s*mg)/i);
+      if (dosageMatch?.[1]) {
+        parsedFields.push({
+          field: "dosage",
+          value: dosageMatch[1].toLowerCase().replace(/\s+/g, ""),
+          confidence: 0.8,
+        });
+      }
+
+      // Extract quantity (look for numbers with quantity keywords)
+      const qtyMatch = rawText.match(
+        /(?:quantity|qty|amount|count|boxes?|units?)[\s:]+(\d+)/i,
+      );
+      if (qtyMatch?.[1]) {
+        parsedFields.push({
+          field: "quantity",
+          value: qtyMatch[1],
+          confidence: 0.7,
+        });
+      } else {
+        // Look for standalone numbers that might be quantities
+        const numMatch = rawText.match(/\b(\d{1,4})\b/);
+        if (
+          numMatch?.[1] &&
+          parseInt(numMatch[1]) > 0 &&
+          parseInt(numMatch[1]) <= 10000
+        ) {
+          parsedFields.push({
+            field: "quantity",
+            value: numMatch[1],
+            confidence: 0.5,
+          });
+        }
+      }
+
+      // Extract price (e.g., "$50", "50 EGP", "price: 100")
+      const priceMatch = rawText.match(
+        /(?:price|cost|egp|\$)[\s:]*(\d+(?:\.\d{1,2})?)/i,
+      );
+      if (priceMatch?.[1]) {
+        parsedFields.push({
+          field: "price",
+          value: priceMatch[1],
+          confidence: 0.7,
+        });
+      }
+
+      aiReasoning = `Fallback regex extraction: found ${parsedFields.length} fields`;
+    }
+
     pipelineSteps.push({
       step: "AI Parsing",
-      status: "skipped",
-      detail: "OpenAI integration pending",
+      status: parsedFields.length > 0 ? "fallback" : "skipped",
+      detail: `${parsedFields.length} fields extracted via regex fallback`,
       durationMs: Date.now() - parseStart,
     });
 
@@ -192,7 +282,7 @@ export const simulateRouter = o.router({
             quantity: req.quantity,
             price: req.maxPrice !== null ? Number(req.maxPrice) : null,
             groupName: req.groupName,
-            senderPhone: req.senderPhone,
+            senderPhone: maskPhone(req.senderPhone),
             score: Math.round(score * 1000) / 1000,
             confidenceBand: bandFromScore(score),
             scoreBreakdown: breakdown,
@@ -232,7 +322,7 @@ export const simulateRouter = o.router({
             quantity: offer.quantity,
             price: offer.price !== null ? Number(offer.price) : null,
             groupName: offer.groupName,
-            senderPhone: offer.senderPhone,
+            senderPhone: maskPhone(offer.senderPhone),
             score: Math.round(score * 1000) / 1000,
             confidenceBand: bandFromScore(score),
             scoreBreakdown: breakdown,
@@ -305,10 +395,16 @@ export const simulateRouter = o.router({
           durationMs: Date.now() - insertStart,
         });
       } catch (err) {
+        // Log the full error for debugging
+        console.error("DB insert failed:", err);
+
+        // Extract sanitized error message
+        const errorMessage = err instanceof Error ? err.message : String(err);
+
         pipelineSteps.push({
           step: "Insert Record",
           status: "error",
-          detail: "DB insert failed",
+          detail: `DB insert failed: ${errorMessage}`,
           durationMs: Date.now() - insertStart,
         });
       }
@@ -328,6 +424,19 @@ export const simulateRouter = o.router({
       durationMs: Date.now() - t0,
     });
 
+    // Add warning if no meaningful data was extracted
+    const warnings: string[] = [];
+    if (!medName) {
+      warnings.push(
+        "No medication name extracted. Consider providing clearer text or wait for OpenAI integration.",
+      );
+    }
+    if (parsedFields.length === 0) {
+      warnings.push(
+        "No fields extracted from input. Results may be inaccurate.",
+      );
+    }
+
     return {
       parsedType,
       parsedFields,
@@ -335,6 +444,7 @@ export const simulateRouter = o.router({
       candidates: candidates.slice(0, 5),
       insertedId,
       pipelineSteps,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }),
 });

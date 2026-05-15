@@ -29,6 +29,11 @@ tasks:
   #  🚀 Development
   # ═══════════════════════════════════════════════════════════════════════════
 
+  start:
+    desc: "🚀 Start server + Tauri desktop app concurrently"
+    cmds:
+      - "{{.BUN}} run index.ts"
+
   dev:
     desc: "🚀 Start all development servers (web + server)"
     cmds:
