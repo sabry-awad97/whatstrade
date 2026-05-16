@@ -1,5 +1,5 @@
 model User {
-  id            String     @id @db.Uuid
+  id            String     @id
   name          String
   email         String
   emailVerified Boolean    @default(false)
@@ -15,14 +15,14 @@ model User {
 }
 
 model Session {
-  id        String   @id @db.Uuid
+  id        String   @id
   expiresAt DateTime
   token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
-  userId    String   @db.Uuid
+  userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
@@ -31,10 +31,10 @@ model Session {
 }
 
 model Account {
-  id                    String    @id @db.Uuid
+  id                    String    @id
   accountId             String
   providerId            String
-  userId                String    @db.Uuid
+  userId                String
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?
   refreshToken          String?
@@ -51,7 +51,7 @@ model Account {
 }
 
 model Verification {
-  id         String   @id @db.Uuid
+  id         String   @id
   identifier String
   value      String
   expiresAt  DateTime

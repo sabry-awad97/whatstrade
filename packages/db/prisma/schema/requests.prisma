@@ -51,7 +51,7 @@ enum RequestStatus {
 }
 
 model Request {
-    id             String        @id @default(uuid()) @db.Uuid
+    id             String        @id @default(uuid())
     medicationName String        @map("medication_name") // ⚠️ PHI: Health information
     dosage         String?
     quantity       Int

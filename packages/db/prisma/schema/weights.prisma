@@ -1,7 +1,7 @@
 // Matching weights schema
 
 model MatchingWeights {
-    id         String   @id @default(uuid()) @db.Uuid
+    id         String   @id @default(uuid())
     medication Decimal  @default(0.40) @db.Decimal(5, 4)
     quantity   Decimal  @default(0.20) @db.Decimal(5, 4)
     dosage     Decimal  @default(0.15) @db.Decimal(5, 4)
