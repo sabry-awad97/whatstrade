@@ -12,6 +12,7 @@ export const env = createEnv({
       .enum(["development", "production", "test"])
       .default("development"),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
+    GOOGLE_GENERATIVE_AI_MODEL: z.string().min(1),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

@@ -175,7 +175,7 @@ export const simulateRouter = o.router({
 
       // Call Google Gemini for structured extraction using new API
       const result = await generateText({
-        model: google("gemini-1.5-flash"),
+        model: google(env.GOOGLE_GENERATIVE_AI_MODEL),
         output: Output.object({
           schema: extractionSchema,
         }),
