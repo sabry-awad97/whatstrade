@@ -11,6 +11,11 @@ import {
 import type { ListMatchesResponseItem } from "@workspace/schemas";
 import { ConfidenceRing } from "./confidence-ring";
 import { BAND_COLORS, STATUS_COLORS } from "./constants";
+import {
+  calculateRecencyScore,
+  calculatePriceScore,
+  calculateQuantityScore,
+} from "@/utils/scoring";
 
 interface MatchDetailViewProps {
   match: ListMatchesResponseItem;
@@ -37,29 +42,20 @@ export function MatchDetailView({
 
   // Calculate AI reasoning checks
   const availabilityOk = match.score >= 0.6;
+  const quantityScore = calculateQuantityScore(
+    match.offerQuantity,
+    match.requestQuantity,
+  );
   const priceFitOk =
     match.offerPrice != null &&
     match.maxPrice != null &&
     Number(match.offerPrice) <= Number(match.maxPrice);
-  const qtyMatchOk =
-    (match.offerQuantity ?? 0) > 0 &&
-    (match.requestQuantity ?? 0) > 0 &&
-    Math.min(match.offerQuantity ?? 0, match.requestQuantity ?? 0) /
-      Math.max(match.offerQuantity ?? 0, match.requestQuantity ?? 0) >
-      0.5;
+  const qtyMatchOk = quantityScore > 0.5;
 
   // Calculate score breakdown values
   const medicationScore = match.score * 0.95;
-  const quantityScore =
-    (match.offerQuantity ?? 0) > 0 && (match.requestQuantity ?? 0) > 0
-      ? Math.min(match.offerQuantity ?? 0, match.requestQuantity ?? 0) /
-        Math.max(match.offerQuantity ?? 0, match.requestQuantity ?? 0)
-      : 0;
-  const priceScore =
-    match.offerPrice != null && match.maxPrice != null
-      ? Math.min(1, Number(match.maxPrice) / Number(match.offerPrice))
-      : 0.5;
-  const recencyScore = 0.72;
+  const priceScore = calculatePriceScore(match.offerPrice, match.maxPrice);
+  const recencyScore = calculateRecencyScore(match.createdAt);
 
   return (
     <div className="flex flex-col h-full overflow-auto p-5 gap-4 animate-fade-up">
@@ -135,7 +131,6 @@ export function MatchDetailView({
               { label: "Availability", ok: availabilityOk },
               { label: "Price Fit", ok: priceFitOk },
               { label: "Qty Match", ok: qtyMatchOk },
-              { label: "Compliance", ok: true },
             ].map((item) => (
               <div
                 key={item.label}

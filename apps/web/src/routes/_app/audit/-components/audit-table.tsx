@@ -128,9 +128,18 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
       {
         accessorKey: "createdAt",
         header: ({ column }) => {
+          const sortDirection = column.getIsSorted();
           return (
             <button
               className="flex items-center gap-1 hover:text-foreground transition-colors"
+              aria-label={`Sort by timestamp ${sortDirection === "asc" ? "descending" : "ascending"}`}
+              aria-sort={
+                sortDirection === "asc"
+                  ? "ascending"
+                  : sortDirection === "desc"
+                    ? "descending"
+                    : "none"
+              }
               onClick={() =>
                 column.toggleSorting(column.getIsSorted() === "asc")
               }
