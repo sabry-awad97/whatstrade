@@ -3,6 +3,8 @@
  * React Query hooks for medication matches using oRPC
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { GetMatchStatsResponse } from "@workspace/schemas";
 
 import { orpc } from "@/utils/orpc";
 
@@ -23,7 +25,10 @@ import { orpc } from "@/utils/orpc";
  *
  * @returns TanStack Query result with match statistics
  */
-export function useGetMatchStats() {
+export function useGetMatchStats(): UseQueryResult<
+  GetMatchStatsResponse,
+  Error
+> {
   return useQuery(
     orpc.matches.getMatchStats.queryOptions({
       // No input needed for this endpoint
@@ -72,7 +77,9 @@ export function useListMatches(params?: {
  *
  * @example
  * ```tsx
- * const { data: match, isLoading, error } = useGetMatch("match-id-123");
+ * const { data: match, isLoading, error } = useGetMatch("match-id-123", {
+ *   enabled: true
+ * });
  *
  * if (isLoading) return <Loader />;
  * if (error) return <Error />;
@@ -81,12 +88,14 @@ export function useListMatches(params?: {
  * ```
  *
  * @param id - The match ID
+ * @param options - Query options including enabled flag
  * @returns TanStack Query result with match details
  */
-export function useGetMatch(id: string) {
+export function useGetMatch(id: string, options?: { enabled?: boolean }) {
   return useQuery(
     orpc.matches.getMatch.queryOptions({
       input: { id },
+      enabled: options?.enabled ?? true,
     }),
   );
 }
