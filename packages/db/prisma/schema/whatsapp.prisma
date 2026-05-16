@@ -17,62 +17,66 @@
 // COMPLIANCE: HIPAA (PHI), GDPR (Personal Data)
 
 enum MessageQueueStatus {
-    pending
-    processing
-    completed
-    failed
-    dead_letter
+  pending
+  processing
+  completed
+  failed
+  dead_letter
 
-    @@map("message_queue_status")
+  @@map("message_queue_status")
 }
 
 // WhatsApp message queue for processing incoming messages
 model WhatsAppMessageQueue {
-    id String @id @default(uuid())
+  id String @id @default(uuid())
 
-    // WhatsApp metadata
-    whatsappMessageId String   @unique @map("whatsapp_message_id")
-    whatsappGroupId   String   @map("whatsapp_group_id")
-    groupName         String   @map("group_name")
-    senderPhone       String   @map("sender_phone") // ⚠️ PII: Personal identifier
-    senderName        String?  @map("sender_name")
-    rawText           String   @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
-    receivedAt        DateTime @map("received_at") @db.Timestamptz()
+  // WhatsApp metadata
+  whatsappMessageId String   @unique @map("whatsapp_message_id")
+  whatsappGroupId   String   @map("whatsapp_group_id")
+  groupName         String   @map("group_name")
+  senderPhone       String   @map("sender_phone") // ⚠️ PII: Personal identifier
+  senderName        String?  @map("sender_name")
+  rawText           String   @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
+  receivedAt        DateTime @map("received_at") @db.Timestamptz()
 
-    // Processing state
-    status     MessageQueueStatus @default(pending)
-    retryCount Int                @default(0) @map("retry_count")
-    maxRetries Int                @default(3) @map("max_retries")
+  // Processing state
+  status     MessageQueueStatus @default(pending)
+  retryCount Int                @default(0) @map("retry_count")
+  maxRetries Int                @default(3) @map("max_retries")
 
-    // Error tracking
-    lastError   String?   @map("last_error")
-    lastErrorAt DateTime? @map("last_error_at") @db.Timestamptz()
+  // Error tracking
+  lastError   String?   @map("last_error")
+  lastErrorAt DateTime? @map("last_error_at") @db.Timestamptz()
 
-    // Timestamps
-    createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-    processedAt DateTime? @map("processed_at") @db.Timestamptz()
-    completedAt DateTime? @map("completed_at") @db.Timestamptz()
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  processedAt DateTime? @map("processed_at") @db.Timestamptz()
+  completedAt DateTime? @map("completed_at") @db.Timestamptz()
 
-    // Result tracking (optional - links to created entities)
-    extractedData    Json?   @map("extracted_data")
-    createdOfferId   String? @map("created_offer_id")
-    createdRequestId String? @map("created_request_id")
+  // Result tracking (optional - links to created entities)
+  extractedData    Json?   @map("extracted_data")
+  createdOfferId   String? @map("created_offer_id")
+  createdRequestId String? @map("created_request_id")
 
-    @@index([status, createdAt], name: "idx_queue_status_created")
-    @@index([whatsappGroupId], name: "idx_queue_group")
-    @@index([retryCount], name: "idx_queue_retry")
-    @@map("whatsapp_message_queue")
+  // Back-relations to Offer and Request models
+  offers   Offer[]
+  requests Request[]
+
+  @@index([status, createdAt], name: "idx_queue_status_created")
+  @@index([whatsappGroupId], name: "idx_queue_group")
+  @@index([retryCount], name: "idx_queue_retry")
+  @@map("whatsapp_message_queue")
 }
 
 // WhatsApp session storage for authentication persistence
 model WhatsAppSession {
-    id            String    @id @default(uuid())
-    phoneNumber   String    @unique @map("phone_number")
-    sessionData   Json      @map("session_data")
-    isConnected   Boolean   @default(false) @map("is_connected")
-    lastConnected DateTime? @map("last_connected") @db.Timestamptz()
-    createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
-    updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+  id            String    @id @default(uuid())
+  phoneNumber   String    @unique @map("phone_number")
+  sessionData   Json      @map("session_data")
+  isConnected   Boolean   @default(false) @map("is_connected")
+  lastConnected DateTime? @map("last_connected") @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
 
-    @@map("whatsapp_sessions")
+  @@map("whatsapp_sessions")
 }

@@ -64,19 +64,40 @@ export type PharmaceuticalExtraction = z.infer<
  * console.log(result.quantity); // 10
  * ```
  */
+/**
+ * Sanitize and validate user input text
+ */
+function sanitizeUserInput(text: string, maxLength = 1000): string {
+  // Trim whitespace
+  let sanitized = text.trim();
+
+  // Enforce max length
+  if (sanitized.length > maxLength) {
+    sanitized = sanitized.substring(0, maxLength);
+  }
+
+  // Remove control characters (except newlines and tabs)
+  sanitized = sanitized.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, "");
+
+  // Normalize newlines to prevent homograph attacks
+  sanitized = sanitized.replace(/[\r\n\u2028\u2029]/g, "\n");
+
+  return sanitized;
+}
+
 export async function extractPharmaceuticalMessage(
   rawText: string,
 ): Promise<PharmaceuticalExtraction> {
-  const result = await generateText({
-    model: getGoogleModel(),
-    output: Output.object({
-      schema: PharmaceuticalExtractionSchema,
-    }),
-    prompt: `You are an expert at parsing Arabic pharmaceutical WhatsApp messages from Egyptian pharmacies.
+  // Sanitize and validate user input
+  const sanitizedText = sanitizeUserInput(rawText, 1000);
 
-Analyze this message and extract structured information:
+  if (!sanitizedText) {
+    throw new Error("Input text is empty after sanitization");
+  }
 
-"${rawText}"
+  const systemPrompt = `You are an expert at parsing Arabic pharmaceutical WhatsApp messages from Egyptian pharmacies.
+
+Analyze the provided message and extract structured information.
 
 Context:
 - Messages are typically in Arabic or mixed Arabic/English
@@ -87,10 +108,13 @@ Context:
 - "عندي" or "متوفر" indicates an OFFER (someone has medication to sell)
 - "محتاج" or "عايز" indicates a REQUEST (someone needs to buy)
 
-Extract all available information with confidence scores.`,
-  });
+Extract all available information with confidence scores.`;
 
-  return result.output;
+  return extractStructuredData(
+    sanitizedText,
+    PharmaceuticalExtractionSchema,
+    systemPrompt,
+  );
 }
 
 /**
@@ -120,16 +144,32 @@ export async function extractStructuredData<T extends z.ZodType>(
   schema: T,
   systemPrompt: string,
 ): Promise<z.infer<T>> {
+  // Sanitize inputs by escaping delimiter markers to prevent prompt injection
+  const DELIMITER = "<<<END_SECTION>>>";
+  const sanitizedSystemPrompt = systemPrompt.replace(
+    new RegExp(DELIMITER, "g"),
+    "",
+  );
+  const sanitizedText = text.replace(new RegExp(DELIMITER, "g"), "");
+
   const result = await generateText({
     model: getGoogleModel(),
     output: Output.object({
       schema,
     }),
-    prompt: `${systemPrompt}
+    prompt: `${sanitizedSystemPrompt}
+${DELIMITER}
 
 Text to analyze:
-"${text}"`,
+${sanitizedText}
+${DELIMITER}`,
   });
 
-  return result.output as z.infer<T>;
+  // Validate output with Zod schema instead of unsafe type assertion
+  const parsed = schema.safeParse(result.output);
+  if (!parsed.success) {
+    throw new Error(`AI output validation failed: ${parsed.error.message}`);
+  }
+
+  return parsed.data;
 }

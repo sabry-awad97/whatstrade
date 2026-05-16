@@ -50,34 +50,34 @@
 // - Data minimization: Consider if senderPhone is necessary for review process
 
 enum ReviewStatus {
-    pending
-    approved
-    rejected
+  pending
+  approved
+  rejected
 
-    @@map("review_status")
+  @@map("review_status")
 }
 
 enum ReviewType {
-    offer
-    request
-    match
+  offer
+  request
+  match
 
-    @@map("review_type")
+  @@map("review_type")
 }
 
 model ReviewItem {
-    id             String       @id @default(uuid())
-    type           ReviewType
-    medicationName String       @map("medication_name") // ⚠️ PHI: Health information
-    dosage         String?
-    quantity       Int?
-    rawText        String       @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
-    groupName      String       @map("group_name")
-    senderPhone    String       @map("sender_phone") // ⚠️ CRITICAL PII: Never log, always mask
-    status         ReviewStatus @default(pending)
-    parsedData     String?      @map("parsed_data") // ⚠️ PII/PHI: May contain extracted sensitive data
-    createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
-    updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+  id             String       @id @default(uuid())
+  type           ReviewType
+  medicationName String       @map("medication_name") // ⚠️ PHI: Health information
+  dosage         String?
+  quantity       Int?
+  rawText        String       @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
+  groupName      String       @map("group_name")
+  senderPhone    String       @map("sender_phone") // ⚠️ CRITICAL PII: Never log, always mask
+  status         ReviewStatus @default(pending)
+  parsedData     String?      @map("parsed_data") // ⚠️ PII/PHI: May contain extracted sensitive data
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
 
-    @@map("review_items")
+  @@map("review_items")
 }

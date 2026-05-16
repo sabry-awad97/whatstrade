@@ -6,15 +6,15 @@
 // maintaining a complete audit trail for compliance and forensic purposes.
 
 model AuditLog {
-    id         String   @id @default(uuid())
-    action     String
-    entityType String   @map("entity_type")
-    entityId   String   @map("entity_id")
-    operatorId String?  @map("operator_id")
-    operator   User?    @relation(fields: [operatorId], references: [id], onDelete: SetNull)
-    details    Json?
-    createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  id         String   @id @default(uuid())
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  operatorId String?  @map("operator_id")
+  operator   User?    @relation(fields: [operatorId], references: [id], onDelete: SetNull)
+  details    Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
-    @@index([operatorId])
-    @@map("audit_log")
+  @@index([operatorId])
+  @@map("audit_log")
 }

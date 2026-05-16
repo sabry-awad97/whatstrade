@@ -1,13 +1,13 @@
 // Matching weights schema
 
 model MatchingWeights {
-    id         String   @id @default(uuid())
-    medication Decimal  @default(0.40) @db.Decimal(5, 4)
-    quantity   Decimal  @default(0.20) @db.Decimal(5, 4)
-    dosage     Decimal  @default(0.15) @db.Decimal(5, 4)
-    price      Decimal  @default(0.15) @db.Decimal(5, 4)
-    recency    Decimal  @default(0.10) @db.Decimal(5, 4)
-    updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  id         String   @id @default(uuid())
+  medication Decimal  @default(0.40) @db.Decimal(5, 4)
+  quantity   Decimal  @default(0.20) @db.Decimal(5, 4)
+  dosage     Decimal  @default(0.15) @db.Decimal(5, 4)
+  price      Decimal  @default(0.15) @db.Decimal(5, 4)
+  recency    Decimal  @default(0.10) @db.Decimal(5, 4)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-    @@map("matching_weights")
+  @@map("matching_weights")
 }
