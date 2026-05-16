@@ -47,9 +47,10 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
         header: "ID",
         cell: ({ getValue }) => {
           const id = getValue<string>();
+          const displayId = id.length > 11 ? `${id.slice(0, 8)}...` : id;
           return (
             <span className="text-muted-foreground font-mono text-[10px] truncate max-w-[80px] block">
-              {id.slice(0, 8)}...
+              {displayId}
             </span>
           );
         },
@@ -84,9 +85,10 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
         header: "Entity ID",
         cell: ({ getValue }) => {
           const id = getValue<string>();
+          const displayId = id.length > 11 ? `${id.slice(0, 8)}...` : id;
           return (
             <span className="font-mono text-muted-foreground text-[10px] truncate max-w-[100px] block">
-              {id.slice(0, 8)}...
+              {displayId}
             </span>
           );
         },
@@ -161,7 +163,7 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
           const date = getValue<Date>();
           return (
             <span className="text-muted-foreground whitespace-nowrap text-[11px]">
-              {new Date(date).toLocaleString()}
+              {date.toLocaleString()}
             </span>
           );
         },
