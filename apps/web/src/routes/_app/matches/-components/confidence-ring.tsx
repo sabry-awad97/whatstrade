@@ -16,6 +16,7 @@ export function ConfidenceRing({
   band,
   size = 160,
 }: ConfidenceRingProps) {
+  const clampedScore = Math.max(0, Math.min(1, score));
   const r = size * 0.375;
   const circ = 2 * Math.PI * r;
   const color = BAND_COLORS[band] ?? BAND_COLORS.none;
@@ -46,7 +47,7 @@ export function ConfidenceRing({
           fill="none"
           stroke={color}
           strokeWidth={size * 0.07}
-          strokeDasharray={`${score * circ} ${(1 - score) * circ}`}
+          strokeDasharray={`${clampedScore * circ} ${(1 - clampedScore) * circ}`}
           strokeLinecap="round"
           style={{
             transition: "stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)",
@@ -59,7 +60,7 @@ export function ConfidenceRing({
           className="text-3xl font-bold tabular-nums"
           style={{ color, textShadow: `0 0 20px ${color}40` }}
         >
-          {(score * 100).toFixed(0)}%
+          {(clampedScore * 100).toFixed(0)}%
         </span>
         <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
           Match Score

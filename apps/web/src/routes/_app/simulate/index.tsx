@@ -26,7 +26,7 @@ import {
 
 import { authClient } from "@/lib/auth-client";
 import { useSimulateMessage } from "@/hooks/simulate";
-import type { SimulateMessageResponse } from "@workspace/schemas";
+import type { SimulateMessageResponse, MessageType } from "@workspace/schemas";
 import {
   ConfidenceRing,
   MatchCard,
@@ -57,9 +57,7 @@ export const Route = createFileRoute("/_app/simulate/")({
 
 function RouteComponent() {
   const [rawText, setRawText] = useState("");
-  const [messageType, setMessageType] = useState<"auto" | "offer" | "request">(
-    "auto",
-  );
+  const [messageType, setMessageType] = useState<MessageType>("auto");
   const [insertIntoSystem, setInsertIntoSystem] = useState(false);
   const [result, setResult] = useState<SimulateMessageResponse | null>(null);
   const [selectedCandidateIdx, setSelectedCandidateIdx] = useState(0);
@@ -182,9 +180,7 @@ function RouteComponent() {
             </label>
             <Select
               value={messageType}
-              onValueChange={(value) =>
-                setMessageType(value as "auto" | "offer" | "request")
-              }
+              onValueChange={(value) => setMessageType(value as MessageType)}
             >
               <SelectTrigger
                 className="h-8 text-xs"

@@ -97,16 +97,24 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
       {
         accessorKey: "operator",
         header: "Operator",
-        cell: ({ row }) => (
-          <div className="flex flex-col">
-            <span className="font-medium text-[11px]">
-              {row.original.operator.name}
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {row.original.operator.email}
-            </span>
-          </div>
-        ),
+        cell: ({ row }) => {
+          const operator = row.original.operator;
+          if (!operator) {
+            return (
+              <span className="text-muted-foreground italic text-[11px]">
+                Deleted user
+              </span>
+            );
+          }
+          return (
+            <div className="flex flex-col">
+              <span className="font-medium text-[11px]">{operator.name}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {operator.email}
+              </span>
+            </div>
+          );
+        },
       },
       {
         accessorKey: "details",

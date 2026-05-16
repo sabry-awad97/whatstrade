@@ -62,6 +62,7 @@ function RouteComponent() {
   const handleStatusChange = (status: string) => {
     setStatusFilter(status);
     setView("list");
+    setSelectedMatch(null);
   };
 
   const handleViewChange = (newView: "list" | "detail") => {

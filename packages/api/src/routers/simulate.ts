@@ -10,7 +10,7 @@
 import { ORPCError } from "@orpc/server";
 import { o } from "../index";
 import { prisma } from "@workspace/db";
-import { SimulateMessageBody } from "@workspace/schemas";
+import { SimulateMessageBody, MessageType } from "@workspace/schemas";
 
 // Note: OpenAI integration needs to be set up
 // import { openai } from "@workspace/integrations-openai-ai-server";
@@ -121,7 +121,8 @@ export const simulateRouter = o.router({
 
     // Step 1: AI Parse (placeholder - OpenAI integration pending)
     const parseStart = Date.now();
-    const parsedType = messageType === "auto" ? "offer" : messageType;
+    const parsedType =
+      messageType === MessageType.AUTO ? MessageType.OFFER : messageType;
     const parsedFields: ParsedField[] = [];
     let aiReasoning = "AI parsing not yet configured — using fallback.";
 
@@ -249,7 +250,7 @@ export const simulateRouter = o.router({
     const scoreStart = Date.now();
     const candidates: SimulateCandidate[] = [];
 
-    if (parsedType === "offer") {
+    if (parsedType === MessageType.OFFER) {
       const requests = await prisma.request.findMany({
         where: { status: "active" },
         orderBy: { createdAt: "desc" },
@@ -370,7 +371,7 @@ export const simulateRouter = o.router({
             message: "Price must be a valid non-negative number",
           });
         }
-        if (parsedType === "offer") {
+        if (parsedType === MessageType.OFFER) {
           const inserted = await prisma.offer.create({
             data: {
               medicationName: medName,

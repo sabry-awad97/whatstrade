@@ -98,7 +98,7 @@ export function calculatePriceScore(
     max == null ||
     !isFinite(offer) ||
     !isFinite(max) ||
-    offer < 0 ||
+    offer <= 0 ||
     max <= 0
   ) {
     return 0.5;

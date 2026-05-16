@@ -81,13 +81,15 @@ function RouteComponent() {
   };
   // Handle reset to defaults
   const handleReset = () => {
-    // Only mark dirty if current values differ from defaults
-    const isDifferent = (Object.keys(DEFAULT_WEIGHTS) as WeightKey[]).some(
-      (key) => values[key] !== DEFAULT_WEIGHTS[key],
-    );
     setValues(DEFAULT_WEIGHTS);
-    if (isDifferent) {
-      setDirty(true);
+    // Only mark dirty if defaults differ from server weights
+    if (weights) {
+      const isDifferent = (Object.keys(DEFAULT_WEIGHTS) as WeightKey[]).some(
+        (key) => DEFAULT_WEIGHTS[key] !== Number(weights[key]),
+      );
+      setDirty(isDifferent);
+    } else {
+      setDirty(false);
     }
   };
 

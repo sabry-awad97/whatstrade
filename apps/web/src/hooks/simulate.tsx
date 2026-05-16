@@ -3,6 +3,7 @@
  * React Query hooks for message simulation using oRPC
  */
 import { useMutation } from "@tanstack/react-query";
+import type { MessageType } from "@workspace/schemas";
 
 import { orpc } from "@/utils/orpc";
 
@@ -37,7 +38,7 @@ export function useSimulateMessage() {
   return useMutation({
     mutationFn: async (params: {
       rawText: string;
-      messageType: "offer" | "request" | "auto";
+      messageType: MessageType;
       groupName?: string;
       senderPhone?: string;
       insertIntoSystem?: boolean;
