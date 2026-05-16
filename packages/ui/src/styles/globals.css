@@ -236,18 +236,18 @@
 .fluent-reveal:hover::after { opacity: 1; }
 
 /* Confidence band colors */
-.band-auto { color: hsl(142 72% 35%); }
-.band-suggest { color: hsl(38 92% 50%); }
-.band-review { color: hsl(21 85% 50%); }
-.band-none { color: hsl(0 72% 48%); }
-.bg-band-auto { background-color: hsl(142 72% 35% / 0.12); color: hsl(142 72% 28%); }
-.bg-band-suggest { background-color: hsl(38 92% 50% / 0.12); color: hsl(38 60% 35%); }
-.bg-band-review { background-color: hsl(21 85% 50% / 0.12); color: hsl(21 70% 38%); }
-.bg-band-none { background-color: hsl(0 72% 48% / 0.12); color: hsl(0 60% 38%); }
-.dark .bg-band-auto { background-color: hsl(142 60% 35% / 0.20); color: hsl(142 60% 60%); }
-.dark .bg-band-suggest { background-color: hsl(38 80% 50% / 0.20); color: hsl(38 80% 65%); }
-.dark .bg-band-review { background-color: hsl(21 70% 50% / 0.20); color: hsl(21 70% 65%); }
-.dark .bg-band-none { background-color: hsl(0 65% 48% / 0.20); color: hsl(0 65% 65%); }
+.band-auto { color: hsl(var(--band-auto)); }
+.band-suggest { color: hsl(var(--band-suggest)); }
+.band-review { color: hsl(var(--band-review)); }
+.band-none { color: hsl(var(--band-none)); }
+.bg-band-auto { background-color: hsl(var(--band-auto) / 0.12); color: hsl(142 72% 28%); }
+.bg-band-suggest { background-color: hsl(var(--band-suggest) / 0.12); color: hsl(38 60% 35%); }
+.bg-band-review { background-color: hsl(var(--band-review) / 0.12); color: hsl(21 70% 38%); }
+.bg-band-none { background-color: hsl(var(--band-none) / 0.12); color: hsl(0 60% 38%); }
+.dark .bg-band-auto { background-color: hsl(var(--band-auto) / 0.20); color: hsl(142 60% 60%); }
+.dark .bg-band-suggest { background-color: hsl(var(--band-suggest) / 0.20); color: hsl(38 80% 65%); }
+.dark .bg-band-review { background-color: hsl(var(--band-review) / 0.20); color: hsl(21 70% 65%); }
+.dark .bg-band-none { background-color: hsl(var(--band-none) / 0.20); color: hsl(0 65% 65%); }
 
 /* Windows-style animations */
 @keyframes slide-in-from-left {

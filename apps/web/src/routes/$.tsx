@@ -34,6 +34,15 @@ function NotFoundComponent() {
     return () => clearInterval(countdownInterval);
   }, [navigate]);
 
+  // Safe back navigation handler
+  const handleGoBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigate({ to: "/dashboard" });
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center h-full p-8">
       {/* 404 Number with gradient */}
@@ -52,10 +61,10 @@ function NotFoundComponent() {
           you back on track.
         </p>
         <p className="text-xs text-muted-foreground">
-          Redirecting to dashboard in
+          Redirecting to dashboard in{" "}
           <span className="font-mono font-semibold text-primary">
             {countdown}
-          </span>
+          </span>{" "}
           seconds...
         </p>
       </div>
@@ -83,7 +92,7 @@ function NotFoundComponent() {
           variant="ghost"
           size="lg"
           className="w-full sm:w-auto gap-2"
-          onClick={() => window.history.back()}
+          onClick={handleGoBack}
         >
           <ArrowLeft className="w-4 h-4" />
           Go Back

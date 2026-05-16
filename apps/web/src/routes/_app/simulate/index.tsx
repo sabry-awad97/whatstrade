@@ -32,14 +32,8 @@ import {
   MatchCard,
   PipelineStepRow,
   SAMPLE_MESSAGES,
+  type PipelineStep,
 } from "./-components";
-
-interface PipelineStep {
-  step: string;
-  status: string;
-  detail: string;
-  durationMs: number;
-}
 
 export const Route = createFileRoute("/_app/simulate/")({
   component: RouteComponent,

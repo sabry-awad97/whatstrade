@@ -172,7 +172,10 @@ export const simulateRouter = o.router({
         durationMs: Date.now() - parseStart,
       });
     } catch (error) {
-      console.error("AI parsing failed, falling back to regex:", error);
+      // Log sanitized error message only (no sensitive data)
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      console.error("AI parsing failed, falling back to regex:", errorMessage);
 
       // Fallback: Basic regex extraction if AI fails
       if (!parsedFields.length) {
@@ -462,11 +465,9 @@ export const simulateRouter = o.router({
           throw err;
         }
 
-        // Log the full error for debugging
-        console.error("DB insert failed:", err);
-
-        // Extract sanitized error message
+        // Log sanitized error message only (no sensitive data)
         const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error("DB insert failed:", errorMessage);
 
         pipelineSteps.push({
           step: "Insert Record",

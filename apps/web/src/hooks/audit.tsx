@@ -15,7 +15,7 @@ import { orpc } from "@/utils/orpc";
  *
  * return auditLog?.map(entry => (
  *   <div key={entry.id}>
- *     {entry.operator.name} - {entry.action} - {entry.entityType}
+ *     {entry.operator?.name ?? 'System'} - {entry.action} - {entry.entityType}
  *   </div>
  * ));
  * ```

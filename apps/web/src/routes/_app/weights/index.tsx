@@ -84,8 +84,12 @@ function RouteComponent() {
     setValues(DEFAULT_WEIGHTS);
     // Only mark dirty if defaults differ from server weights
     if (weights) {
+      const EPSILON = 1e-9; // Tolerance for floating-point comparison
       const isDifferent = (Object.keys(DEFAULT_WEIGHTS) as WeightKey[]).some(
-        (key) => DEFAULT_WEIGHTS[key] !== Number(weights[key]),
+        (key) => {
+          const parsedWeight = Number(weights[key]);
+          return Math.abs(DEFAULT_WEIGHTS[key] - parsedWeight) > EPSILON;
+        },
       );
       setDirty(isDifferent);
     } else {

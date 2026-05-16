@@ -52,10 +52,17 @@ export function MatchDetailView({
     Number(match.offerPrice) <= Number(match.maxPrice);
   const qtyMatchOk = quantityScore > 0.5;
 
-  // Calculate score breakdown values
-  const medicationScore = match.score * 0.95;
+  // Calculate score breakdown values (estimated - not from backend)
   const priceScore = calculatePriceScore(match.offerPrice, match.maxPrice);
   const recencyScore = calculateRecencyScore(match.createdAt);
+
+  // Estimate medication score as remainder to make total = 100%
+  // Weights: medication 40%, quantity 20%, dosage 15%, price 15%, recency 10%
+  // Since we don't have dosage info, we estimate medication + dosage together
+  const estimatedMedicationScore =
+    (match.score -
+      (quantityScore * 0.2 + priceScore * 0.15 + recencyScore * 0.1)) /
+    0.55;
 
   return (
     <div className="flex flex-col h-full overflow-auto p-5 gap-4 animate-fade-up">
@@ -195,11 +202,15 @@ export function MatchDetailView({
       {/* Score breakdown bars */}
       <div className="border border-border/60 rounded-xl p-4 bg-card">
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Score Breakdown
+          Estimated Score Breakdown
         </p>
         <div className="space-y-2.5">
           {[
-            { label: "Medication Name", value: medicationScore, weight: "40%" },
+            {
+              label: "Medication + Dosage",
+              value: estimatedMedicationScore,
+              weight: "55%",
+            },
             { label: "Quantity Match", value: quantityScore, weight: "20%" },
             { label: "Price Fit", value: priceScore, weight: "15%" },
             { label: "Recency", value: recencyScore, weight: "10%" },

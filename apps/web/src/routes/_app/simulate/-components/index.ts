@@ -6,5 +6,5 @@
 
 export { ConfidenceRing } from "./confidence-ring";
 export { MatchCard } from "./match-card";
-export { PipelineStepRow } from "./pipeline-step-row";
+export { PipelineStepRow, type PipelineStep } from "./pipeline-step-row";
 export { SAMPLE_MESSAGES, BAND_COLORS, BAND_BG } from "./constants";

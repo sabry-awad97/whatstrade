@@ -1,6 +1,6 @@
 import { CheckCircle, XCircle, Info, Loader2 } from "lucide-react";
 
-interface PipelineStep {
+export interface PipelineStep {
   step: string;
   status: string;
   detail: string;
