@@ -1,0 +1,78 @@
+// WhatsApp Integration Schema
+//
+// ⚠️ SECURITY NOTICE: This model contains sensitive PII/PHI data
+// The following fields contain sensitive information and require special handling:
+// - senderPhone: Personal identifier (PII)
+// - rawText: May contain unstructured PII/PHI
+//
+// REQUIRED SECURITY CONTROLS:
+// See packages/db/prisma/schema/requests.prisma for detailed security requirements.
+// The same controls apply to this model:
+// 1. Database encryption-at-rest (TDE/CMK)
+// 2. Role-based access control (RBAC) with field-level restrictions
+// 3. Audit logging for all sensitive field access
+// 4. Data retention and automated purge policies
+// 5. Query restrictions (no SELECT *, explicit field selection)
+//
+// COMPLIANCE: HIPAA (PHI), GDPR (Personal Data)
+
+enum MessageQueueStatus {
+    pending
+    processing
+    completed
+    failed
+    dead_letter
+
+    @@map("message_queue_status")
+}
+
+// WhatsApp message queue for processing incoming messages
+model WhatsAppMessageQueue {
+    id String @id @default(uuid())
+
+    // WhatsApp metadata
+    whatsappMessageId String   @unique @map("whatsapp_message_id")
+    whatsappGroupId   String   @map("whatsapp_group_id")
+    groupName         String   @map("group_name")
+    senderPhone       String   @map("sender_phone") // ⚠️ PII: Personal identifier
+    senderName        String?  @map("sender_name")
+    rawText           String   @map("raw_text") // ⚠️ PII/PHI: Unstructured sensitive data
+    receivedAt        DateTime @map("received_at") @db.Timestamptz()
+
+    // Processing state
+    status     MessageQueueStatus @default(pending)
+    retryCount Int                @default(0) @map("retry_count")
+    maxRetries Int                @default(3) @map("max_retries")
+
+    // Error tracking
+    lastError   String?   @map("last_error")
+    lastErrorAt DateTime? @map("last_error_at") @db.Timestamptz()
+
+    // Timestamps
+    createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+    processedAt DateTime? @map("processed_at") @db.Timestamptz()
+    completedAt DateTime? @map("completed_at") @db.Timestamptz()
+
+    // Result tracking (optional - links to created entities)
+    extractedData    Json?   @map("extracted_data")
+    createdOfferId   String? @map("created_offer_id")
+    createdRequestId String? @map("created_request_id")
+
+    @@index([status, createdAt], name: "idx_queue_status_created")
+    @@index([whatsappGroupId], name: "idx_queue_group")
+    @@index([retryCount], name: "idx_queue_retry")
+    @@map("whatsapp_message_queue")
+}
+
+// WhatsApp session storage for authentication persistence
+model WhatsAppSession {
+    id            String    @id @default(uuid())
+    phoneNumber   String    @unique @map("phone_number")
+    sessionData   Json      @map("session_data")
+    isConnected   Boolean   @default(false) @map("is_connected")
+    lastConnected DateTime? @map("last_connected") @db.Timestamptz()
+    createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+    updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+    @@map("whatsapp_sessions")
+}
