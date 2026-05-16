@@ -60,9 +60,13 @@ export function MatchDetailView({
   // Weights: medication 40%, quantity 20%, dosage 15%, price 15%, recency 10%
   // Since we don't have dosage info, we estimate medication + dosage together
   const estimatedMedicationScore =
-    (match.score -
-      (quantityScore * 0.2 + priceScore * 0.15 + recencyScore * 0.1)) /
-    0.55;
+    Number.isFinite(quantityScore) &&
+    Number.isFinite(priceScore) &&
+    Number.isFinite(recencyScore)
+      ? (match.score -
+          (quantityScore * 0.2 + priceScore * 0.15 + recencyScore * 0.1)) /
+        0.55
+      : 0;
 
   return (
     <div className="flex flex-col h-full overflow-auto p-5 gap-4 animate-fade-up">

@@ -54,11 +54,13 @@ model WhatsAppMessageQueue {
   completedAt DateTime? @map("completed_at") @db.Timestamptz()
 
   // Result tracking (optional - links to created entities)
-  extractedData    Json?   @map("extracted_data")
-  createdOfferId   String? @map("created_offer_id")
-  createdRequestId String? @map("created_request_id")
+  extractedData    Json?    @map("extracted_data")
+  createdOfferId   String?  @map("created_offer_id")
+  createdOffer     Offer?   @relation("MessageCreatedOffer", fields: [createdOfferId], references: [id], onDelete: SetNull)
+  createdRequestId String?  @map("created_request_id")
+  createdRequest   Request? @relation("MessageCreatedRequest", fields: [createdRequestId], references: [id], onDelete: SetNull)
 
-  // Back-relations to Offer and Request models
+  // Back-relations from Offer and Request models (for whatsappMessageId FK)
   offers   Offer[]
   requests Request[]
 

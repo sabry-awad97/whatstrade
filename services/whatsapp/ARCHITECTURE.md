@@ -253,29 +253,38 @@ if err := msg.Validate(); err != nil {
 
 ## Database Access
 
-### sqlc for Type-Safe Queries
+### GORM for Type-Safe Database Access
 
-Queries are defined in SQL and sqlc generates Go code:
-
-```sql
--- name: InsertMessage :one
-INSERT INTO whatsapp_message_queue (...)
-VALUES (...)
-RETURNING *;
-```
-
-Generated Go code:
+GORM provides type-safe database operations with struct tags:
 
 ```go
-func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (WhatsappMessageQueue, error)
+type WhatsAppMessageQueue struct {
+    ID                uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+    WhatsAppMessageID string     `gorm:"column:whatsapp_message_id;uniqueIndex;not null"`
+    // ... other fields
+}
+```
+
+Repository methods use GORM's chainable API:
+
+```go
+func (r *PostgresRepository) InsertMessage(ctx context.Context, msg *domain.Message) error {
+    queue := &WhatsAppMessageQueue{
+        WhatsAppMessageID: msg.WhatsAppID,
+        // ... map fields
+    }
+    return r.db.WithContext(ctx).Create(queue).Error
+}
 ```
 
 ### Connection Pooling
 
-pgx connection pool for efficient database access:
+GORM uses database/sql connection pooling for efficient database access:
 
 ```go
-pool, err := pgxpool.New(ctx, databaseURL)
+db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
+    Logger: gormLogger,
+})
 ```
 
 ## Graceful Shutdown
@@ -296,8 +305,8 @@ whatsappClient.Disconnect()
 
 ## Performance Considerations
 
-1. **Connection Pooling**: pgx pool reuses database connections
-2. **Prepared Statements**: sqlc uses prepared statements
+1. **Connection Pooling**: GORM uses database/sql connection pooling
+2. **Prepared Statements**: GORM automatically uses prepared statements
 3. **Batch Processing**: Process multiple messages in parallel
 4. **Indexes**: Database indexes on frequently queried fields
 5. **SKIP LOCKED**: Prevents race conditions in queue processing
@@ -306,7 +315,7 @@ whatsappClient.Disconnect()
 
 1. **PII/PHI Protection**: Sensitive fields documented in schema
 2. **Input Validation**: Domain entities validate themselves
-3. **SQL Injection**: sqlc uses parameterized queries
+3. **SQL Injection**: GORM uses parameterized queries
 4. **Localhost Only**: API binds to localhost in sidecar mode
 5. **Structured Logging**: Never log sensitive data
 

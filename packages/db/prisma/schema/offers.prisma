@@ -46,7 +46,8 @@ model Offer {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
-  matches Match[]
+  matches             Match[]
+  sourceMessageQueues WhatsAppMessageQueue[] @relation("MessageCreatedOffer")
 
   @@index([whatsappMessageId], name: "idx_offer_whatsapp_message")
   @@map("offers")

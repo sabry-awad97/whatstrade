@@ -52,13 +52,9 @@ tasks:
       - go tool cover -html={{.COVERAGE_FILE}}
 
   test:watch:
-    desc: Run tests in watch mode
+    desc: Run tests in watch mode (requires reflex - install with 'go install github.com/cespare/reflex@latest')
     cmds:
-      - |
-        while true; do
-          go test -v ./...
-          inotifywait -qre close_write .
-        done
+      - reflex -r '\.go$' -s -- go test -v ./...
 
   lint:
     desc: Run linter
@@ -91,6 +87,11 @@ tasks:
     desc: Build Docker image
     cmds:
       - docker build -t {{.DOCKER_IMAGE}} .
+
+  docker:check:
+    desc: Validate Dockerfile syntax without building
+    cmds:
+      - docker build --check .
 
   docker:run:
     desc: Run Docker container
@@ -169,12 +170,13 @@ tasks:
       - go vet ./...
 
   check:
-    desc: Run all checks (format, vet, lint, test)
+    desc: Run all checks (format, vet, lint, test, docker)
     cmds:
       - task: format
       - task: vet
       - task: lint
       - task: test
+      - task: docker:check
 
   migrate:up:
     desc: Run database migrations (via Bun server)

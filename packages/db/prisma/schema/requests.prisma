@@ -70,7 +70,8 @@ model Request {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
-  matches Match[]
+  matches             Match[]
+  sourceMessageQueues WhatsAppMessageQueue[] @relation("MessageCreatedRequest")
 
   @@index([whatsappMessageId], name: "idx_request_whatsapp_message")
   @@map("requests")

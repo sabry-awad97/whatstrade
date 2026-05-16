@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@workspace/ui/components/button";
 import { Badge } from "@workspace/ui/components/badge";
@@ -57,10 +57,19 @@ function RouteComponent() {
   const [selectedCandidateIdx, setSelectedCandidateIdx] = useState(0);
   const [streamingSteps, setStreamingSteps] = useState<PipelineStep[]>([]);
   const resultRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true);
 
   const simulateMutation = useSimulateMessage();
 
   const topCandidate = result?.candidates[selectedCandidateIdx] ?? null;
+
+  // Track mount status for cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const handleRun = async () => {
     if (!rawText.trim()) {
@@ -88,12 +97,16 @@ function RouteComponent() {
       },
       {
         onSuccess: async (data) => {
-          // Animate steps appearing
+          // Animate steps appearing with mount check
           setStreamingSteps([]);
           for (let i = 0; i < data.pipelineSteps.length; i++) {
+            if (!isMountedRef.current) return; // Exit early if unmounted
             await new Promise((r) => setTimeout(r, 180));
+            if (!isMountedRef.current) return; // Check again after timeout
             setStreamingSteps((prev) => [...prev, data.pipelineSteps[i]]);
           }
+
+          if (!isMountedRef.current) return; // Final check before setting result
 
           setResult(data);
           setSelectedCandidateIdx(0);

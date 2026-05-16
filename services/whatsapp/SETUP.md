@@ -4,7 +4,6 @@
 
 - **Go 1.22+**: [Download](https://go.dev/dl/)
 - **PostgreSQL 15+**: Running on port 5433
-- **sqlc**: `go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest`
 - **Air** (optional, for hot reload): `go install github.com/cosmtrek/air@latest`
 
 ## Step 1: Database Setup
@@ -38,15 +37,15 @@ psql -h localhost -p 5433 -U postgres -d whatstrade -f packages/db/prisma/migrat
 
 Or include it in your migration workflow.
 
-## Step 2: Generate sqlc Code
+## Step 2: Install Dependencies
 
 From `services/whatsapp`:
 
 ```bash
-make sqlc
+go mod download
 ```
 
-This generates type-safe Go code from SQL queries in `internal/adapter/repository/`.
+GORM models are already defined in `internal/adapter/repository/models.go` - no code generation needed.
 
 ## Step 3: Environment Configuration
 
@@ -193,13 +192,6 @@ tail -f /path/to/logs
 
 ## Troubleshooting
 
-### Issue: sqlc not found
-
-```bash
-go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-export PATH=$PATH:$(go env GOPATH)/bin
-```
-
 ### Issue: Database connection failed
 
 Check PostgreSQL is running:
@@ -278,21 +270,21 @@ WHERE priority > 5
 ORDER BY priority DESC;
 ```
 
-### 4. Regenerate sqlc Code
+### 4. Update Dependencies
 
 ```bash
 cd services/whatsapp
-make sqlc
+go mod tidy
 ```
 
 ### 5. Update Use Cases
 
-Use the new generated functions in your use cases.
+Use the updated GORM models in your use cases.
 
 ### 6. Test
 
 ```bash
-make test
+task test
 ```
 
 ## Docker Compose Setup
@@ -398,6 +390,6 @@ curl http://localhost:8080/health
 ## Resources
 
 - [whatsmeow Documentation](https://pkg.go.dev/go.mau.fi/whatsmeow)
-- [sqlc Documentation](https://docs.sqlc.dev/)
+- [GORM Documentation](https://gorm.io/docs/)
 - [Gin Documentation](https://gin-gonic.com/docs/)
-- [pgx Documentation](https://pkg.go.dev/github.com/jackc/pgx/v5)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)

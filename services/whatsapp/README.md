@@ -21,7 +21,7 @@ AI Extraction + Matching
 - **Runtime:** Go 1.22+
 - **Web Framework:** Gin
 - **Database:** PostgreSQL (shared with Bun server)
-- **SQL Generator:** sqlc (type-safe queries)
+- **ORM:** GORM (type-safe database access)
 - **WhatsApp:** whatsmeow
 - **Logging:** zap (structured logging)
 - **Config:** envconfig
@@ -54,8 +54,7 @@ services/whatsapp/
 │   │   │   └── qr.go
 │   │   ├── repository/
 │   │   │   ├── postgres.go
-│   │   │   ├── queries.sql
-│   │   │   └── sqlc.yaml
+│   │   │   └── models.go
 │   │   └── api/
 │   │       ├── server.go
 │   │       ├── handlers.go
@@ -77,7 +76,6 @@ services/whatsapp/
 
 - Go 1.22+
 - PostgreSQL 15+
-- sqlc CLI: `go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest`
 
 ### Environment Variables
 
@@ -99,17 +97,14 @@ WHATSAPP_LOG_LEVEL=INFO
 # Install dependencies
 go mod download
 
-# Generate sqlc code
-make sqlc
-
 # Run migrations (done by Bun server)
 # This service only reads from migrated database
 
 # Run service
-make run
+task run
 
 # Or with hot reload
-make dev
+task dev
 ```
 
 ## Development

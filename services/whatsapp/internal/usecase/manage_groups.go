@@ -45,8 +45,13 @@ func (uc *ManageGroups) SyncGroups(ctx context.Context) error {
 
 	uc.logger.Info("syncing groups", zap.Int("count", len(whatsappGroups)))
 
-	// Track errors but continue syncing other groups
-	var syncErrors []error
+	// Track errors with context about which groups failed
+	type groupError struct {
+		jid   string
+		name  string
+		error error
+	}
+	var syncErrors []groupError
 
 	// Upsert each group
 	for _, group := range whatsappGroups {
@@ -56,7 +61,11 @@ func (uc *ManageGroups) SyncGroups(ctx context.Context) error {
 				zap.String("jid", group.JID),
 				zap.String("name", group.Name),
 			)
-			syncErrors = append(syncErrors, err)
+			syncErrors = append(syncErrors, groupError{
+				jid:   group.JID,
+				name:  group.Name,
+				error: err,
+			})
 			// Continue with other groups
 			continue
 		}
@@ -67,12 +76,30 @@ func (uc *ManageGroups) SyncGroups(ctx context.Context) error {
 		)
 	}
 
-	uc.logger.Info("groups synced successfully", zap.Int("count", len(whatsappGroups)))
-
-	// Return error if any groups failed to sync
+	// Log and return based on sync results
 	if len(syncErrors) > 0 {
-		return fmt.Errorf("failed to sync %d groups", len(syncErrors))
+		// Build detailed error message with failed group info
+		failedJIDs := make([]string, len(syncErrors))
+		failedNames := make([]string, len(syncErrors))
+		for i, ge := range syncErrors {
+			failedJIDs[i] = ge.jid
+			failedNames[i] = ge.name
+		}
+
+		uc.logger.Error("groups sync completed with errors",
+			zap.Int("total", len(whatsappGroups)),
+			zap.Int("failed", len(syncErrors)),
+			zap.Int("succeeded", len(whatsappGroups)-len(syncErrors)),
+			zap.Strings("failed_jids", failedJIDs),
+			zap.Strings("failed_names", failedNames),
+		)
+
+		return fmt.Errorf("failed to sync %d of %d groups: %v", len(syncErrors), len(whatsappGroups), failedJIDs)
 	}
+
+	uc.logger.Info("groups synced successfully",
+		zap.Int("count", len(whatsappGroups)),
+	)
 
 	return nil
 }

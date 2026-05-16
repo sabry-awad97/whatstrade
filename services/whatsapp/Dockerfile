@@ -19,13 +19,20 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o whatsapp-service 
 # Runtime stage
 FROM alpine:latest
 
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates
+# Install ca-certificates for HTTPS and wget for healthcheck
+RUN apk --no-cache add ca-certificates wget
 
-WORKDIR /root/
+# Create non-root user
+RUN addgroup -g 1001 -S appuser && \
+  adduser -u 1001 -S appuser -G appuser
 
-# Copy binary from builder
-COPY --from=builder /app/whatsapp-service .
+WORKDIR /app
+
+# Copy binary from builder and set ownership
+COPY --from=builder --chown=appuser:appuser /app/whatsapp-service .
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8080

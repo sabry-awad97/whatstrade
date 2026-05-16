@@ -117,6 +117,60 @@ export const simulateRouter = o.router({
     const pipelineSteps: PipelineStep[] = [];
     const t0 = Date.now();
 
+    // Step 0: Input validation and sanitization
+    const validationStart = Date.now();
+    const MAX_TEXT_LENGTH = 1000;
+
+    // Validate text length
+    if (!rawText || rawText.trim().length === 0) {
+      pipelineSteps.push({
+        step: "Input Validation",
+        status: "error",
+        detail: "Empty input text",
+        durationMs: Date.now() - validationStart,
+      });
+
+      return {
+        parsedType: MessageType.OFFER,
+        parsedFields: [],
+        candidates: [],
+        pipelineSteps,
+        insertedId: null,
+        aiReasoning: "Input validation failed: empty text",
+      };
+    }
+
+    if (rawText.length > MAX_TEXT_LENGTH) {
+      pipelineSteps.push({
+        step: "Input Validation",
+        status: "error",
+        detail: `Input too long (${rawText.length} chars, max ${MAX_TEXT_LENGTH})`,
+        durationMs: Date.now() - validationStart,
+      });
+
+      return {
+        parsedType: MessageType.OFFER,
+        parsedFields: [],
+        candidates: [],
+        pipelineSteps,
+        insertedId: null,
+        aiReasoning: `Input validation failed: text exceeds ${MAX_TEXT_LENGTH} characters`,
+      };
+    }
+
+    // Sanitize: remove control characters except newlines and tabs
+    const sanitizedText = rawText.replace(
+      /[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g,
+      "",
+    );
+
+    pipelineSteps.push({
+      step: "Input Validation",
+      status: "success",
+      detail: `Validated ${sanitizedText.length} characters`,
+      durationMs: Date.now() - validationStart,
+    });
+
     // Step 1: AI Parse using @workspace/ai
     const parseStart = Date.now();
     let parsedType =
@@ -125,8 +179,8 @@ export const simulateRouter = o.router({
     let aiReasoning = "AI parsing not yet configured — using fallback.";
 
     try {
-      // Use centralized AI extraction service
-      const extracted = await extractPharmaceuticalMessage(rawText);
+      // Use centralized AI extraction service with sanitized text
+      const extracted = await extractPharmaceuticalMessage(sanitizedText);
 
       parsedFields = [
         {
