@@ -28,7 +28,7 @@ func main() {
 	defer log.Sync()
 
 	log.Info("starting WhatsApp service",
-		zap.String("port", string(rune(cfg.Port))),
+		zap.Int("port", cfg.Port),
 		zap.String("log_level", cfg.LogLevel),
 	)
 
@@ -37,7 +37,13 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to initialize repository", zap.Error(err))
 	}
-
+	defer func() {
+		if repo, ok := messageRepo.(interface{ Close() error }); ok {
+			if err := repo.Close(); err != nil {
+				log.Error("failed to close repository", zap.Error(err))
+			}
+		}
+	}()
 	log.Info("database connection established")
 
 	// Initialize use cases
@@ -78,18 +84,25 @@ func main() {
 	server := api.NewServer(whatsappClient, manageGroups, log)
 
 	// Start HTTP server in goroutine
+	errCh := make(chan error, 1)
 	go func() {
 		if err := server.Start(cfg.Port); err != nil {
-			log.Fatal("failed to start HTTP server", zap.Error(err))
+			errCh <- err
 		}
 	}()
 
 	log.Info("service started successfully")
 
-	// Wait for interrupt signal
+	// Wait for interrupt signal or startup error
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+
+	select {
+	case err := <-errCh:
+		log.Fatal("failed to start HTTP server", zap.Error(err))
+	case <-quit:
+		// Continue to graceful shutdown
+	}
 
 	log.Info("shutting down service...")
 

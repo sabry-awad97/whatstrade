@@ -3,6 +3,8 @@ package whatsapp
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -21,6 +23,7 @@ type Client struct {
 	logger       *zap.Logger
 	qrChan       <-chan whatsmeow.QRChannelItem
 	isFirstLogin bool // Track if this is the first login
+	mu           sync.Mutex
 }
 
 // NewClient creates a new WhatsApp client
@@ -34,7 +37,9 @@ func NewClient(
 	waLogger := waLog.Stdout("WhatsApp", logLevel, true)
 
 	// Connect to database for session storage
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	container, err := sqlstore.New(ctx, "postgres", databaseURL, waLogger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create sqlstore: %w", err)
@@ -101,18 +106,24 @@ func (c *Client) Connect(ctx context.Context) error {
 
 // Disconnect closes the WhatsApp connection
 func (c *Client) Disconnect() error {
-	c.client.Disconnect()
+	if c.client != nil {
+		c.client.Disconnect()
+	}
 	c.logger.Info("WhatsApp client disconnected")
 	return nil
 }
-
-// IsConnected checks if client is connected
 func (c *Client) IsConnected() bool {
+	if c.client == nil {
+		return false
+	}
 	return c.client.IsConnected()
 }
 
 // IsLoggedIn checks if client is authenticated
 func (c *Client) IsLoggedIn() bool {
+	if c.client == nil {
+		return false
+	}
 	return c.client.IsLoggedIn()
 }
 

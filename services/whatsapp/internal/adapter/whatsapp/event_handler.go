@@ -104,6 +104,11 @@ func (c *Client) handleDisconnected(ctx context.Context) {
 func (c *Client) handleQR(evt *events.QR) {
 	c.logger.Info("QR code received - scan with WhatsApp mobile app")
 
+	if len(evt.Codes) == 0 {
+		c.logger.Warn("received QR event with no codes")
+		return
+	}
+
 	// Print QR code to terminal
 	qrterminal.GenerateHalfBlock(evt.Codes[0], qrterminal.L, os.Stdout)
 
@@ -119,18 +124,24 @@ func (c *Client) handlePairSuccess(evt *events.PairSuccess) {
 	)
 
 	// After first successful pairing, enable automatic history sync for future reconnections
+	c.mu.Lock()
 	if c.isFirstLogin {
 		c.isFirstLogin = false
 		c.client.AutomaticMessageRerequestFromPhone = true
 		c.logger.Info("first login completed - automatic history sync enabled for future reconnections")
 	}
+	c.mu.Unlock()
 }
 
 // handleHistorySync processes history sync events
 func (c *Client) handleHistorySync(evt *events.HistorySync) {
 	syncType := evt.Data.GetSyncType().String()
 
-	if c.isFirstLogin {
+	c.mu.Lock()
+	isFirstLogin := c.isFirstLogin
+	c.mu.Unlock()
+
+	if isFirstLogin {
 		// Ignore history sync on first login - user will trigger manually
 		c.logger.Info("ignoring history sync on first login (will sync manually)",
 			zap.String("sync_type", syncType),
