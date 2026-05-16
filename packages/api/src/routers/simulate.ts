@@ -3,7 +3,7 @@
  * Migrated from Express to oRPC
  *
  * ⚠️ SPECIAL ATTENTION REQUIRED:
- * - This router uses Google AI SDK integration (@ai-sdk/google)
+ * - This router uses @workspace/ai for AI-powered extraction
  * - Complex business logic with AI parsing, scoring algorithms, and database insertions
  * - Requires GOOGLE_GENERATIVE_AI_API_KEY environment variable
  */
@@ -11,15 +11,7 @@ import { ORPCError } from "@orpc/server";
 import { o } from "../index";
 import { prisma } from "@workspace/db";
 import { SimulateMessageBody, MessageType } from "@workspace/schemas";
-import { generateText, Output } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { z } from "zod";
-import { env } from "@workspace/env/server";
-
-// Initialize Google AI with API key
-const google = createGoogleGenerativeAI({
-  apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-});
+import { extractPharmaceuticalMessage } from "@workspace/ai";
 
 export interface ParsedField {
   field: string;
@@ -125,7 +117,7 @@ export const simulateRouter = o.router({
     const pipelineSteps: PipelineStep[] = [];
     const t0 = Date.now();
 
-    // Step 1: AI Parse using Google Gemini
+    // Step 1: AI Parse using @workspace/ai
     const parseStart = Date.now();
     let parsedType =
       messageType === MessageType.AUTO ? MessageType.OFFER : messageType;
@@ -133,72 +125,8 @@ export const simulateRouter = o.router({
     let aiReasoning = "AI parsing not yet configured — using fallback.";
 
     try {
-      // Define the schema for AI extraction
-      const extractionSchema = z.object({
-        messageType: z
-          .enum(["offer", "request"])
-          .describe(
-            "Whether this is an offer (someone selling/providing) or request (someone buying/needing)",
-          ),
-        medicationName: z
-          .string()
-          .describe("The name of the medication or drug mentioned"),
-        dosage: z
-          .string()
-          .nullable()
-          .describe(
-            "The dosage amount (e.g., '10mg', '500mg', '2.5mg'). Null if not mentioned.",
-          ),
-        quantity: z
-          .number()
-          .int()
-          .positive()
-          .describe("The quantity or number of units/boxes mentioned"),
-        price: z
-          .number()
-          .nullable()
-          .describe(
-            "The price in Egyptian Pounds (EGP). Null if not mentioned.",
-          ),
-        confidence: z
-          .object({
-            medicationName: z.number().min(0).max(1),
-            dosage: z.number().min(0).max(1),
-            quantity: z.number().min(0).max(1),
-            price: z.number().min(0).max(1),
-          })
-          .describe("Confidence scores for each extracted field (0-1)"),
-        reasoning: z
-          .string()
-          .describe("Brief explanation of how the message was interpreted"),
-      });
-
-      // Call Google Gemini for structured extraction using new API
-      const result = await generateText({
-        model: google(env.GOOGLE_GENERATIVE_AI_MODEL),
-        output: Output.object({
-          schema: extractionSchema,
-        }),
-        prompt: `You are an expert at parsing Arabic pharmaceutical WhatsApp messages from Egyptian pharmacies.
-
-Analyze this message and extract structured information:
-
-"${rawText}"
-
-Context:
-- Messages are typically in Arabic or mixed Arabic/English
-- Common medications: Panadol, Augmentin, Brufen, Voltaren, etc.
-- Dosages are usually in mg (milligrams)
-- Quantities refer to boxes or units
-- Prices are in Egyptian Pounds (EGP)
-- "عندي" or "متوفر" indicates an OFFER (someone has medication to sell)
-- "محتاج" or "عايز" indicates a REQUEST (someone needs to buy)
-
-Extract all available information with confidence scores.`,
-      });
-
-      // Convert AI response to parsedFields format
-      const extracted = result.output;
+      // Use centralized AI extraction service
+      const extracted = await extractPharmaceuticalMessage(rawText);
 
       parsedFields = [
         {
@@ -240,7 +168,7 @@ Extract all available information with confidence scores.`,
       pipelineSteps.push({
         step: "AI Parsing",
         status: "success",
-        detail: `Google Gemini extracted ${parsedFields.length} fields`,
+        detail: `AI extracted ${parsedFields.length} fields`,
         durationMs: Date.now() - parseStart,
       });
     } catch (error) {

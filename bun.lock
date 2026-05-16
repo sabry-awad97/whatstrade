@@ -85,6 +85,20 @@
         "vite": "^8.0.8",
       },
     },
+    "packages/ai": {
+      "name": "@workspace/ai",
+      "version": "0.1.0",
+      "dependencies": {
+        "@ai-sdk/google": "^3.0.74",
+        "@workspace/env": "workspace:*",
+        "ai": "^6.0.183",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@workspace/config": "workspace:*",
+        "typescript": "catalog:",
+      },
+    },
     "packages/api": {
       "name": "@workspace/api",
       "dependencies": {
@@ -93,6 +107,7 @@
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
+        "@workspace/ai": "workspace:*",
         "@workspace/auth": "workspace:*",
         "@workspace/db": "workspace:*",
         "@workspace/env": "workspace:*",
@@ -791,6 +806,8 @@
     "@vitest/spy": ["@vitest/spy@4.1.6", "", {}, "sha512-JFKxMx6udhwKh/Ldo270e17QX710vgunMkuPAvXjHSvC6oqLWAHhVhjg/I71q0u0CBSErIODV1Kjv0FQNSWjdg=="],
 
     "@vitest/utils": ["@vitest/utils@4.1.6", "", { "dependencies": { "@vitest/pretty-format": "4.1.6", "convert-source-map": "^2.0.0", "tinyrainbow": "^3.1.0" } }, "sha512-FxIY+U81R3LGKCxaHHFRQ5+g6/iRgGLmeHWdp2Amj4ljQRrEIWHmZyDfDYBRZlpyqA7qKxtS9DD1dhk8RnRIVQ=="],
+
+    "@workspace/ai": ["@workspace/ai@workspace:packages/ai"],
 
     "@workspace/api": ["@workspace/api@workspace:packages/api"],
 

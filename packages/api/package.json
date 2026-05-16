@@ -16,6 +16,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@workspace/ai": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/env": "workspace:*",
