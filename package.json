@@ -39,7 +39,9 @@
     "db:down": "turbo -F @workspace/db db:down"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.74",
     "@workspace/env": "workspace:*",
+    "ai": "^6.0.183",
     "dotenv": "catalog:",
     "recharts": "^3.8.1",
     "zod": "catalog:"

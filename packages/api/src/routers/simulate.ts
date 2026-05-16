@@ -3,17 +3,23 @@
  * Migrated from Express to oRPC
  *
  * ⚠️ SPECIAL ATTENTION REQUIRED:
- * - This router uses OpenAI integration (@workspace/integrations-openai-ai-server)
+ * - This router uses Google AI SDK integration (@ai-sdk/google)
  * - Complex business logic with AI parsing, scoring algorithms, and database insertions
- * - Ensure OpenAI package is available before using this router
+ * - Requires GOOGLE_GENERATIVE_AI_API_KEY environment variable
  */
 import { ORPCError } from "@orpc/server";
 import { o } from "../index";
 import { prisma } from "@workspace/db";
 import { SimulateMessageBody, MessageType } from "@workspace/schemas";
+import { generateText, Output } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { z } from "zod";
+import { env } from "@workspace/env/server";
 
-// Note: OpenAI integration needs to be set up
-// import { openai } from "@workspace/integrations-openai-ai-server";
+// Initialize Google AI with API key
+const google = createGoogleGenerativeAI({
+  apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
+});
 
 export interface ParsedField {
   field: string;
@@ -119,97 +125,212 @@ export const simulateRouter = o.router({
     const pipelineSteps: PipelineStep[] = [];
     const t0 = Date.now();
 
-    // Step 1: AI Parse (placeholder - OpenAI integration pending)
+    // Step 1: AI Parse using Google Gemini
     const parseStart = Date.now();
-    const parsedType =
+    let parsedType =
       messageType === MessageType.AUTO ? MessageType.OFFER : messageType;
-    const parsedFields: ParsedField[] = [];
+    let parsedFields: ParsedField[] = [];
     let aiReasoning = "AI parsing not yet configured — using fallback.";
 
-    // Fallback: Basic regex extraction until OpenAI is integrated
-    if (!parsedFields.length) {
-      // Extract medication name (look for common patterns)
-      const medMatch = rawText.match(
-        /(?:medication|med|drug|medicine)[\s:]+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/i,
-      );
-      if (medMatch?.[1]) {
-        parsedFields.push({
-          field: "medicationName",
-          value: medMatch[1].trim(),
-          confidence: 0.6,
-        });
-      } else {
-        // Try to find capitalized words that might be medication names
-        const words = rawText.split(/\s+/);
-        const capitalizedWord = words.find(
-          (w) => w.length > 3 && /^[A-Z][a-z]+/.test(w),
-        );
-        if (capitalizedWord) {
-          parsedFields.push({
-            field: "medicationName",
-            value: capitalizedWord,
-            confidence: 0.4,
-          });
-        }
-      }
+    try {
+      // Define the schema for AI extraction
+      const extractionSchema = z.object({
+        messageType: z
+          .enum(["offer", "request"])
+          .describe(
+            "Whether this is an offer (someone selling/providing) or request (someone buying/needing)",
+          ),
+        medicationName: z
+          .string()
+          .describe("The name of the medication or drug mentioned"),
+        dosage: z
+          .string()
+          .nullable()
+          .describe(
+            "The dosage amount (e.g., '10mg', '500mg', '2.5mg'). Null if not mentioned.",
+          ),
+        quantity: z
+          .number()
+          .int()
+          .positive()
+          .describe("The quantity or number of units/boxes mentioned"),
+        price: z
+          .number()
+          .nullable()
+          .describe(
+            "The price in Egyptian Pounds (EGP). Null if not mentioned.",
+          ),
+        confidence: z
+          .object({
+            medicationName: z.number().min(0).max(1),
+            dosage: z.number().min(0).max(1),
+            quantity: z.number().min(0).max(1),
+            price: z.number().min(0).max(1),
+          })
+          .describe("Confidence scores for each extracted field (0-1)"),
+        reasoning: z
+          .string()
+          .describe("Brief explanation of how the message was interpreted"),
+      });
 
-      // Extract dosage (e.g., "10mg", "500 mg", "2.5mg")
-      const dosageMatch = rawText.match(/(\d+(?:\.\d+)?\s*mg)/i);
-      if (dosageMatch?.[1]) {
+      // Call Google Gemini for structured extraction using new API
+      const result = await generateText({
+        model: google("gemini-1.5-flash"),
+        output: Output.object({
+          schema: extractionSchema,
+        }),
+        prompt: `You are an expert at parsing Arabic pharmaceutical WhatsApp messages from Egyptian pharmacies.
+
+Analyze this message and extract structured information:
+
+"${rawText}"
+
+Context:
+- Messages are typically in Arabic or mixed Arabic/English
+- Common medications: Panadol, Augmentin, Brufen, Voltaren, etc.
+- Dosages are usually in mg (milligrams)
+- Quantities refer to boxes or units
+- Prices are in Egyptian Pounds (EGP)
+- "عندي" or "متوفر" indicates an OFFER (someone has medication to sell)
+- "محتاج" or "عايز" indicates a REQUEST (someone needs to buy)
+
+Extract all available information with confidence scores.`,
+      });
+
+      // Convert AI response to parsedFields format
+      const extracted = result.output;
+
+      parsedFields = [
+        {
+          field: "medicationName",
+          value: extracted.medicationName,
+          confidence: extracted.confidence.medicationName,
+        },
+      ];
+
+      if (extracted.dosage) {
         parsedFields.push({
           field: "dosage",
-          value: dosageMatch[1].toLowerCase().replace(/\s+/g, ""),
-          confidence: 0.8,
+          value: extracted.dosage,
+          confidence: extracted.confidence.dosage,
         });
       }
 
-      // Extract quantity (look for numbers with quantity keywords)
-      const qtyMatch = rawText.match(
-        /(?:quantity|qty|amount|count|boxes?|units?)[\s:]+(\d+)/i,
-      );
-      if (qtyMatch?.[1]) {
-        parsedFields.push({
-          field: "quantity",
-          value: qtyMatch[1],
-          confidence: 0.7,
-        });
-      } else {
-        // Look for standalone numbers that might be quantities
-        const numMatch = rawText.match(/\b(\d{1,4})\b/);
-        if (
-          numMatch?.[1] &&
-          parseInt(numMatch[1]) > 0 &&
-          parseInt(numMatch[1]) <= 10000
-        ) {
-          parsedFields.push({
-            field: "quantity",
-            value: numMatch[1],
-            confidence: 0.5,
-          });
-        }
-      }
+      parsedFields.push({
+        field: "quantity",
+        value: extracted.quantity.toString(),
+        confidence: extracted.confidence.quantity,
+      });
 
-      // Extract price (e.g., "$50", "50 EGP", "price: 100")
-      const priceMatch = rawText.match(
-        /(?:price|cost|egp|\$)[\s:]*(\d+(?:\.\d{1,2})?)/i,
-      );
-      if (priceMatch?.[1]) {
+      if (extracted.price !== null) {
         parsedFields.push({
           field: "price",
-          value: priceMatch[1],
-          confidence: 0.7,
+          value: extracted.price.toString(),
+          confidence: extracted.confidence.price,
         });
       }
 
-      aiReasoning = `Fallback regex extraction: found ${parsedFields.length} fields`;
-    }
+      aiReasoning = extracted.reasoning;
 
-    pipelineSteps.push({
-      step: "AI Parsing",
-      status: parsedFields.length > 0 ? "fallback" : "skipped",
-      detail: `${parsedFields.length} fields extracted via regex fallback`,
-      durationMs: Date.now() - parseStart,
-    });
+      // Override messageType if AUTO detection was requested
+      if (messageType === MessageType.AUTO) {
+        parsedType = extracted.messageType;
+      }
+
+      pipelineSteps.push({
+        step: "AI Parsing",
+        status: "success",
+        detail: `Google Gemini extracted ${parsedFields.length} fields`,
+        durationMs: Date.now() - parseStart,
+      });
+    } catch (error) {
+      console.error("AI parsing failed, falling back to regex:", error);
+
+      // Fallback: Basic regex extraction if AI fails
+      if (!parsedFields.length) {
+        // Extract medication name (look for common patterns)
+        const medMatch = rawText.match(
+          /(?:medication|med|drug|medicine)[\s:]+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/i,
+        );
+        if (medMatch?.[1]) {
+          parsedFields.push({
+            field: "medicationName",
+            value: medMatch[1].trim(),
+            confidence: 0.6,
+          });
+        } else {
+          // Try to find capitalized words that might be medication names
+          const words = rawText.split(/\s+/);
+          const capitalizedWord = words.find(
+            (w) => w.length > 3 && /^[A-Z][a-z]+/.test(w),
+          );
+          if (capitalizedWord) {
+            parsedFields.push({
+              field: "medicationName",
+              value: capitalizedWord,
+              confidence: 0.4,
+            });
+          }
+        }
+
+        // Extract dosage (e.g., "10mg", "500 mg", "2.5mg")
+        const dosageMatch = rawText.match(/(\d+(?:\.\d+)?\s*mg)/i);
+        if (dosageMatch?.[1]) {
+          parsedFields.push({
+            field: "dosage",
+            value: dosageMatch[1].toLowerCase().replace(/\s+/g, ""),
+            confidence: 0.8,
+          });
+        }
+
+        // Extract quantity (look for numbers with quantity keywords)
+        const qtyMatch = rawText.match(
+          /(?:quantity|qty|amount|count|boxes?|units?)[\s:]+(\d+)/i,
+        );
+        if (qtyMatch?.[1]) {
+          parsedFields.push({
+            field: "quantity",
+            value: qtyMatch[1],
+            confidence: 0.7,
+          });
+        } else {
+          // Look for standalone numbers that might be quantities
+          const numMatch = rawText.match(/\b(\d{1,4})\b/);
+          if (
+            numMatch?.[1] &&
+            parseInt(numMatch[1]) > 0 &&
+            parseInt(numMatch[1]) <= 10000
+          ) {
+            parsedFields.push({
+              field: "quantity",
+              value: numMatch[1],
+              confidence: 0.5,
+            });
+          }
+        }
+
+        // Extract price (e.g., "$50", "50 EGP", "price: 100")
+        const priceMatch = rawText.match(
+          /(?:price|cost|egp|\$)[\s:]*(\d+(?:\.\d{1,2})?)/i,
+        );
+        if (priceMatch?.[1]) {
+          parsedFields.push({
+            field: "price",
+            value: priceMatch[1],
+            confidence: 0.7,
+          });
+        }
+
+        aiReasoning = `Fallback regex extraction: found ${parsedFields.length} fields (AI parsing failed)`;
+      }
+
+      pipelineSteps.push({
+        step: "AI Parsing",
+        status: "fallback",
+        detail: `${parsedFields.length} fields extracted via regex fallback`,
+        durationMs: Date.now() - parseStart,
+      });
+    }
 
     // Extract values
     const medName =
