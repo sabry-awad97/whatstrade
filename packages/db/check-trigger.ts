@@ -71,9 +71,15 @@ async function checkTrigger() {
     }
   } catch (error) {
     console.error("Error:", error);
+    throw error; // Re-throw to propagate to caller
   } finally {
     await prisma.$disconnect();
   }
 }
 
-checkTrigger();
+checkTrigger()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  });

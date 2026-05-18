@@ -1,6 +1,7 @@
 import { GitMerge, ChevronRight } from "lucide-react";
 import type { ListMatchesResponseItem } from "@workspace/schemas";
 import { BAND_COLORS } from "./constants";
+import { ConfidenceRing } from "./confidence-ring";
 
 interface MatchCardProps {
   match: ListMatchesResponseItem;
@@ -58,37 +59,12 @@ export function MatchCard({ match, onSelect }: MatchCardProps) {
             </span>
           </div>
         </div>
-        <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
-          <svg
-            className="absolute inset-0 -rotate-90"
-            width="56"
-            height="56"
-            viewBox="0 0 56 56"
-          >
-            <circle
-              cx="28"
-              cy="28"
-              r="22"
-              fill="none"
-              stroke="hsl(var(--border))"
-              strokeWidth="5"
-            />
-            <circle
-              cx="28"
-              cy="28"
-              r="22"
-              fill="none"
-              stroke={color}
-              strokeWidth="5"
-              strokeDasharray={`${match.score * 138.2} ${(1 - match.score) * 138.2}`}
-              strokeLinecap="round"
-              style={{ filter: `drop-shadow(0 0 4px ${color}60)` }}
-            />
-          </svg>
-          <span className="text-xs font-bold tabular-nums" style={{ color }}>
-            {(match.score * 100).toFixed(0)}%
-          </span>
-        </div>
+        <ConfidenceRing
+          score={match.score}
+          band={match.confidenceBand}
+          size={56}
+          compact
+        />
       </div>
       <div className="mt-3 flex items-center gap-1.5 justify-end">
         <span className="text-[10px] text-muted-foreground">

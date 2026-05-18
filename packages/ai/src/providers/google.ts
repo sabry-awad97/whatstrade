@@ -16,7 +16,7 @@ export const google = createGoogleGenerativeAI({
 
 /**
  * Get the configured Google AI model
- * Uses model from environment or defaults to gemini-1.5-flash
+ * Uses model from environment (required via env validation)
  */
 export function getGoogleModel(): LanguageModel {
   return google(env.GOOGLE_GENERATIVE_AI_MODEL);

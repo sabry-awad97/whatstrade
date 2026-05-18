@@ -72,13 +72,14 @@ const result = await extractStructuredData(
 ### Using Different Models
 
 ```typescript
-import { google, GoogleModels } from "@workspace/ai/google";
+import { google } from "@workspace/ai/google";
 
 // Use a specific model directly
-const model = google(GoogleModels.PRO); // gemini-1.5-pro
+const model = google("gemini-1.5-pro");
 
-// Or configure via environment variable
-// GOOGLE_GENERATIVE_AI_MODEL=gemini-1.5-pro
+// Or use the default configured model
+import { getGoogleModel } from "@workspace/ai";
+const defaultModel = getGoogleModel();
 ```
 
 ## Environment Variables
@@ -86,10 +87,7 @@ const model = google(GoogleModels.PRO); // gemini-1.5-pro
 Required:
 
 - `GOOGLE_GENERATIVE_AI_API_KEY` - Your Google AI API key
-
-Optional:
-
-- `GOOGLE_GENERATIVE_AI_MODEL` - Model to use (default: `gemini-1.5-flash`)
+- `GOOGLE_GENERATIVE_AI_MODEL` - Model to use (e.g., `gemini-1.5-flash`, `gemini-1.5-pro`)
 
 ## Available Models
 

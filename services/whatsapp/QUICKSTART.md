@@ -37,17 +37,13 @@ From project root:
 # Generate Prisma client
 bun run db:generate
 
-# Apply migrations
+# Apply migrations (includes NOTIFY trigger)
 bun run db:push
 ```
 
-### 3. Apply NOTIFY Trigger
+**Note:** The NOTIFY trigger for WhatsApp message processing is automatically applied as part of the main migration (`20260518032257_init/migration.sql`). No separate trigger file is needed.
 
-```bash
-psql -h localhost -p 5433 -U postgres -d whatstrade -f packages/db/prisma/migrations/add_whatsapp_notify_trigger.sql
-```
-
-### 4. Run the Service
+### 3. Run the Service
 
 ```bash
 cd services/whatsapp

@@ -179,14 +179,23 @@ task lint:fix
 
 ### Install Tools
 
+Development tools required for formatting, linting, and hot reload:
+
 ```bash
-# Install all development tools
+# Install all development tools (air, golangci-lint, goimports)
 task tools
 
 # Install specific tools
-task tools:air
-task tools:lint
+task tools:air        # Hot reload
+task tools:lint       # Linter
+task tools:goimports  # Code formatting with import management
 ```
+
+**Tools installed:**
+
+- `air` - Hot reload for development
+- `golangci-lint` - Comprehensive Go linter
+- `goimports` - Formats code and manages imports (used by `task format`)
 
 ## API Endpoints
 

@@ -35,12 +35,9 @@ function NotFoundComponent() {
   }, [navigate]);
 
   // Safe back navigation handler
+  // Always use history.back() - the browser handles the case when there's no history
   const handleGoBack = () => {
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      navigate({ to: "/dashboard" });
-    }
+    window.history.back();
   };
 
   return (

@@ -4,17 +4,21 @@ interface ConfidenceRingProps {
   score: number;
   band: string;
   size?: number;
+  compact?: boolean;
 }
 
 /**
  * Confidence Ring Component
  *
  * Displays a circular progress ring with match score and confidence band.
+ *
+ * @param compact - When true, hides the "Match Score" label and band badge for compact layouts
  */
 export function ConfidenceRing({
   score,
   band,
   size = 160,
+  compact = false,
 }: ConfidenceRingProps) {
   const clampedScore = Math.max(0, Math.min(1, score));
   const r = size * 0.375;
@@ -57,20 +61,30 @@ export function ConfidenceRing({
       </svg>
       <div className="flex flex-col items-center z-10">
         <span
-          className="text-3xl font-bold tabular-nums"
-          style={{ color, textShadow: `0 0 20px ${color}40` }}
+          className={
+            compact
+              ? "text-xs font-bold tabular-nums"
+              : "text-3xl font-bold tabular-nums"
+          }
+          style={
+            compact ? { color } : { color, textShadow: `0 0 20px ${color}40` }
+          }
         >
           {(clampedScore * 100).toFixed(0)}%
         </span>
-        <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
-          Match Score
-        </span>
-        <span
-          className={`text-[9px] px-2 py-0.5 rounded mt-1.5 font-bold uppercase`}
-          style={{ backgroundColor: `${color}20`, color }}
-        >
-          {band}
-        </span>
+        {!compact && (
+          <>
+            <span className="text-[10px] text-muted-foreground font-medium mt-0.5">
+              Match Score
+            </span>
+            <span
+              className={`text-[9px] px-2 py-0.5 rounded mt-1.5 font-bold uppercase`}
+              style={{ backgroundColor: `${color}20`, color }}
+            >
+              {band}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

@@ -111,13 +111,58 @@ type MessageRepository interface {
     GetPendingMessages(ctx context.Context, limit int) ([]*domain.Message, error)
 }
 
-// Adapter (implementation)
+// Adapter (implementation using GORM)
 type PostgresRepository struct {
-    pool *pgxpool.Pool
+    db     *gorm.DB
+    logger *zap.Logger
 }
 
 func (r *PostgresRepository) SaveMessage(ctx context.Context, msg *domain.Message) error {
-    // Implementation using pgx
+    // Map domain entity to GORM model
+    dbMsg := &WhatsAppMessageQueue{
+        WhatsAppMessageID: msg.WhatsAppID,
+        WhatsAppGroupID:   msg.GroupID,
+        GroupName:         msg.GroupName,
+        SenderPhone:       msg.SenderPhone,
+        RawText:           msg.RawText,
+        ReceivedAt:        msg.ReceivedAt,
+        Status:            string(msg.Status),
+    }
+
+    // Use GORM to insert
+    return r.db.WithContext(ctx).Create(dbMsg).Error
+}
+
+func (r *PostgresRepository) GetPendingMessages(ctx context.Context, limit int) ([]*domain.Message, error) {
+    var dbMessages []WhatsAppMessageQueue
+
+    // Use GORM query with WHERE and LIMIT
+    err := r.db.WithContext(ctx).
+        Where("status = ?", "pending").
+        Order("created_at ASC").
+        Limit(limit).
+        Find(&dbMessages).Error
+
+    if err != nil {
+        return nil, err
+    }
+
+    // Map GORM models back to domain entities
+    messages := make([]*domain.Message, len(dbMessages))
+    for i, dbMsg := range dbMessages {
+        messages[i] = &domain.Message{
+            ID:          dbMsg.ID,
+            WhatsAppID:  dbMsg.WhatsAppMessageID,
+            GroupID:     dbMsg.WhatsAppGroupID,
+            GroupName:   dbMsg.GroupName,
+            SenderPhone: dbMsg.SenderPhone,
+            RawText:     dbMsg.RawText,
+            ReceivedAt:  dbMsg.ReceivedAt,
+            Status:      domain.MessageStatus(dbMsg.Status),
+        }
+    }
+
+    return messages, nil
 }
 ```
 

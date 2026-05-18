@@ -87,31 +87,48 @@ startWhatsAppListener(true).catch((error) => {
   // The listener will attempt to reconnect automatically
 });
 
+// Shutdown guard to prevent multiple shutdown attempts
+let isShuttingDown = false;
+
 // Graceful shutdown handler
 process.on("SIGINT", async () => {
+  // Early return if shutdown already in progress
+  if (isShuttingDown) {
+    console.log("Shutdown already in progress, ignoring SIGINT");
+    return;
+  }
+
   console.log("\nReceived SIGINT, shutting down gracefully...");
+  isShuttingDown = true;
 
   try {
     await stopWhatsAppListener();
     console.log("WhatsApp listener stopped");
+    process.exit(0);
   } catch (error) {
     console.error("Error stopping WhatsApp listener:", error);
+    process.exit(1);
   }
-
-  process.exit(0);
 });
 
 process.on("SIGTERM", async () => {
+  // Early return if shutdown already in progress
+  if (isShuttingDown) {
+    console.log("Shutdown already in progress, ignoring SIGTERM");
+    return;
+  }
+
   console.log("\nReceived SIGTERM, shutting down gracefully...");
+  isShuttingDown = true;
 
   try {
     await stopWhatsAppListener();
     console.log("WhatsApp listener stopped");
+    process.exit(0);
   } catch (error) {
     console.error("Error stopping WhatsApp listener:", error);
+    process.exit(1);
   }
-
-  process.exit(0);
 });
 
 export default app;

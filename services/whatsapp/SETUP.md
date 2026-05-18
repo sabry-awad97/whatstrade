@@ -76,13 +76,13 @@ go mod download
 ### Development (with hot reload)
 
 ```bash
-make dev
+task dev
 ```
 
 ### Production
 
 ```bash
-make build
+task build
 ./bin/whatsapp-service
 ```
 
@@ -90,10 +90,10 @@ make build
 
 ```bash
 # Build image
-make docker-build
+task docker:build
 
 # Run container
-make docker-run
+task docker:run
 ```
 
 ## Step 6: WhatsApp Authentication
@@ -186,7 +186,7 @@ LIMIT 10;
 # Service logs
 tail -f /path/to/logs
 
-# Or if running with make dev
+# Or if running with task dev
 # Logs appear in terminal
 ```
 
@@ -234,9 +234,9 @@ SELECT tgname FROM pg_trigger WHERE tgname = 'trigger_notify_new_whatsapp_messag
 
 ```bash
 # Clean and rebuild
-make clean
+task clean
 go mod tidy
-make build
+task build
 ```
 
 ## Development Workflow

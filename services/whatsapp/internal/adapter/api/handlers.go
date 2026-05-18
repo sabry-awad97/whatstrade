@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -9,9 +10,17 @@ import (
 
 // handleHealth returns the health status of the service
 func (s *Server) handleHealth(c *gin.Context) {
+	// Get request_time from context and type-assert to time.Time
+	requestTime := time.Now() // Default fallback
+	if val, exists := c.Get("request_time"); exists {
+		if ts, ok := val.(time.Time); ok {
+			requestTime = ts
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":    "ok",
-		"timestamp": c.GetTime("request_time"),
+		"timestamp": requestTime,
 	})
 }
 

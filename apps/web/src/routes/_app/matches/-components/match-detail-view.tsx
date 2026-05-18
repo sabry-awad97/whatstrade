@@ -11,11 +11,6 @@ import {
 import type { ListMatchesResponseItem } from "@workspace/schemas";
 import { ConfidenceRing } from "./confidence-ring";
 import { BAND_COLORS, STATUS_COLORS } from "./constants";
-import {
-  calculateRecencyScore,
-  calculatePriceScore,
-  calculateQuantityScore,
-} from "@/utils/scoring";
 
 interface MatchDetailViewProps {
   match: ListMatchesResponseItem;
@@ -42,31 +37,23 @@ export function MatchDetailView({
 
   // Calculate AI reasoning checks
   const availabilityOk = match.score >= 0.6;
-  const quantityScore = calculateQuantityScore(
-    match.offerQuantity,
-    match.requestQuantity,
-  );
+  const quantityScore = match.scoreBreakdown?.quantity ?? 0;
   const priceFitOk =
     match.offerPrice != null &&
     match.maxPrice != null &&
     Number(match.offerPrice) <= Number(match.maxPrice);
   const qtyMatchOk = quantityScore > 0.5;
 
-  // Calculate score breakdown values (estimated - not from backend)
-  const priceScore = calculatePriceScore(match.offerPrice, match.maxPrice);
-  const recencyScore = calculateRecencyScore(match.createdAt);
+  // Use backend score breakdown if available, otherwise calculate estimates
+  const medicationScore = match.scoreBreakdown?.medication ?? 0;
+  const dosageScore = match.scoreBreakdown?.dosage ?? 0;
+  const priceScore = match.scoreBreakdown?.price ?? 0;
+  const recencyScore = match.scoreBreakdown?.recency ?? 0;
 
-  // Estimate medication score as remainder to make total = 100%
-  // Weights: medication 40%, quantity 20%, dosage 15%, price 15%, recency 10%
-  // Since we don't have dosage info, we estimate medication + dosage together
-  const estimatedMedicationScore =
-    Number.isFinite(quantityScore) &&
-    Number.isFinite(priceScore) &&
-    Number.isFinite(recencyScore)
-      ? (match.score -
-          (quantityScore * 0.2 + priceScore * 0.15 + recencyScore * 0.1)) /
-        0.55
-      : 0;
+  // Combined medication + dosage score (55% weight total)
+  const medicationDosageScore = match.scoreBreakdown
+    ? (medicationScore * 0.4 + dosageScore * 0.15) / 0.55
+    : 0;
 
   return (
     <div className="flex flex-col h-full overflow-auto p-5 gap-4 animate-fade-up">
@@ -206,13 +193,13 @@ export function MatchDetailView({
       {/* Score breakdown bars */}
       <div className="border border-border/60 rounded-xl p-4 bg-card">
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Estimated Score Breakdown
+          Score Breakdown
         </p>
         <div className="space-y-2.5">
           {[
             {
               label: "Medication + Dosage",
-              value: estimatedMedicationScore,
+              value: medicationDosageScore,
               weight: "55%",
             },
             { label: "Quantity Match", value: quantityScore, weight: "20%" },

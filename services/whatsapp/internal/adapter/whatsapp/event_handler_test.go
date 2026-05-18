@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"go.mau.fi/whatsmeow"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
@@ -128,24 +129,39 @@ func TestHandlePairSuccess_FirstLogin(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	eventHandler := &testutil.MockWhatsAppEventHandler{}
 
+	// Create a mock whatsmeow client
+	mockWhatsmeowClient := &whatsmeow.Client{}
+
 	client := &Client{
 		logger:       logger,
 		eventHandler: eventHandler,
 		isFirstLogin: true,
-		client:       nil,
+		client:       mockWhatsmeowClient,
 	}
 
-	// Test the logic: on first login, isFirstLogin should become false
-	initialFirstLogin := client.isFirstLogin
-
-	// Simulate what handlePairSuccess does on first login
-	if initialFirstLogin {
-		client.isFirstLogin = false
+	// Create a PairSuccess event
+	evt := &events.PairSuccess{
+		ID: types.JID{
+			User:   "1234567890",
+			Server: types.DefaultUserServer,
+		},
 	}
 
-	// After first login, isFirstLogin should be false
-	if client.isFirstLogin {
+	// Call the real handler
+	client.handlePairSuccess(evt)
+
+	// Verify isFirstLogin is now false
+	client.mu.Lock()
+	isFirstLogin := client.isFirstLogin
+	autoRerequest := client.client.AutomaticMessageRerequestFromPhone
+	client.mu.Unlock()
+
+	if isFirstLogin {
 		t.Error("isFirstLogin should be false after first pair success")
+	}
+
+	if !autoRerequest {
+		t.Error("AutomaticMessageRerequestFromPhone should be true after first pair success")
 	}
 }
 
@@ -154,19 +170,40 @@ func TestHandlePairSuccess_ExistingSession(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	eventHandler := &testutil.MockWhatsAppEventHandler{}
 
+	// Create a mock whatsmeow client
+	mockWhatsmeowClient := &whatsmeow.Client{}
+
 	client := &Client{
 		logger:       logger,
 		eventHandler: eventHandler,
-		isFirstLogin: false,
-		client:       nil,
+		isFirstLogin: false, // Already logged in before
+		client:       mockWhatsmeowClient,
 	}
 
-	// Test the logic: if not first login, nothing changes
-	initialFirstLogin := client.isFirstLogin
+	// Create a PairSuccess event
+	evt := &events.PairSuccess{
+		ID: types.JID{
+			User:   "1234567890",
+			Server: types.DefaultUserServer,
+		},
+	}
 
-	// isFirstLogin should remain unchanged
-	if client.isFirstLogin != initialFirstLogin {
-		t.Error("isFirstLogin should remain unchanged for existing session")
+	// Call the real handler
+	client.handlePairSuccess(evt)
+
+	// Verify isFirstLogin remains false
+	client.mu.Lock()
+	isFirstLogin := client.isFirstLogin
+	autoRerequest := client.client.AutomaticMessageRerequestFromPhone
+	client.mu.Unlock()
+
+	if isFirstLogin {
+		t.Error("isFirstLogin should remain false for existing session")
+	}
+
+	// AutomaticMessageRerequestFromPhone should not be set again (remains at default false)
+	if autoRerequest {
+		t.Error("AutomaticMessageRerequestFromPhone should remain false for existing session")
 	}
 }
 

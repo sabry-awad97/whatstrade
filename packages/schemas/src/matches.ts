@@ -25,6 +25,21 @@ export const ListMatchesQueryParams = PaginationQueryParams.extend({
 
 // Response schemas
 /**
+ * @summary Score breakdown for a match
+ */
+export const ScoreBreakdown = z.object({
+  medication: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Medication name similarity score"),
+  quantity: z.number().min(0).max(1).describe("Quantity match score"),
+  dosage: z.number().min(0).max(1).describe("Dosage similarity score"),
+  price: z.number().min(0).max(1).describe("Price fit score"),
+  recency: z.number().min(0).max(1).describe("Recency score"),
+});
+
+/**
  * @summary Single match item in list response
  */
 export const ListMatchesResponseItem = z.object({
@@ -41,6 +56,9 @@ export const ListMatchesResponseItem = z.object({
   offerPrice: z.string().nullish(),
   maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
+  scoreBreakdown: ScoreBreakdown.optional().describe(
+    "Detailed score breakdown by component",
+  ),
 });
 
 /**
@@ -88,6 +106,9 @@ export const GetMatchResponse = z.object({
   offerPrice: z.string().nullish(),
   maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
+  scoreBreakdown: ScoreBreakdown.optional().describe(
+    "Detailed score breakdown by component",
+  ),
 });
 
 /**
@@ -121,6 +142,7 @@ export const RejectMatchBody = OptionalNoteBody;
 export const RejectMatchResponse = GetMatchResponse;
 
 // Type exports
+export type ScoreBreakdown = z.infer<typeof ScoreBreakdown>;
 export type ListMatchesQueryParams = z.infer<typeof ListMatchesQueryParams>;
 export type ListMatchesResponseItem = z.infer<typeof ListMatchesResponseItem>;
 export type ListMatchesResponse = z.infer<typeof ListMatchesResponse>;

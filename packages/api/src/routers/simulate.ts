@@ -10,21 +10,26 @@
 import { ORPCError } from "@orpc/server";
 import { o } from "../index";
 import { prisma } from "@workspace/db";
-import { SimulateMessageBody, MessageType } from "@workspace/schemas";
+import {
+  SimulateMessageBody,
+  MessageType,
+  MATCH_SCORE_THRESHOLD,
+} from "@workspace/schemas";
 import { extractPharmaceuticalMessage } from "@workspace/ai";
+import {
+  calculateMedicationSimilarity,
+  calculateDosageSimilarity,
+  calculateQuantityScore,
+  calculatePriceScore,
+  calculateRecencyScore,
+  calculateConfidenceBand,
+  type ScoreBreakdown,
+} from "../utils/scoring";
 
 export interface ParsedField {
   field: string;
   value: string;
   confidence: number;
-}
-
-export interface ScoreBreakdown {
-  medication: number;
-  quantity: number;
-  dosage: number;
-  price: number;
-  recency: number;
 }
 
 export interface SimulateCandidate {
@@ -51,57 +56,6 @@ export interface PipelineStep {
 function maskPhone(phone: string): string {
   if (phone.length <= 4) return "****";
   return "*".repeat(phone.length - 4) + phone.slice(-4);
-}
-
-// Scoring utility functions
-function similarity(a: string, b: string): number {
-  const na = a.toLowerCase().trim();
-  const nb = b.toLowerCase().trim();
-
-  // Guard against empty strings
-  if (na.length === 0 || nb.length === 0) return 0;
-
-  if (na === nb) return 1;
-  if (na.includes(nb) || nb.includes(na)) return 0.85;
-  let common = 0;
-  for (let i = 0; i < Math.min(na.length, nb.length); i++) {
-    if (na[i] === nb[i]) common++;
-    else break;
-  }
-  return Math.min(common / Math.max(na.length, nb.length), 0.8);
-}
-
-function dosageSim(a: string | null, b: string | null): number {
-  if (!a || !b) return 0.5;
-  return a.toLowerCase().trim() === b.toLowerCase().trim() ? 1 : 0;
-}
-
-function quantityScore(offered: number, requested: number): number {
-  const max = Math.max(offered, requested);
-  if (max === 0) return 1; // Both quantities are zero, treat as perfect match
-  return Math.min(offered, requested) / max;
-}
-
-function priceScore(
-  offerPrice: number | null,
-  maxPrice: number | null,
-): number {
-  if (offerPrice == null || maxPrice == null) return 0.5;
-  if (offerPrice <= maxPrice) return 1;
-  const overshoot = (offerPrice - maxPrice) / maxPrice;
-  return Math.max(0, 1 - overshoot * 2);
-}
-
-function recencyScore(createdAt: Date): number {
-  const ageHours = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
-  return Math.max(0, 1 - ageHours / 72);
-}
-
-function bandFromScore(score: number): string {
-  if (score >= 0.85) return "auto";
-  if (score >= 0.65) return "suggest";
-  if (score >= 0.45) return "review";
-  return "none";
 }
 
 export const simulateRouter = o.router({
@@ -365,14 +319,17 @@ export const simulateRouter = o.router({
 
       for (const req of requests) {
         const breakdown: ScoreBreakdown = {
-          medication: similarity(medName, req.medicationName),
-          quantity: quantityScore(quantity, req.quantity),
-          dosage: dosageSim(dosage, req.dosage),
-          price: priceScore(
+          medication: calculateMedicationSimilarity(
+            medName,
+            req.medicationName,
+          ),
+          quantity: calculateQuantityScore(quantity, req.quantity),
+          dosage: calculateDosageSimilarity(dosage, req.dosage),
+          price: calculatePriceScore(
             price,
             req.maxPrice !== null ? Number(req.maxPrice) : null,
           ),
-          recency: recencyScore(req.createdAt),
+          recency: calculateRecencyScore(req.createdAt),
         };
         const score =
           breakdown.medication * weights.medication +
@@ -381,7 +338,7 @@ export const simulateRouter = o.router({
           breakdown.price * weights.price +
           breakdown.recency * weights.recency;
 
-        if (score > 0.2) {
+        if (score > MATCH_SCORE_THRESHOLD) {
           candidates.push({
             id: req.id,
             medicationName: req.medicationName,
@@ -391,7 +348,7 @@ export const simulateRouter = o.router({
             groupName: req.groupName,
             senderPhone: maskPhone(req.senderPhone),
             score: Math.round(score * 1000) / 1000,
-            confidenceBand: bandFromScore(score),
+            confidenceBand: calculateConfidenceBand(score),
             scoreBreakdown: breakdown,
           });
         }
@@ -405,14 +362,17 @@ export const simulateRouter = o.router({
 
       for (const offer of offers) {
         const breakdown: ScoreBreakdown = {
-          medication: similarity(medName, offer.medicationName),
-          quantity: quantityScore(quantity, offer.quantity),
-          dosage: dosageSim(dosage, offer.dosage),
-          price: priceScore(
+          medication: calculateMedicationSimilarity(
+            medName,
+            offer.medicationName,
+          ),
+          quantity: calculateQuantityScore(quantity, offer.quantity),
+          dosage: calculateDosageSimilarity(dosage, offer.dosage),
+          price: calculatePriceScore(
             offer.price !== null ? Number(offer.price) : null,
             price,
           ),
-          recency: recencyScore(offer.createdAt),
+          recency: calculateRecencyScore(offer.createdAt),
         };
         const score =
           breakdown.medication * weights.medication +
@@ -421,7 +381,7 @@ export const simulateRouter = o.router({
           breakdown.price * weights.price +
           breakdown.recency * weights.recency;
 
-        if (score > 0.2) {
+        if (score > MATCH_SCORE_THRESHOLD) {
           candidates.push({
             id: offer.id,
             medicationName: offer.medicationName,
@@ -431,7 +391,7 @@ export const simulateRouter = o.router({
             groupName: offer.groupName,
             senderPhone: maskPhone(offer.senderPhone),
             score: Math.round(score * 1000) / 1000,
-            confidenceBand: bandFromScore(score),
+            confidenceBand: calculateConfidenceBand(score),
             scoreBreakdown: breakdown,
           });
         }

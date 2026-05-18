@@ -27,6 +27,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { useSimulateMessage } from "@/hooks/simulate";
 import type { SimulateMessageResponse, MessageType } from "@workspace/schemas";
+import { MATCH_SCORE_THRESHOLD } from "@workspace/schemas";
 import {
   ConfidenceRing,
   MatchCard,
@@ -465,9 +466,12 @@ function RouteComponent() {
                     No matching candidates found
                   </p>
                   <p className="text-xs mt-1 opacity-70">
-                    Score threshold is 20% — no existing
-                    {result.parsedType === "offer" ? "requests" : "offers"} are
-                    close enough
+                    Score threshold is {MATCH_SCORE_THRESHOLD * 100}% — no
+                    existing
+                    {result.parsedType === "offer"
+                      ? " requests"
+                      : " offers"}{" "}
+                    are close enough
                   </p>
                 </div>
               )}
