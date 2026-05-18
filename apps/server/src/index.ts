@@ -10,6 +10,10 @@ import { env } from "@workspace/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import {
+  startWhatsAppListener,
+  stopWhatsAppListener,
+} from "./services/whatsapp-listener";
 
 const app = new Hono();
 
@@ -73,6 +77,41 @@ app.use("/*", async (c, next) => {
 
 app.get("/", (c) => {
   return c.text("OK");
+});
+
+// Start WhatsApp listener service
+// This runs concurrently with the HTTP server
+startWhatsAppListener(true).catch((error) => {
+  console.error("Failed to start WhatsApp listener:", error);
+  // Don't crash the HTTP server if WhatsApp listener fails
+  // The listener will attempt to reconnect automatically
+});
+
+// Graceful shutdown handler
+process.on("SIGINT", async () => {
+  console.log("\nReceived SIGINT, shutting down gracefully...");
+
+  try {
+    await stopWhatsAppListener();
+    console.log("WhatsApp listener stopped");
+  } catch (error) {
+    console.error("Error stopping WhatsApp listener:", error);
+  }
+
+  process.exit(0);
+});
+
+process.on("SIGTERM", async () => {
+  console.log("\nReceived SIGTERM, shutting down gracefully...");
+
+  try {
+    await stopWhatsAppListener();
+    console.log("WhatsApp listener stopped");
+  } catch (error) {
+    console.error("Error stopping WhatsApp listener:", error);
+  }
+
+  process.exit(0);
 });
 
 export default app;
