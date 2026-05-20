@@ -12,6 +12,7 @@
  */
 
 import { Client } from "pg";
+import pLimit from "p-limit";
 import {
   processMessage,
   processRetries,
@@ -20,6 +21,48 @@ import {
 let listenClient: Client | null = null;
 let isShuttingDown = false;
 let retryInterval: NodeJS.Timeout | null = null;
+
+// Concurrency control for message processing
+const MAX_CONCURRENT_MESSAGES = 5; // Limit parallel processing to avoid overwhelming DB/AI
+const limit = pLimit(MAX_CONCURRENT_MESSAGES);
+const inFlightMessages = new Map<string, Promise<void>>(); // Track in-flight processing
+
+/**
+ * Process a message with concurrency control using p-limit
+ * Limits parallel processing to avoid overwhelming database and AI services
+ *
+ * @param messageId - The message ID to process
+ */
+async function processMessageWithLimit(messageId: string): Promise<void> {
+  // Check if already processing this message
+  if (inFlightMessages.has(messageId)) {
+    console.log(
+      `[WhatsApp Listener] Message ${messageId} already being processed, skipping`,
+    );
+    return;
+  }
+
+  // Use p-limit to control concurrency
+  const processingPromise = limit(() =>
+    processMessage(messageId)
+      .catch((error) => {
+        console.error(
+          `[WhatsApp Listener] Failed to process message ${messageId}:`,
+          error instanceof Error ? error.message : "Unknown error",
+        );
+      })
+      .finally(() => {
+        // Cleanup: remove from tracking
+        inFlightMessages.delete(messageId);
+      }),
+  );
+
+  // Track in-flight promise
+  inFlightMessages.set(messageId, processingPromise);
+
+  // Don't await - return immediately to avoid blocking
+  return processingPromise;
+}
 
 /**
  * Start the WhatsApp LISTEN service
@@ -66,31 +109,50 @@ export async function startWhatsAppListener(
           `[WhatsApp Listener] Received notification for message: ${messageId}`,
         );
 
-        // Process message asynchronously (don't block LISTEN connection)
-        processMessage(messageId).catch((error) => {
+        // Process message with concurrency control (don't block LISTEN connection)
+        processMessageWithLimit(messageId).catch((error) => {
           console.error(
-            `[WhatsApp Listener] Failed to process message ${messageId}:`,
-            error.message,
+            `[WhatsApp Listener] Error queuing message ${messageId}:`,
+            error instanceof Error ? error.message : "Unknown error",
           );
         });
       }
     });
 
     // Handle connection errors
-    listenClient.on("error", (err) => {
+    listenClient.on("error", async (err) => {
       console.error("[WhatsApp Listener] Connection error:", err);
 
-      if (!isShuttingDown) {
-        // Attempt to reconnect after delay
-        console.log(
-          "[WhatsApp Listener] Attempting to reconnect in 5 seconds...",
-        );
-        setTimeout(() => {
-          startWhatsAppListener(false).catch((error) => {
-            console.error("[WhatsApp Listener] Reconnection failed:", error);
-          });
-        }, 5000);
+      if (isShuttingDown) {
+        return; // Don't reconnect during shutdown
       }
+
+      // Clean up existing connection before reconnecting
+      const oldClient = listenClient;
+      listenClient = null;
+
+      if (oldClient) {
+        try {
+          await oldClient.end();
+          console.log("[WhatsApp Listener] Closed failed connection");
+        } catch (closeError) {
+          console.error(
+            "[WhatsApp Listener] Error closing failed connection:",
+            closeError,
+          );
+          // Continue with reconnection even if close fails
+        }
+      }
+
+      // Attempt to reconnect after delay
+      console.log(
+        "[WhatsApp Listener] Attempting to reconnect in 5 seconds...",
+      );
+      setTimeout(() => {
+        startWhatsAppListener(false).catch((error) => {
+          console.error("[WhatsApp Listener] Reconnection failed:", error);
+        });
+      }, 5000);
     });
 
     // Process existing pending messages on startup (if enabled)
@@ -173,18 +235,11 @@ async function processExistingPendingMessages(): Promise<void> {
       });
     }
 
-    // Process all messages (pending + reset failed)
+    // Process all messages (pending + reset failed) with concurrency control
     const allMessages = [...pendingMessages, ...failedMessages];
     for (const message of allMessages) {
-      try {
-        await processMessage(message.id);
-      } catch (error) {
-        console.error(
-          `[WhatsApp Listener] Failed to process existing message ${message.id}:`,
-          error instanceof Error ? error.message : "Unknown error",
-        );
-        // Continue processing other messages even if one fails
-      }
+      // Use the concurrency-limited processor
+      await processMessageWithLimit(message.id);
     }
 
     console.log("[WhatsApp Listener] Finished processing existing messages");
@@ -208,6 +263,35 @@ export async function stopWhatsAppListener(): Promise<void> {
     clearInterval(retryInterval);
     retryInterval = null;
     console.log("[WhatsApp Listener] Stopped retry processor");
+  }
+
+  // Wait for in-flight messages to complete (with timeout)
+  if (inFlightMessages.size > 0) {
+    console.log(
+      `[WhatsApp Listener] Waiting for ${inFlightMessages.size} in-flight messages to complete...`,
+    );
+
+    const timeout = 30000; // 30 second timeout
+    const startTime = Date.now();
+
+    try {
+      await Promise.race([
+        Promise.all(Array.from(inFlightMessages.values())),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("Timeout waiting for messages")),
+            timeout,
+          ),
+        ),
+      ]);
+
+      console.log("[WhatsApp Listener] All in-flight messages completed");
+    } catch (error) {
+      const elapsed = Date.now() - startTime;
+      console.warn(
+        `[WhatsApp Listener] Timeout after ${elapsed}ms, ${inFlightMessages.size} messages still in-flight`,
+      );
+    }
   }
 
   if (!listenClient) {

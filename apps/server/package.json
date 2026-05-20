@@ -21,6 +21,7 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "hono": "catalog:",
+    "p-limit": "^7.3.0",
     "pg": "^8.13.1",
     "zod": "catalog:"
   },
