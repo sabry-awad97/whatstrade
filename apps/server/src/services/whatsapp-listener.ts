@@ -12,10 +12,14 @@
  */
 
 import { Client } from "pg";
-import { processMessage } from "../processors/message-processor";
+import {
+  processMessage,
+  processRetries,
+} from "../processors/message-processor";
 
 let listenClient: Client | null = null;
 let isShuttingDown = false;
+let retryInterval: NodeJS.Timeout | null = null;
 
 /**
  * Start the WhatsApp LISTEN service
@@ -94,7 +98,16 @@ export async function startWhatsAppListener(
       await processExistingPendingMessages();
     }
 
-    console.log("[WhatsApp Listener] Service started successfully");
+    // Start periodic retry processor (every 10 seconds)
+    retryInterval = setInterval(() => {
+      processRetries().catch((error) => {
+        console.error("[WhatsApp Listener] Retry processor error:", error);
+      });
+    }, 10000); // 10 seconds
+
+    console.log(
+      "[WhatsApp Listener] Service started successfully with retry processor",
+    );
   } catch (error) {
     console.error("[WhatsApp Listener] Failed to start:", error);
     throw error;
@@ -104,32 +117,65 @@ export async function startWhatsAppListener(
 /**
  * Process all existing pending messages in the queue
  * Called on startup to handle any messages that arrived while server was down
+ * Also processes failed messages that are ready for retry
  */
 async function processExistingPendingMessages(): Promise<void> {
   try {
     // Use a separate query connection (not the LISTEN connection)
     const { prisma } = await import("@workspace/db");
 
-    const pendingMessages = await prisma.whatsAppMessageQueue.findMany({
-      where: {
-        status: "pending",
-      },
-      orderBy: {
-        createdAt: "asc", // Process oldest first
-      },
-    });
+    // Find both pending messages and failed messages ready for retry
+    const [pendingMessages, failedMessages] = await Promise.all([
+      prisma.whatsAppMessageQueue.findMany({
+        where: {
+          status: "pending",
+        },
+        orderBy: {
+          createdAt: "asc", // Process oldest first
+        },
+      }),
+      prisma.whatsAppMessageQueue.findMany({
+        where: {
+          status: "failed",
+          nextRetryAt: {
+            lte: new Date(), // Retry time has passed
+          },
+        },
+        orderBy: {
+          nextRetryAt: "asc", // Process oldest retries first
+        },
+      }),
+    ]);
 
-    if (pendingMessages.length === 0) {
-      console.log("[WhatsApp Listener] No pending messages to process");
+    const totalMessages = pendingMessages.length + failedMessages.length;
+
+    if (totalMessages === 0) {
+      console.log(
+        "[WhatsApp Listener] No pending or failed messages to process",
+      );
       return;
     }
 
     console.log(
-      `[WhatsApp Listener] Processing ${pendingMessages.length} existing pending messages`,
+      `[WhatsApp Listener] Processing ${pendingMessages.length} pending and ${failedMessages.length} failed messages on startup`,
     );
 
-    // Process messages sequentially to avoid overwhelming the system
-    for (const message of pendingMessages) {
+    // Reset failed messages to pending so they can be claimed
+    if (failedMessages.length > 0) {
+      await prisma.whatsAppMessageQueue.updateMany({
+        where: {
+          id: { in: failedMessages.map((m) => m.id) },
+        },
+        data: {
+          status: "pending",
+          nextRetryAt: null,
+        },
+      });
+    }
+
+    // Process all messages (pending + reset failed)
+    const allMessages = [...pendingMessages, ...failedMessages];
+    for (const message of allMessages) {
       try {
         await processMessage(message.id);
       } catch (error) {
@@ -141,12 +187,10 @@ async function processExistingPendingMessages(): Promise<void> {
       }
     }
 
-    console.log(
-      "[WhatsApp Listener] Finished processing existing pending messages",
-    );
+    console.log("[WhatsApp Listener] Finished processing existing messages");
   } catch (error) {
     console.error(
-      "[WhatsApp Listener] Error processing existing pending messages:",
+      "[WhatsApp Listener] Error processing existing messages:",
       error,
     );
     // Don't throw - this is a best-effort operation on startup
@@ -158,6 +202,13 @@ async function processExistingPendingMessages(): Promise<void> {
  */
 export async function stopWhatsAppListener(): Promise<void> {
   isShuttingDown = true;
+
+  // Stop retry interval
+  if (retryInterval) {
+    clearInterval(retryInterval);
+    retryInterval = null;
+    console.log("[WhatsApp Listener] Stopped retry processor");
+  }
 
   if (!listenClient) {
     return;
