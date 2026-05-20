@@ -1,3 +1,5 @@
+import { List, LayoutGrid } from "lucide-react";
+
 interface StatusFilterTabsProps {
   statusFilter: string;
   onStatusChange: (status: string) => void;
@@ -51,7 +53,7 @@ export function StatusFilterTabs({
           }`}
           aria-label="List view"
         >
-          ☰
+          <List className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
         <button
           onClick={() => hasSelectedMatch && onViewChange("detail")}
@@ -63,7 +65,7 @@ export function StatusFilterTabs({
           }`}
           aria-label="Detail view"
         >
-          ⊡
+          <LayoutGrid className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       </div>
     </div>

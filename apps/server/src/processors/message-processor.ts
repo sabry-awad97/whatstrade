@@ -277,14 +277,12 @@ export async function retryFailedMessage(messageId: string): Promise<void> {
 export async function processRetries(): Promise<void> {
   try {
     // Find failed messages that are ready for retry
+    // Note: maxRetries enforcement is handled by handleProcessingError
     const messagesToRetry = await prisma.whatsAppMessageQueue.findMany({
       where: {
         status: "failed",
         nextRetryAt: {
           lte: new Date(), // Retry time has passed
-        },
-        retryCount: {
-          lt: prisma.whatsAppMessageQueue.fields.maxRetries, // Still have retries left
         },
       },
       orderBy: {

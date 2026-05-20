@@ -27,7 +27,7 @@ import {
 } from "@workspace/ui/components/empty";
 import { GitMerge, ArrowUpDown } from "lucide-react";
 import type { ListMatchesResponseItem } from "@workspace/schemas";
-import { STATUS_COLORS, BAND_COLORS } from "./constants";
+import { STATUS_COLORS, BAND_COLORS, BAND_COLORS_ALPHA } from "./constants";
 
 // Extend TanStack Table meta type
 declare module "@tanstack/react-table" {
@@ -127,10 +127,11 @@ export function MatchesTable({
         cell: ({ getValue }) => {
           const band = getValue<string>();
           const color = BAND_COLORS[band] ?? BAND_COLORS.none;
+          const colorAlpha = BAND_COLORS_ALPHA[band] ?? BAND_COLORS_ALPHA.none;
           return (
             <span
               className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase`}
-              style={{ backgroundColor: `${color}20`, color }}
+              style={{ backgroundColor: colorAlpha.subtle, color }}
             >
               {band}
             </span>

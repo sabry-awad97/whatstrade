@@ -1,6 +1,6 @@
 import { GitMerge, ChevronRight } from "lucide-react";
 import type { ListMatchesResponseItem } from "@workspace/schemas";
-import { BAND_COLORS } from "./constants";
+import { BAND_COLORS, BAND_COLORS_ALPHA } from "./constants";
 import { ConfidenceRing } from "./confidence-ring";
 
 interface MatchCardProps {
@@ -15,6 +15,8 @@ interface MatchCardProps {
  */
 export function MatchCard({ match, onSelect }: MatchCardProps) {
   const color = BAND_COLORS[match.confidenceBand] ?? BAND_COLORS.none;
+  const colorAlpha =
+    BAND_COLORS_ALPHA[match.confidenceBand] ?? BAND_COLORS_ALPHA.none;
 
   return (
     <button
@@ -37,7 +39,7 @@ export function MatchCard({ match, onSelect }: MatchCardProps) {
         </div>
         <span
           className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase`}
-          style={{ backgroundColor: `${color}20`, color }}
+          style={{ backgroundColor: colorAlpha.subtle, color }}
         >
           {match.confidenceBand}
         </span>

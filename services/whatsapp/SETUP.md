@@ -64,14 +64,7 @@ LOG_LEVEL=info
 WHATSAPP_LOG_LEVEL=INFO
 ```
 
-## Step 4: Install Dependencies
-
-```bash
-cd services/whatsapp
-go mod download
-```
-
-## Step 5: Run the Service
+## Step 4: Run the Service
 
 ### Development (with hot reload)
 
@@ -96,7 +89,7 @@ task docker:build
 task docker:run
 ```
 
-## Step 6: WhatsApp Authentication
+## Step 5: WhatsApp Authentication
 
 ### Get QR Code
 
@@ -134,7 +127,7 @@ Response:
 }
 ```
 
-## Step 7: Sync Groups
+## Step 6: Sync Groups
 
 After authentication, sync WhatsApp groups:
 
@@ -148,7 +141,7 @@ This will:
 2. Insert/update them in the database
 3. Set `is_monitored = false` by default
 
-## Step 8: Enable Group Monitoring
+## Step 7: Enable Group Monitoring
 
 Update groups in the database to enable monitoring:
 
@@ -160,7 +153,7 @@ WHERE name LIKE '%pharmacy%';
 
 Or use the Bun server API to manage groups.
 
-## Step 9: Test Message Flow
+## Step 8: Test Message Flow
 
 ### Send Test Message
 
@@ -261,14 +254,9 @@ bun run db:migrate
 
 ### 3. Update SQL Queries
 
-Edit `services/whatsapp/internal/adapter/repository/queries.sql`:
+### 3. Update GORM Models
 
-```sql
--- name: GetHighPriorityMessages :many
-SELECT * FROM whatsapp_message_queue
-WHERE priority > 5
-ORDER BY priority DESC;
-```
+Edit `services/whatsapp/internal/adapter/repository/models.go`:
 
 ### 4. Update Dependencies
 

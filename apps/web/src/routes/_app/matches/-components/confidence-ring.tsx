@@ -1,4 +1,4 @@
-import { BAND_COLORS } from "./constants";
+import { BAND_COLORS, BAND_COLORS_ALPHA } from "./constants";
 
 interface ConfidenceRingProps {
   score: number;
@@ -24,6 +24,7 @@ export function ConfidenceRing({
   const r = size * 0.375;
   const circ = 2 * Math.PI * r;
   const color = BAND_COLORS[band] ?? BAND_COLORS.none;
+  const colorAlpha = BAND_COLORS_ALPHA[band] ?? BAND_COLORS_ALPHA.none;
 
   return (
     <div
@@ -55,7 +56,7 @@ export function ConfidenceRing({
           strokeLinecap="round"
           style={{
             transition: "stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)",
-            filter: `drop-shadow(0 0 ${size * 0.05}px ${color}80)`,
+            filter: `drop-shadow(0 0 ${size * 0.05}px ${colorAlpha.glow})`,
           }}
         />
       </svg>
@@ -67,7 +68,9 @@ export function ConfidenceRing({
               : "text-3xl font-bold tabular-nums"
           }
           style={
-            compact ? { color } : { color, textShadow: `0 0 20px ${color}40` }
+            compact
+              ? { color }
+              : { color, textShadow: `0 0 20px ${colorAlpha.light}` }
           }
         >
           {(clampedScore * 100).toFixed(0)}%
@@ -79,7 +82,7 @@ export function ConfidenceRing({
             </span>
             <span
               className={`text-[9px] px-2 py-0.5 rounded mt-1.5 font-bold uppercase`}
-              style={{ backgroundColor: `${color}20`, color }}
+              style={{ backgroundColor: colorAlpha.subtle, color }}
             >
               {band}
             </span>

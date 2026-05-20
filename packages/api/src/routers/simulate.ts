@@ -188,7 +188,7 @@ export const simulateRouter = o.router({
       // Fallback: Basic regex extraction if AI fails
       if (!parsedFields.length) {
         // Extract medication name (look for common patterns)
-        const medMatch = rawText.match(
+        const medMatch = sanitizedText.match(
           /(?:medication|med|drug|medicine)[\s:]+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)/i,
         );
         if (medMatch?.[1]) {
@@ -199,7 +199,7 @@ export const simulateRouter = o.router({
           });
         } else {
           // Try to find capitalized words that might be medication names
-          const words = rawText.split(/\s+/);
+          const words = sanitizedText.split(/\s+/);
           const capitalizedWord = words.find(
             (w) => w.length > 3 && /^[A-Z][a-z]+/.test(w),
           );
@@ -211,7 +211,6 @@ export const simulateRouter = o.router({
             });
           }
         }
-
         // Extract dosage (e.g., "10mg", "500 mg", "2.5mg")
         const dosageMatch = rawText.match(/(\d+(?:\.\d+)?\s*mg)/i);
         if (dosageMatch?.[1]) {

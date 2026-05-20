@@ -24,11 +24,11 @@ AI Extraction + Matching
 - **ORM:** GORM (type-safe database access)
 - **WhatsApp:** whatsmeow
 - **Logging:** zap (structured logging)
-- **Config:** envconfig
+- **Config:** viper
 
 ## Project Structure
 
-```
+````
 services/whatsapp/
 ├── cmd/
 │   └── server/
@@ -67,8 +67,7 @@ services/whatsapp/
 ├── go.mod
 ├── go.sum
 ├── Dockerfile
-└── Makefile
-```
+└── Taskfile.yml```
 
 ## Setup
 
@@ -89,7 +88,7 @@ LOG_LEVEL=info
 
 # WhatsApp
 WHATSAPP_LOG_LEVEL=INFO
-```
+````
 
 ### Installation
 

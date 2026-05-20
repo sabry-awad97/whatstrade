@@ -76,6 +76,7 @@ export const PharmaceuticalExtractionSchema = z.object({
     .describe("The quantity or number of units/boxes mentioned"),
   price: z
     .number()
+    .nonnegative()
     .nullable()
     .describe("The price in Egyptian Pounds (EGP). Null if not mentioned."),
   confidence: z

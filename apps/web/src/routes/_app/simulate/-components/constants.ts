@@ -19,6 +19,36 @@ export const BAND_COLORS: Record<string, string> = {
   none: "hsl(0 72% 48%)",
 };
 
+export const BAND_COLORS_ALPHA: Record<
+  string,
+  { base: string; light: string; subtle: string; glow: string }
+> = {
+  auto: {
+    base: "hsl(142 72% 35%)",
+    light: "hsl(142 72% 35% / 0.25)",
+    subtle: "hsl(142 72% 35% / 0.125)",
+    glow: "hsl(142 72% 35% / 0.5)",
+  },
+  suggest: {
+    base: "hsl(38 92% 50%)",
+    light: "hsl(38 92% 50% / 0.25)",
+    subtle: "hsl(38 92% 50% / 0.125)",
+    glow: "hsl(38 92% 50% / 0.5)",
+  },
+  review: {
+    base: "hsl(21 85% 50%)",
+    light: "hsl(21 85% 50% / 0.25)",
+    subtle: "hsl(21 85% 50% / 0.125)",
+    glow: "hsl(21 85% 50% / 0.5)",
+  },
+  none: {
+    base: "hsl(0 72% 48%)",
+    light: "hsl(0 72% 48% / 0.25)",
+    subtle: "hsl(0 72% 48% / 0.125)",
+    glow: "hsl(0 72% 48% / 0.5)",
+  },
+};
+
 export const BAND_BG: Record<string, string> = {
   auto: "bg-band-auto",
   suggest: "bg-band-suggest",

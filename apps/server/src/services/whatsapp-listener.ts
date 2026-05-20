@@ -237,10 +237,14 @@ async function processExistingPendingMessages(): Promise<void> {
 
     // Process all messages (pending + reset failed) with concurrency control
     const allMessages = [...pendingMessages, ...failedMessages];
-    for (const message of allMessages) {
-      // Use the concurrency-limited processor
-      await processMessageWithLimit(message.id);
-    }
+
+    // Start all processing tasks without awaiting (p-limit will control concurrency)
+    const processingPromises = allMessages.map((message) =>
+      processMessageWithLimit(message.id),
+    );
+
+    // Wait for all tasks to complete
+    await Promise.all(processingPromises);
 
     console.log("[WhatsApp Listener] Finished processing existing messages");
   } catch (error) {

@@ -1,4 +1,4 @@
-import { BAND_COLORS, BAND_BG } from "./constants";
+import { BAND_COLORS, BAND_COLORS_ALPHA, BAND_BG } from "./constants";
 
 interface ConfidenceRingProps {
   score: number;
@@ -15,6 +15,7 @@ export function ConfidenceRing({ score, band }: ConfidenceRingProps) {
   const circ = 2 * Math.PI * r;
   const pct = score * circ;
   const color = BAND_COLORS[band] ?? BAND_COLORS.none;
+  const colorAlpha = BAND_COLORS_ALPHA[band] ?? BAND_COLORS_ALPHA.none;
 
   return (
     <div className="relative w-36 h-36 flex items-center justify-center">
@@ -43,7 +44,7 @@ export function ConfidenceRing({ score, band }: ConfidenceRingProps) {
           strokeLinecap="round"
           style={{
             transition: "stroke-dasharray 0.8s cubic-bezier(0.4,0,0.2,1)",
-            filter: `drop-shadow(0 0 6px ${color}80)`,
+            filter: `drop-shadow(0 0 6px ${colorAlpha.glow})`,
           }}
         />
       </svg>

@@ -97,7 +97,7 @@ function RouteComponent() {
       { id: selectedMatch.id },
       {
         onSuccess: () => {
-          toast.error("Match rejected", {
+          toast.success("Match rejected", {
             description: `Match #${selectedMatch.id} has been rejected.`,
           });
           setView("list");

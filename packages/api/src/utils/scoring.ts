@@ -118,6 +118,7 @@ export function calculatePriceScore(
   maxPrice: number | null,
 ): number {
   if (offerPrice == null || maxPrice == null) return 0.5;
+  if (maxPrice === 0) return offerPrice === 0 ? 1 : 0;
   if (offerPrice <= maxPrice) return 1;
   const overshoot = (offerPrice - maxPrice) / maxPrice;
   return Math.max(0, 1 - overshoot * 2);
