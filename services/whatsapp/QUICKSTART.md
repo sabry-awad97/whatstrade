@@ -4,7 +4,7 @@
 
 The service has been successfully built with:
 
-- **Go 1.22**
+- **Go 1.25**
 - **Gin** web framework
 - **GORM** ORM with PostgreSQL
 - **whatsmeow** WhatsApp library
@@ -13,7 +13,7 @@ The service has been successfully built with:
 ## Prerequisites
 
 1. **PostgreSQL** running on port 5433
-2. **Go 1.22+** installed
+2. **Go 1.25+** installed
 3. **Environment variables** configured
 
 ## Quick Start

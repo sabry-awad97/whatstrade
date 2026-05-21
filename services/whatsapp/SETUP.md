@@ -25,17 +25,21 @@ bun run db:push
 bun run db:migrate
 ```
 
-### Apply NOTIFY Trigger
+### Database Triggers (Automatic)
 
-The NOTIFY trigger is in `packages/db/prisma/migrations/add_whatsapp_notify_trigger.sql`.
+PostgreSQL NOTIFY triggers are automatically applied on server startup via `packages/db/check-trigger.ts`. No manual migration needed.
 
-Apply it manually:
+The triggers enable real-time updates for:
+
+- New WhatsApp messages (`new_whatsapp_message` channel)
+- Queue statistics changes (`queue_stats` channel)
+
+If you need to manually apply triggers, run:
 
 ```bash
-psql -h localhost -p 5433 -U postgres -d whatstrade -f packages/db/prisma/migrations/add_whatsapp_notify_trigger.sql
+cd packages/db
+bun run check-trigger.ts
 ```
-
-Or include it in your migration workflow.
 
 ## Step 2: Install Dependencies
 
@@ -252,18 +256,11 @@ cd packages/db
 bun run db:migrate
 ```
 
-### 3. Update SQL Queries
-
 ### 3. Update GORM Models
 
 Edit `services/whatsapp/internal/adapter/repository/models.go`:
 
-### 4. Update Dependencies
-
-```bash
-cd services/whatsapp
-go mod tidy
-```
+````
 
 ### 5. Update Use Cases
 
@@ -273,7 +270,7 @@ Use the updated GORM models in your use cases.
 
 ```bash
 task test
-```
+````
 
 ## Docker Compose Setup
 

@@ -227,47 +227,56 @@ export const whatsappRouter = o.router({
       const queue: QueueStatsEvent[] = [];
       let lastYield = Date.now();
 
+      let isProcessing = false;
+
       // Event handler for NOTIFY - queries fresh stats
-      const handler = async () => {
-        try {
-          const [pending, processing, failed, completed, deadLetter] =
-            await Promise.all([
-              prisma.whatsAppMessageQueue.count({
-                where: { status: "pending" },
-              }),
-              prisma.whatsAppMessageQueue.count({
-                where: { status: "processing" },
-              }),
-              prisma.whatsAppMessageQueue.count({
-                where: { status: "failed" },
-              }),
-              prisma.whatsAppMessageQueue.count({
-                where: { status: "completed" },
-              }),
-              prisma.whatsAppMessageQueue.count({
-                where: { status: "dead_letter" },
-              }),
-            ]);
+      const handler = () => {
+        if (isProcessing) return; // Skip if already processing
+        isProcessing = true;
 
-          const total = pending + processing + failed + completed + deadLetter;
+        (async () => {
+          try {
+            const [pending, processing, failed, completed, deadLetter] =
+              await Promise.all([
+                prisma.whatsAppMessageQueue.count({
+                  where: { status: "pending" },
+                }),
+                prisma.whatsAppMessageQueue.count({
+                  where: { status: "processing" },
+                }),
+                prisma.whatsAppMessageQueue.count({
+                  where: { status: "failed" },
+                }),
+                prisma.whatsAppMessageQueue.count({
+                  where: { status: "completed" },
+                }),
+                prisma.whatsAppMessageQueue.count({
+                  where: { status: "dead_letter" },
+                }),
+              ]);
 
-          queue.push({
-            pending,
-            processing,
-            failed,
-            completed,
-            deadLetter,
-            total,
-            timestamp: new Date(),
-          });
-        } catch (error) {
-          console.error(
-            "[WhatsApp Router] Failed to fetch queue stats:",
-            error,
-          );
-        }
+            const total =
+              pending + processing + failed + completed + deadLetter;
+
+            queue.push({
+              pending,
+              processing,
+              failed,
+              completed,
+              deadLetter,
+              total,
+              timestamp: new Date(),
+            });
+          } catch (error) {
+            console.error(
+              "[WhatsApp Router] Failed to fetch queue stats:",
+              error,
+            );
+          } finally {
+            isProcessing = false;
+          }
+        })();
       };
-
       // Subscribe to NOTIFY channel
       pgNotifier.on("queue_stats", handler);
 
@@ -356,6 +365,8 @@ export const whatsappRouter = o.router({
             status: "pending",
             nextRetryAt: null,
             lastError: null,
+            lastErrorAt: null,
+            retryCount: 0,
           },
         });
 
