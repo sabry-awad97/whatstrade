@@ -9,44 +9,12 @@ import (
 
 // MockMessageRepository is a mock implementation of port.MessageRepository
 type MockMessageRepository struct {
-	SaveMessageFunc          func(ctx context.Context, msg *domain.Message) error
-	GetPendingMessagesFunc   func(ctx context.Context, limit int) ([]*domain.Message, error)
-	UpdateMessageStatusFunc  func(ctx context.Context, id string, status domain.MessageStatus) error
-	MarkMessageFailedFunc    func(ctx context.Context, id string, err error) error
-	MarkMessageCompletedFunc func(ctx context.Context, id string) error
+	SaveMessageFunc func(ctx context.Context, msg *domain.Message) error
 }
 
 func (m *MockMessageRepository) SaveMessage(ctx context.Context, msg *domain.Message) error {
 	if m.SaveMessageFunc != nil {
 		return m.SaveMessageFunc(ctx, msg)
-	}
-	return nil
-}
-
-func (m *MockMessageRepository) GetPendingMessages(ctx context.Context, limit int) ([]*domain.Message, error) {
-	if m.GetPendingMessagesFunc != nil {
-		return m.GetPendingMessagesFunc(ctx, limit)
-	}
-	return nil, nil
-}
-
-func (m *MockMessageRepository) UpdateMessageStatus(ctx context.Context, id string, status domain.MessageStatus) error {
-	if m.UpdateMessageStatusFunc != nil {
-		return m.UpdateMessageStatusFunc(ctx, id, status)
-	}
-	return nil
-}
-
-func (m *MockMessageRepository) MarkMessageFailed(ctx context.Context, id string, err error) error {
-	if m.MarkMessageFailedFunc != nil {
-		return m.MarkMessageFailedFunc(ctx, id, err)
-	}
-	return nil
-}
-
-func (m *MockMessageRepository) MarkMessageCompleted(ctx context.Context, id string) error {
-	if m.MarkMessageCompletedFunc != nil {
-		return m.MarkMessageCompletedFunc(ctx, id)
 	}
 	return nil
 }

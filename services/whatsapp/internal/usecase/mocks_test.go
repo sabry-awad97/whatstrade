@@ -9,44 +9,12 @@ import (
 // Shared mocks for usecase tests
 
 type mockMessageRepository struct {
-	saveMessageFunc          func(ctx context.Context, msg *domain.Message) error
-	getPendingMessagesFunc   func(ctx context.Context, limit int) ([]*domain.Message, error)
-	updateMessageStatusFunc  func(ctx context.Context, id string, status domain.MessageStatus) error
-	markMessageFailedFunc    func(ctx context.Context, id string, err error) error
-	markMessageCompletedFunc func(ctx context.Context, id string) error
+	saveMessageFunc func(ctx context.Context, msg *domain.Message) error
 }
 
 func (m *mockMessageRepository) SaveMessage(ctx context.Context, msg *domain.Message) error {
 	if m.saveMessageFunc != nil {
 		return m.saveMessageFunc(ctx, msg)
-	}
-	return nil
-}
-
-func (m *mockMessageRepository) GetPendingMessages(ctx context.Context, limit int) ([]*domain.Message, error) {
-	if m.getPendingMessagesFunc != nil {
-		return m.getPendingMessagesFunc(ctx, limit)
-	}
-	return nil, nil
-}
-
-func (m *mockMessageRepository) UpdateMessageStatus(ctx context.Context, id string, status domain.MessageStatus) error {
-	if m.updateMessageStatusFunc != nil {
-		return m.updateMessageStatusFunc(ctx, id, status)
-	}
-	return nil
-}
-
-func (m *mockMessageRepository) MarkMessageFailed(ctx context.Context, id string, err error) error {
-	if m.markMessageFailedFunc != nil {
-		return m.markMessageFailedFunc(ctx, id, err)
-	}
-	return nil
-}
-
-func (m *mockMessageRepository) MarkMessageCompleted(ctx context.Context, id string) error {
-	if m.markMessageCompletedFunc != nil {
-		return m.markMessageCompletedFunc(ctx, id)
 	}
 	return nil
 }

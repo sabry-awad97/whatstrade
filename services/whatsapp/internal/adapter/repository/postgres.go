@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -101,117 +100,6 @@ func (r *PostgresRepository) SaveMessage(ctx context.Context, msg *domain.Messag
 	return nil
 }
 
-// GetPendingMessages retrieves pending messages for processing
-func (r *PostgresRepository) GetPendingMessages(ctx context.Context, limit int) ([]*domain.Message, error) {
-	var dbMessages []WhatsAppMessageQueue
-
-	// Use FOR UPDATE SKIP LOCKED for concurrent processing
-	result := r.db.WithContext(ctx).
-		Raw("SELECT * FROM whatsapp_message_queue WHERE status = ? ORDER BY created_at ASC LIMIT ? FOR UPDATE SKIP LOCKED", "pending", limit).
-		Scan(&dbMessages)
-
-	if result.Error != nil {
-		return nil, fmt.Errorf("failed to get pending messages: %w", result.Error)
-	}
-
-	messages := make([]*domain.Message, 0, len(dbMessages))
-	for _, dbMsg := range dbMessages {
-		msg := &domain.Message{
-			ID:          dbMsg.ID.String(),
-			WhatsAppID:  dbMsg.WhatsAppMessageID,
-			GroupID:     dbMsg.WhatsAppGroupID,
-			GroupName:   dbMsg.GroupName,
-			SenderPhone: dbMsg.SenderPhone,
-			RawText:     dbMsg.RawText,
-			ReceivedAt:  dbMsg.ReceivedAt,
-			Status:      domain.MessageStatus(dbMsg.Status),
-			RetryCount:  dbMsg.RetryCount,
-			MaxRetries:  dbMsg.MaxRetries,
-		}
-
-		if dbMsg.SenderName != nil {
-			msg.SenderName = *dbMsg.SenderName
-		}
-
-		messages = append(messages, msg)
-	}
-
-	return messages, nil
-}
-
-// UpdateMessageStatus updates the status of a message
-func (r *PostgresRepository) UpdateMessageStatus(ctx context.Context, id string, status domain.MessageStatus) error {
-	msgID, err := uuid.Parse(id)
-	if err != nil {
-		return fmt.Errorf("invalid message ID: %w", err)
-	}
-
-	now := time.Now()
-	result := r.db.WithContext(ctx).
-		Model(&WhatsAppMessageQueue{}).
-		Where("id = ?", msgID).
-		Updates(map[string]interface{}{
-			"status":       string(status),
-			"processed_at": now,
-		})
-
-	if result.Error != nil {
-		return fmt.Errorf("failed to update message status: %w", result.Error)
-	}
-
-	return nil
-}
-
-// MarkMessageFailed marks a message as failed with error details
-func (r *PostgresRepository) MarkMessageFailed(ctx context.Context, id string, err error) error {
-	msgID, parseErr := uuid.Parse(id)
-	if parseErr != nil {
-		return fmt.Errorf("invalid message ID: %w", parseErr)
-	}
-
-	now := time.Now()
-	errMsg := err.Error()
-
-	result := r.db.WithContext(ctx).
-		Model(&WhatsAppMessageQueue{}).
-		Where("id = ?", msgID).
-		Updates(map[string]interface{}{
-			"status":        "failed",
-			"retry_count":   gorm.Expr("retry_count + 1"),
-			"last_error":    errMsg,
-			"last_error_at": now,
-		})
-
-	if result.Error != nil {
-		return fmt.Errorf("failed to mark message as failed: %w", result.Error)
-	}
-
-	return nil
-}
-
-// MarkMessageCompleted marks a message as completed
-func (r *PostgresRepository) MarkMessageCompleted(ctx context.Context, id string) error {
-	msgID, err := uuid.Parse(id)
-	if err != nil {
-		return fmt.Errorf("invalid message ID: %w", err)
-	}
-
-	now := time.Now()
-	result := r.db.WithContext(ctx).
-		Model(&WhatsAppMessageQueue{}).
-		Where("id = ?", msgID).
-		Updates(map[string]interface{}{
-			"status":       "completed",
-			"completed_at": now,
-		})
-
-	if result.Error != nil {
-		return fmt.Errorf("failed to mark message as completed: %w", result.Error)
-	}
-
-	return nil
-}
-
 // GetMonitoredGroups retrieves all groups that should be monitored
 func (r *PostgresRepository) GetMonitoredGroups(ctx context.Context) ([]*domain.Group, error) {
 	var dbGroups []Group
@@ -252,8 +140,9 @@ func (r *PostgresRepository) GetGroupByJID(ctx context.Context, jid string) (*do
 		First(&dbGroup)
 
 	if result.Error != nil {
+		// Preserve gorm.ErrRecordNotFound sentinel so callers can use errors.Is()
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("group not found: %w", result.Error)
+			return nil, result.Error
 		}
 		return nil, fmt.Errorf("failed to get group by JID: %w", result.Error)
 	}
