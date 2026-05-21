@@ -13,6 +13,7 @@ export const env = createEnv({
       .default("development"),
     GOOGLE_GENERATIVE_AI_API_KEY: z.string().min(1),
     GOOGLE_GENERATIVE_AI_MODEL: z.string().min(1),
+    GO_WHATSAPP_SERVICE_URL: z.string().url().default("http://localhost:8080"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

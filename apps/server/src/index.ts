@@ -14,6 +14,7 @@ import {
   startWhatsAppListener,
   stopWhatsAppListener,
 } from "./services/whatsapp-listener";
+import { initPgNotifier, pgNotifier } from "@workspace/db/pg-notifier";
 
 const app = new Hono();
 
@@ -79,6 +80,14 @@ app.get("/", (c) => {
   return c.text("OK");
 });
 
+// Start PostgreSQL NOTIFY listener service
+// This provides real-time event notifications for SSE streams
+initPgNotifier().catch((error) => {
+  console.error("Failed to start PG Notifier:", error);
+  // Don't crash the HTTP server if PG Notifier fails
+  // The notifier will attempt to reconnect automatically
+});
+
 // Start WhatsApp listener service
 // This runs concurrently with the HTTP server
 startWhatsAppListener(true).catch((error) => {
@@ -102,11 +111,11 @@ process.on("SIGINT", async () => {
   isShuttingDown = true;
 
   try {
-    await stopWhatsAppListener();
-    console.log("WhatsApp listener stopped");
+    await Promise.all([stopWhatsAppListener(), pgNotifier.disconnect()]);
+    console.log("Services stopped successfully");
     process.exit(0);
   } catch (error) {
-    console.error("Error stopping WhatsApp listener:", error);
+    console.error("Error during shutdown:", error);
     process.exit(1);
   }
 });
@@ -122,11 +131,11 @@ process.on("SIGTERM", async () => {
   isShuttingDown = true;
 
   try {
-    await stopWhatsAppListener();
-    console.log("WhatsApp listener stopped");
+    await Promise.all([stopWhatsAppListener(), pgNotifier.disconnect()]);
+    console.log("Services stopped successfully");
     process.exit(0);
   } catch (error) {
-    console.error("Error stopping WhatsApp listener:", error);
+    console.error("Error during shutdown:", error);
     process.exit(1);
   }
 });

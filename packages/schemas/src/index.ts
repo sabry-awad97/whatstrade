@@ -19,3 +19,4 @@ export * from "./weights";
 export * from "./review";
 export * from "./simulation";
 export * from "./audit";
+export * from "./whatsapp";

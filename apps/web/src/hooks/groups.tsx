@@ -3,6 +3,7 @@
  * React Query hooks for WhatsApp group management using oRPC
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { orpc } from "@/utils/orpc";
 
@@ -128,6 +129,129 @@ export function useDisableGroupMonitoring() {
       queryClient.invalidateQueries({
         queryKey: orpc.stats.key(),
       });
+    },
+  });
+}
+
+/**
+ * Hook to toggle group monitoring with optimistic updates
+ *
+ * @example
+ * ```tsx
+ * const toggleMonitoring = useToggleGroupMonitoring();
+ *
+ * const handleToggle = (jid: string, enabled: boolean) => {
+ *   toggleMonitoring.mutate({ jid, enabled });
+ * };
+ * ```
+ *
+ * @returns TanStack Mutation for toggling group monitoring
+ */
+export function useToggleGroupMonitoring() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { jid: string; enabled: boolean }) => {
+      if (params.enabled) {
+        return orpc.groups.enableGroupMonitoring.call({ jid: params.jid });
+      } else {
+        return orpc.groups.disableGroupMonitoring.call({ jid: params.jid });
+      }
+    },
+    onMutate: async (params) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: orpc.groups.listGroups.key(),
+      });
+
+      // Snapshot the previous value
+      const previousGroups = queryClient.getQueryData(
+        orpc.groups.listGroups.key(),
+      );
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(orpc.groups.listGroups.key(), (old: any[]) => {
+        if (!old) return old;
+        return old.map((group: any) =>
+          group.jid === params.jid
+            ? { ...group, isMonitored: params.enabled }
+            : group,
+        );
+      });
+
+      // Return context with snapshot
+      return { previousGroups };
+    },
+    onError: (error, params, context) => {
+      // Rollback on error
+      if (context?.previousGroups) {
+        queryClient.setQueryData(
+          orpc.groups.listGroups.key(),
+          context.previousGroups,
+        );
+      }
+      toast.error(
+        `Failed to ${params.enabled ? "enable" : "disable"} monitoring: ${error.message}`,
+      );
+    },
+    onSuccess: (data, params) => {
+      toast.success(
+        `Monitoring ${params.enabled ? "enabled" : "disabled"} for ${data.name}`,
+      );
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure consistency
+      queryClient.invalidateQueries({
+        queryKey: orpc.groups.key(),
+      });
+      // Invalidate dashboard stats as monitored groups affect stats
+      queryClient.invalidateQueries({
+        queryKey: orpc.stats.key(),
+      });
+    },
+  });
+}
+
+/**
+ * Hook to bulk toggle monitoring for multiple groups
+ *
+ * @example
+ * ```tsx
+ * const bulkToggle = useBulkToggleGroupMonitoring();
+ *
+ * const handleMonitorAll = () => {
+ *   bulkToggle.mutate({ jids: allJids, enabled: true });
+ * };
+ * ```
+ *
+ * @returns TanStack Mutation for bulk toggling
+ */
+export function useBulkToggleGroupMonitoring() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: { jids: string[]; enabled: boolean }) => {
+      // Execute all mutations in parallel
+      const promises = params.jids.map((jid) =>
+        params.enabled
+          ? orpc.groups.enableGroupMonitoring.call({ jid })
+          : orpc.groups.disableGroupMonitoring.call({ jid }),
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: (data, params) => {
+      queryClient.invalidateQueries({
+        queryKey: orpc.groups.key(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: orpc.stats.key(),
+      });
+      toast.success(
+        `Monitoring ${params.enabled ? "enabled" : "disabled"} for ${params.jids.length} groups`,
+      );
+    },
+    onError: (error) => {
+      toast.error(`Bulk operation failed: ${error.message}`);
     },
   });
 }
