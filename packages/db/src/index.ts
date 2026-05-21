@@ -25,3 +25,6 @@ export default prisma;
 
 // Re-export all Prisma types and utilities
 export * from "../prisma/generated/client";
+
+// Re-export trigger management
+export { checkAndApplyTriggers } from "../check-trigger";

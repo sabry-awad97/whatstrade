@@ -15,6 +15,7 @@ import {
   stopWhatsAppListener,
 } from "./services/whatsapp-listener";
 import { initPgNotifier, pgNotifier } from "@workspace/db/pg-notifier";
+import { checkAndApplyTriggers } from "@workspace/db/check-trigger";
 
 const app = new Hono();
 
@@ -78,6 +79,14 @@ app.use("/*", async (c, next) => {
 
 app.get("/", (c) => {
   return c.text("OK");
+});
+
+// Apply database triggers automatically on startup
+// This ensures all required triggers are present without manual migrations
+checkAndApplyTriggers().catch((error) => {
+  console.error("Failed to apply database triggers:", error);
+  // Don't crash the HTTP server if trigger application fails
+  // Triggers can be applied manually by running: bun run check-trigger.ts
 });
 
 // Start PostgreSQL NOTIFY listener service
