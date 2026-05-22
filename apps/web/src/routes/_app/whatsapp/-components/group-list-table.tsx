@@ -57,6 +57,13 @@ export function GroupListTable() {
     if (!bulkAction || !filteredGroups) return;
 
     const jids = filteredGroups.map((g) => g.jid);
+
+    // Validate that there are groups to act on
+    if (jids.length === 0) {
+      setBulkAction(null);
+      return;
+    }
+
     bulkToggle.mutate({ jids, enabled: bulkAction.enabled });
     setBulkAction(null);
   };
