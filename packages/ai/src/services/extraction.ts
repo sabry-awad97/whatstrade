@@ -118,7 +118,7 @@ export type PharmaceuticalExtraction = z.infer<
  * @returns Sanitized text
  * @throws Error if injection patterns are detected
  */
-function sanitizeUserInput(text: string, maxLength = 1000): string {
+export function sanitizeUserInput(text: string, maxLength = 1000): string {
   // Trim whitespace
   let sanitized = text.trim();
 

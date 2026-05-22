@@ -178,26 +178,40 @@ export async function initPgNotifier(): Promise<void> {
 // Graceful shutdown with reentrancy guard
 let isShuttingDown = false;
 
-const gracefulShutdown = async (signal: string) => {
+/**
+ * Gracefully disconnect the PG notifier
+ * Applications should call this in their shutdown handlers
+ * @returns Promise that resolves when disconnection is complete
+ */
+export async function gracefulShutdown(): Promise<void> {
   if (isShuttingDown) {
-    console.log(
-      `[PG Notifier] Shutdown already in progress, ignoring ${signal}`,
-    );
+    console.log("[PG Notifier] Shutdown already in progress, ignoring");
     return;
   }
 
-  console.log(`[PG Notifier] Received ${signal}, shutting down gracefully...`);
+  console.log("[PG Notifier] Shutting down gracefully...");
   isShuttingDown = true;
 
   try {
     await pgNotifier.disconnect();
     console.log("[PG Notifier] Disconnected successfully");
-    process.exit(0);
   } catch (error) {
     console.error("[PG Notifier] Error during graceful shutdown:", error);
-    process.exit(1);
+    throw error;
   }
-};
+}
 
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+/**
+ * Optional helper to register shutdown handlers
+ * Applications can call this to automatically handle SIGTERM/SIGINT
+ */
+export function registerShutdownHandlers(): void {
+  process.on("SIGTERM", async () => {
+    await gracefulShutdown();
+    process.exit(0);
+  });
+  process.on("SIGINT", async () => {
+    await gracefulShutdown();
+    process.exit(0);
+  });
+}

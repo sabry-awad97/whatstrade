@@ -169,7 +169,7 @@ export function MatchesTable({
           );
         },
         cell: ({ getValue }) => {
-          const date = getValue<Date>();
+          const date = getValue<string | Date>();
           return (
             <span className="text-muted-foreground">
               {new Date(date).toLocaleDateString()}

@@ -212,7 +212,7 @@ export const simulateRouter = o.router({
           }
         }
         // Extract dosage (e.g., "10mg", "500 mg", "2.5mg")
-        const dosageMatch = rawText.match(/(\d+(?:\.\d+)?\s*mg)/i);
+        const dosageMatch = sanitizedText.match(/(\d+(?:\.\d+)?\s*mg)/i);
         if (dosageMatch?.[1]) {
           parsedFields.push({
             field: "dosage",
@@ -222,7 +222,7 @@ export const simulateRouter = o.router({
         }
 
         // Extract quantity (look for numbers with quantity keywords)
-        const qtyMatch = rawText.match(
+        const qtyMatch = sanitizedText.match(
           /(?:quantity|qty|amount|count|boxes?|units?)[\s:]+(\d+)/i,
         );
         if (qtyMatch?.[1]) {
@@ -233,7 +233,7 @@ export const simulateRouter = o.router({
           });
         } else {
           // Look for standalone numbers that might be quantities
-          const numMatch = rawText.match(/\b(\d{1,4})\b/);
+          const numMatch = sanitizedText.match(/\b(\d{1,4})\b/);
           if (
             numMatch?.[1] &&
             parseInt(numMatch[1]) > 0 &&
@@ -248,7 +248,7 @@ export const simulateRouter = o.router({
         }
 
         // Extract price (e.g., "$50", "50 EGP", "price: 100")
-        const priceMatch = rawText.match(
+        const priceMatch = sanitizedText.match(
           /(?:price|cost|egp|\$)[\s:]*(\d+(?:\.\d{1,2})?)/i,
         );
         if (priceMatch?.[1]) {

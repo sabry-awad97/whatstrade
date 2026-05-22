@@ -60,6 +60,7 @@ func main() {
 		cfg.DatabaseURL,
 		eventHandler,
 		cfg.WhatsAppLogLevel,
+		cfg.MaxRetries,
 		log,
 	)
 	if err != nil {

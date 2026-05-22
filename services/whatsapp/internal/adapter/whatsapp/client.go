@@ -23,6 +23,7 @@ type Client struct {
 	logger       *zap.Logger
 	qrChan       <-chan whatsmeow.QRChannelItem
 	isFirstLogin bool // Track if this is the first login
+	maxRetries   int  // Maximum retry attempts for message processing
 	mu           sync.Mutex
 }
 
@@ -31,6 +32,7 @@ func NewClient(
 	databaseURL string,
 	eventHandler port.WhatsAppEventHandler,
 	logLevel string,
+	maxRetries int,
 	logger *zap.Logger,
 ) (*Client, error) {
 	// Create whatsmeow logger
@@ -75,6 +77,7 @@ func NewClient(
 		eventHandler: eventHandler,
 		logger:       logger,
 		isFirstLogin: isFirstLogin,
+		maxRetries:   maxRetries,
 	}
 
 	// Register event handler

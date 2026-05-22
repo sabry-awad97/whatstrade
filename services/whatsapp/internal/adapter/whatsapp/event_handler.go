@@ -70,7 +70,7 @@ func (c *Client) handleMessage(ctx context.Context, evt *events.Message) {
 		RawText:     text,
 		ReceivedAt:  evt.Info.Timestamp,
 		Status:      domain.MessageStatusPending,
-		MaxRetries:  3,
+		MaxRetries:  c.maxRetries,
 	}
 
 	// Call event handler

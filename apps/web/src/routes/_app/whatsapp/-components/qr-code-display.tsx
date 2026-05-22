@@ -7,8 +7,9 @@ interface QRCodeDisplayProps {
 }
 
 export function QRCodeDisplay({ qr }: QRCodeDisplayProps) {
-  const [secondsRemaining, setSecondsRemaining] = useState(60);
-
+  const [secondsRemaining, setSecondsRemaining] = useState(() =>
+    Math.max(0, Math.floor((qr.expiresAt.getTime() - Date.now()) / 1000)),
+  );
   useEffect(() => {
     const interval = setInterval(() => {
       const remaining = Math.max(

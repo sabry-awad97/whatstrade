@@ -107,110 +107,105 @@ export function FailedMessagesTable() {
                   key={message.id}
                   open={expandedRows.has(message.id)}
                   onOpenChange={() => toggleRow(message.id)}
-                  asChild
                 >
-                  <>
-                    <TableRow>
-                      <TableCell>
-                        <CollapsibleTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="p-0 h-6 w-6"
-                          >
-                            {expandedRows.has(message.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </CollapsibleTrigger>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {message.groupName}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>{message.senderName || "Unknown"}</div>
-                          <div className="text-xs text-muted-foreground font-mono">
-                            {message.senderPhone}
+                  <TableRow>
+                    <TableCell>
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="p-0 h-6 w-6"
+                        >
+                          {expandedRows.has(message.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {message.groupName}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>{message.senderName || "Unknown"}</div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {message.senderPhone}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-red-600">
+                      {message.lastError || "Unknown error"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {message.retryCount} / {message.maxRetries}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {message.lastErrorAt
+                        ? formatDistanceToNow(new Date(message.lastErrorAt), {
+                            addSuffix: true,
+                          })
+                        : "Unknown"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        onClick={() => handleRetry(message.id)}
+                        disabled={retryMessage.isPending}
+                        size="sm"
+                        variant="outline"
+                      >
+                        <RefreshCw
+                          className={`w-4 h-4 mr-2 ${retryMessage.isPending ? "animate-spin" : ""}`}
+                        />
+                        Retry
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7} className="p-0">
+                      <CollapsibleContent>
+                        <div className="p-4 bg-muted/50 space-y-2">
+                          <div>
+                            <h4 className="text-sm font-semibold mb-1">
+                              Full Error Message:
+                            </h4>
+                            <p className="text-sm text-red-600 font-mono">
+                              {message.lastError ||
+                                "No error message available"}
+                            </p>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold mb-1">
+                              Raw Message Text:
+                            </h4>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {message.rawText}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-semibold">Message ID:</span>{" "}
+                              <span className="font-mono text-xs">
+                                {message.whatsappMessageId}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-semibold">Created:</span>{" "}
+                              {formatDistanceToNow(
+                                new Date(message.createdAt),
+                                {
+                                  addSuffix: true,
+                                },
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate text-red-600">
-                        {message.lastError || "Unknown error"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {message.retryCount} / {message.maxRetries}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {message.lastErrorAt
-                          ? formatDistanceToNow(new Date(message.lastErrorAt), {
-                              addSuffix: true,
-                            })
-                          : "Unknown"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          onClick={() => handleRetry(message.id)}
-                          disabled={retryMessage.isPending}
-                          size="sm"
-                          variant="outline"
-                        >
-                          <RefreshCw
-                            className={`w-4 h-4 mr-2 ${retryMessage.isPending ? "animate-spin" : ""}`}
-                          />
-                          Retry
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={7} className="p-0">
-                        <CollapsibleContent>
-                          <div className="p-4 bg-muted/50 space-y-2">
-                            <div>
-                              <h4 className="text-sm font-semibold mb-1">
-                                Full Error Message:
-                              </h4>
-                              <p className="text-sm text-red-600 font-mono">
-                                {message.lastError ||
-                                  "No error message available"}
-                              </p>
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-semibold mb-1">
-                                Raw Message Text:
-                              </h4>
-                              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                {message.rawText}
-                              </p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="font-semibold">
-                                  Message ID:
-                                </span>{" "}
-                                <span className="font-mono text-xs">
-                                  {message.whatsappMessageId}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="font-semibold">Created:</span>{" "}
-                                {formatDistanceToNow(
-                                  new Date(message.createdAt),
-                                  {
-                                    addSuffix: true,
-                                  },
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </CollapsibleContent>
-                      </TableCell>
-                    </TableRow>
-                  </>
+                      </CollapsibleContent>
+                    </TableCell>
+                  </TableRow>
                 </Collapsible>
               ))
             )}
