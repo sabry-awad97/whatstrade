@@ -18,7 +18,8 @@ AI Extraction + Matching
 
 ## Tech Stack
 
-- **Runtime:** Go 1.25+- **Web Framework:** Gin
+- **Runtime:** Go 1.25+
+- **Web Framework:** Gin
 - **Database:** PostgreSQL (shared with Bun server)
 - **ORM:** GORM (type-safe database access)
 - **WhatsApp:** whatsmeow
@@ -73,7 +74,8 @@ services/whatsapp/
 
 ### Prerequisites
 
-- Go 1.25+- PostgreSQL 15+
+- Go 1.25+
+- PostgreSQL 15+
 
 ### Environment Variables
 

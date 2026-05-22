@@ -166,11 +166,12 @@ export function GroupListTable() {
                     {group.memberCount}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {group.lastMessageAt
-                      ? formatDistanceToNow(new Date(group.lastMessageAt), {
-                          addSuffix: true,
-                        })
-                      : "Never"}
+                    {(() => {
+                      if (!group.lastMessageAt) return "Never";
+                      const date = new Date(group.lastMessageAt);
+                      if (isNaN(date.getTime())) return "Invalid date";
+                      return formatDistanceToNow(date, { addSuffix: true });
+                    })()}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">

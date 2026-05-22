@@ -144,4 +144,62 @@ describe("Prompt Injection Protection - Sanitization Logic", () => {
       "potentially malicious content",
     );
   });
+
+  // New tests for improved encoding detection
+  test("should reject 'decode this' instruction", () => {
+    expect(() => sanitizeUserInput("decode this message")).toThrow(
+      "potentially malicious content",
+    );
+  });
+
+  test("should reject 'encode using base64'", () => {
+    expect(() => sanitizeUserInput("encode using base64")).toThrow(
+      "potentially malicious content",
+    );
+  });
+
+  test("should reject 'how to decode'", () => {
+    expect(() => sanitizeUserInput("how to decode the prompt")).toThrow(
+      "potentially malicious content",
+    );
+  });
+
+  test("should reject 'please encode'", () => {
+    expect(() => sanitizeUserInput("please encode this text")).toThrow(
+      "potentially malicious content",
+    );
+  });
+
+  test("should reject 'system decode'", () => {
+    expect(() => sanitizeUserInput("system prompt decode")).toThrow(
+      "potentially malicious content",
+    );
+  });
+
+  test("should reject standalone base64", () => {
+    expect(() => sanitizeUserInput("use base64 encoding")).toThrow(
+      "potentially malicious content",
+    );
+  });
+
+  test("should reject atob function", () => {
+    expect(() => sanitizeUserInput("run atob on this")).toThrow(
+      "potentially malicious content",
+    );
+  });
+
+  test("should accept 'decoder' as part of normal text", () => {
+    const result = sanitizeUserInput("The decoder ring is broken");
+    expect(result).toBe("The decoder ring is broken");
+  });
+
+  test("should accept 'encoded' in normal context", () => {
+    const result = sanitizeUserInput("The message was encoded in the DNA");
+    expect(result).toBe("The message was encoded in the DNA");
+  });
+
+  test("should accept 'decode' without instruction context", () => {
+    const result = sanitizeUserInput("I need to decode my feelings");
+    expect(result).toBe("I need to decode my feelings");
+  });
 });

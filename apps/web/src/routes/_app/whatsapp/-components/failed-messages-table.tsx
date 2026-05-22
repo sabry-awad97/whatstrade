@@ -144,11 +144,12 @@ export function FailedMessagesTable() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {message.lastErrorAt
-                        ? formatDistanceToNow(new Date(message.lastErrorAt), {
-                            addSuffix: true,
-                          })
-                        : "Unknown"}
+                      {(() => {
+                        if (!message.lastErrorAt) return "Unknown";
+                        const date = new Date(message.lastErrorAt);
+                        if (isNaN(date.getTime())) return "Invalid date";
+                        return formatDistanceToNow(date, { addSuffix: true });
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
@@ -194,12 +195,15 @@ export function FailedMessagesTable() {
                             </div>
                             <div>
                               <span className="font-semibold">Created:</span>{" "}
-                              {formatDistanceToNow(
-                                new Date(message.createdAt),
-                                {
+                              {(() => {
+                                if (!message.createdAt) return "Unknown";
+                                const date = new Date(message.createdAt);
+                                if (isNaN(date.getTime()))
+                                  return "Invalid date";
+                                return formatDistanceToNow(date, {
                                   addSuffix: true,
-                                },
-                              )}
+                                });
+                              })()}
                             </div>
                           </div>
                         </div>

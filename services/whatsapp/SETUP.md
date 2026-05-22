@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Go 1.22+**: [Download](https://go.dev/dl/)
+- **Go 1.25+**: [Download](https://go.dev/dl/)
 - **PostgreSQL 15+**: Running on port 5433
 - **Air** (optional, for hot reload): `go install github.com/cosmtrek/air@latest`
 
@@ -262,11 +262,11 @@ Edit `services/whatsapp/internal/adapter/repository/models.go`:
 
 ````
 
-### 5. Update Use Cases
+### 4. Update Use Cases
 
 Use the updated GORM models in your use cases.
 
-### 6. Test
+### 5. Test
 
 ```bash
 task test

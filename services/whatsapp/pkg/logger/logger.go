@@ -1,17 +1,22 @@
 package logger
 
 import (
-	"fmt"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 // New creates a new structured logger
+// If the level is invalid or empty, defaults to "info" level
 func New(level string) (*zap.Logger, error) {
+	// Default to info level if empty or invalid
+	if level == "" {
+		level = "info"
+	}
+
 	var zapLevel zapcore.Level
 	if err := zapLevel.UnmarshalText([]byte(level)); err != nil {
-		return nil, fmt.Errorf("invalid log level %q: %w", level, err)
+		// Fall back to info level on invalid input
+		zapLevel = zapcore.InfoLevel
 	}
 
 	config := zap.Config{
@@ -29,11 +34,13 @@ func New(level string) (*zap.Logger, error) {
 	return config.Build()
 }
 
-// MustNew creates a logger or panics
+// MustNew creates a logger with fallback to default configuration
+// If the level is invalid, falls back to "info" level instead of panicking
 func MustNew(level string) *zap.Logger {
 	logger, err := New(level)
 	if err != nil {
-		panic(err)
+		// If config.Build() fails, return a basic production logger
+		logger, _ = zap.NewProduction()
 	}
 	return logger
 }

@@ -7,6 +7,95 @@ import { z } from "zod";
 import { getGoogleModel } from "../providers/google";
 
 /**
+ * Circuit breaker state for AI service calls
+ */
+interface CircuitBreakerState {
+  failureCount: number;
+  lastFailureTime: number;
+  isOpen: boolean;
+}
+
+const circuitBreaker: CircuitBreakerState = {
+  failureCount: 0,
+  lastFailureTime: 0,
+  isOpen: false,
+};
+
+// Circuit breaker configuration
+const CIRCUIT_BREAKER_THRESHOLD = 5; // Open circuit after 5 consecutive failures
+const CIRCUIT_BREAKER_COOLDOWN = 60000; // 60 seconds cooldown
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const REQUEST_TIMEOUT = 30000; // 30 seconds
+
+/**
+ * Check if error is transient and should be retried
+ */
+function isTransientError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+    // Network errors, timeouts, rate limits, server errors
+    return (
+      message.includes("timeout") ||
+      message.includes("network") ||
+      message.includes("econnrefused") ||
+      message.includes("enotfound") ||
+      message.includes("rate limit") ||
+      message.includes("429") ||
+      message.includes("500") ||
+      message.includes("502") ||
+      message.includes("503") ||
+      message.includes("504")
+    );
+  }
+  return false;
+}
+
+/**
+ * Reset circuit breaker on successful call
+ */
+function resetCircuitBreaker(): void {
+  circuitBreaker.failureCount = 0;
+  circuitBreaker.isOpen = false;
+}
+
+/**
+ * Record failure and potentially open circuit breaker
+ */
+function recordFailure(): void {
+  circuitBreaker.failureCount++;
+  circuitBreaker.lastFailureTime = Date.now();
+
+  if (circuitBreaker.failureCount >= CIRCUIT_BREAKER_THRESHOLD) {
+    circuitBreaker.isOpen = true;
+  }
+}
+
+/**
+ * Check if circuit breaker should be closed (cooldown expired)
+ */
+function shouldAttemptReset(): boolean {
+  if (!circuitBreaker.isOpen) return false;
+
+  const timeSinceLastFailure = Date.now() - circuitBreaker.lastFailureTime;
+  if (timeSinceLastFailure >= CIRCUIT_BREAKER_COOLDOWN) {
+    // Half-open state: allow one attempt
+    circuitBreaker.isOpen = false;
+    circuitBreaker.failureCount = Math.floor(CIRCUIT_BREAKER_THRESHOLD / 2);
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Sleep for specified milliseconds
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Common prompt injection patterns to detect and block
  * These patterns attempt to override system instructions or inject malicious commands
  */
@@ -28,7 +117,10 @@ const INJECTION_PATTERNS = [
   /repeat\s+(your|the)\s+(system\s+)?(prompt|instructions?)/i,
 
   // Encoding/obfuscation attempts
-  /base64|atob|btoa|decode|encode/i,
+  /\b(base64|atob|btoa)\b/i, // Specific encoding functions
+  /\b(decode|encode)\s+(this|the|it|using|with|base64)/i, // Decode/encode with instruction context
+  /(how\s+to|please|can\s+you)\s+.{0,20}\b(decode|encode)\b/i, // Decode/encode with request phrases
+  /\b(ignore|system|prompt).{0,30}\b(decode|encode)\b/i, // Decode/encode near suspicious terms
   /\\x[0-9a-f]{2}/i, // Hex encoding
   /&#\d+;/, // HTML entities
 
@@ -261,22 +353,91 @@ ${sanitizedText}
 
 ${DELIMITER}`;
 
-  const result = await generateText({
-    model: getGoogleModel(),
-    output: Output.object({
-      schema,
-    }),
-    prompt: structuredPrompt,
-  });
-
-  // Validate output with Zod schema
-  const parsed = schema.safeParse(result.output);
-  if (!parsed.success) {
-    throw new Error(`AI output validation failed: ${parsed.error.message}`);
+  // Check circuit breaker
+  if (circuitBreaker.isOpen && !shouldAttemptReset()) {
+    throw new Error(
+      "AI service circuit breaker is open. Too many recent failures. Please try again later.",
+    );
   }
 
-  // Additional security validation: check for instruction-like content in output
-  validateModelOutput(parsed.data);
+  // Retry loop with exponential backoff
+  let lastError: Error | null = null;
 
-  return parsed.data;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      // Create abort controller for timeout
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, REQUEST_TIMEOUT);
+
+      try {
+        const result = await generateText({
+          model: getGoogleModel(),
+          output: Output.object({
+            schema,
+          }),
+          prompt: structuredPrompt,
+          abortSignal: abortController.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        // Validate output with Zod schema
+        const parsed = schema.safeParse(result.output);
+        if (!parsed.success) {
+          throw new Error(
+            `AI output validation failed: ${parsed.error.message}`,
+          );
+        }
+
+        // Additional security validation: check for instruction-like content in output
+        validateModelOutput(parsed.data);
+
+        // Success - reset circuit breaker
+        resetCircuitBreaker();
+
+        return parsed.data;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Check if this is the last attempt
+      const isLastAttempt = attempt === MAX_RETRIES - 1;
+
+      // Check if error is transient
+      const isTransient = isTransientError(error);
+
+      // Record failure for circuit breaker
+      if (!isTransient || isLastAttempt) {
+        recordFailure();
+      }
+
+      // If not transient or last attempt, throw immediately
+      if (!isTransient) {
+        throw lastError;
+      }
+
+      // If last attempt, throw
+      if (isLastAttempt) {
+        throw new Error(
+          `AI extraction failed after ${MAX_RETRIES} attempts: ${lastError.message}`,
+        );
+      }
+
+      // Calculate exponential backoff delay
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+      console.warn(
+        `AI extraction attempt ${attempt + 1} failed (transient error), retrying in ${delay}ms...`,
+        lastError.message,
+      );
+
+      await sleep(delay);
+    }
+  }
+
+  // This should never be reached, but TypeScript needs it
+  throw lastError || new Error("AI extraction failed for unknown reason");
 }

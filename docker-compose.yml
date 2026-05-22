@@ -1,19 +1,21 @@
-version: "3.8"
+# Environment variables are loaded from .env file
+# Copy .env.example to .env and configure your values
+# DO NOT commit .env to version control
 
 services:
   postgres:
     image: postgres:15-alpine
     container_name: whatstrade-postgres
     environment:
-      POSTGRES_DB: whatstrade
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${POSTGRES_DB:-whatstrade}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,12 +28,12 @@ services:
       dockerfile: Dockerfile
     container_name: whatstrade-whatsapp
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/whatstrade
-      PORT: 8080
-      LOG_LEVEL: info
-      WHATSAPP_LOG_LEVEL: INFO
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: ${WHATSAPP_SERVICE_PORT:-8080}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      WHATSAPP_LOG_LEVEL: ${WHATSAPP_LOG_LEVEL:-INFO}
     ports:
-      - "8080:8080"
+      - "${WHATSAPP_SERVICE_PORT:-8080}:${WHATSAPP_SERVICE_PORT:-8080}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,7 +41,7 @@ services:
     networks:
       - whatstrade-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:${WHATSAPP_SERVICE_PORT:-8080}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -51,12 +53,12 @@ services:
       dockerfile: ./apps/server/Dockerfile
     container_name: whatstrade-server
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/whatstrade
-      WHATSAPP_SERVICE_URL: http://whatsapp-service:8080
-      PORT: 3000
-      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      WHATSAPP_SERVICE_URL: ${WHATSAPP_SERVICE_URL:-http://whatsapp-service:8080}
+      PORT: ${SERVER_PORT:-3000}
+      NODE_ENV: ${NODE_ENV:-production}
     ports:
-      - "3000:3000"
+      - "${SERVER_PORT:-3000}:${SERVER_PORT:-3000}"
     depends_on:
       postgres:
         condition: service_healthy

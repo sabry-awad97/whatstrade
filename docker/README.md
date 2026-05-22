@@ -199,13 +199,28 @@ The current configuration is optimized for **development** with:
 
 For production deployment:
 
-1. **Change default password** in `docker-compose.yml`
-2. **Enable SSL** in `postgresql.conf`
-3. **Restrict connections** via `pg_hba.conf`
-4. **Use secrets management** (Docker secrets, Vault, etc.)
-5. **Enable connection pooling** (PgBouncer)
-6. **Set up automated backups**
-7. **Configure monitoring** (Prometheus, Grafana)
+1. **Configure environment variables** - Copy `.env.example` to `.env` and set secure values
+2. **Change default password** - Set a strong `POSTGRES_PASSWORD` in `.env`
+3. **Enable SSL** in `postgresql.conf`
+4. **Restrict connections** via `pg_hba.conf`
+5. **Use secrets management** (Docker secrets, Vault, etc.)
+6. **Enable connection pooling** (PgBouncer)
+7. **Set up automated backups**
+8. **Configure monitoring** (Prometheus, Grafana)
+
+### Environment Setup
+
+Before running docker-compose, create a `.env` file from the example:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit .env and set your secure values
+# At minimum, change POSTGRES_PASSWORD and update DATABASE_URL accordingly
+```
+
+**Important:** Never commit `.env` to version control. It's already in `.gitignore`.
 
 ## 🐛 Troubleshooting
 
