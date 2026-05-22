@@ -10,6 +10,12 @@ import { env } from "@workspace/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import {
+  startWhatsAppListener,
+  stopWhatsAppListener,
+} from "./services/whatsapp-listener";
+import { initPgNotifier, pgNotifier } from "@workspace/db/pg-notifier";
+import { checkAndApplyTriggers } from "@workspace/db/check-trigger";
 
 const app = new Hono();
 
@@ -73,6 +79,84 @@ app.use("/*", async (c, next) => {
 
 app.get("/", (c) => {
   return c.text("OK");
+});
+
+// Apply database triggers automatically on startup
+// This ensures all required triggers are present without manual migrations
+checkAndApplyTriggers().catch((error) => {
+  console.error("Failed to apply database triggers:", error);
+  // Don't crash the HTTP server if trigger application fails
+  // Triggers can be applied manually by running: bun run check-trigger.ts
+});
+
+// Start PostgreSQL NOTIFY listener service
+// This provides real-time event notifications for SSE streams
+initPgNotifier().catch((error) => {
+  console.error("Failed to start PG Notifier:", error);
+  // Don't crash the HTTP server if PG Notifier fails
+  // The notifier will attempt to reconnect automatically
+});
+
+// Start WhatsApp listener service
+// This runs concurrently with the HTTP server
+startWhatsAppListener(true).catch((error) => {
+  console.error("Failed to start WhatsApp listener:", error);
+  // Don't crash the HTTP server if WhatsApp listener fails
+  // The listener will attempt to reconnect automatically
+});
+
+// Shutdown guard to prevent multiple shutdown attempts
+let isShuttingDown = false;
+
+// Graceful shutdown handler
+process.on("SIGINT", async () => {
+  // Early return if shutdown already in progress
+  if (isShuttingDown) {
+    console.log("Shutdown already in progress, ignoring SIGINT");
+    return;
+  }
+
+  console.log("\nReceived SIGINT, shutting down gracefully...");
+  isShuttingDown = true;
+
+  try {
+    await Promise.race([
+      Promise.all([stopWhatsAppListener(), pgNotifier.disconnect()]),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Shutdown timeout")), 30000),
+      ),
+    ]);
+    console.log("Services stopped successfully");
+    process.exit(0);
+  } catch (error) {
+    console.error("Error during shutdown:", error);
+    process.exit(1);
+  }
+});
+
+process.on("SIGTERM", async () => {
+  // Early return if shutdown already in progress
+  if (isShuttingDown) {
+    console.log("Shutdown already in progress, ignoring SIGTERM");
+    return;
+  }
+
+  console.log("\nReceived SIGTERM, shutting down gracefully...");
+  isShuttingDown = true;
+
+  try {
+    await Promise.race([
+      Promise.all([stopWhatsAppListener(), pgNotifier.disconnect()]),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Shutdown timeout")), 30000),
+      ),
+    ]);
+    console.log("Services stopped successfully");
+    process.exit(0);
+  } catch (error) {
+    console.error("Error during shutdown:", error);
+    process.exit(1);
+  }
 });
 
 export default app;

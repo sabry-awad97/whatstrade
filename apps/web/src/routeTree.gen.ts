@@ -9,9 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SplatRouteImport } from './routes/$'
 import { Route as AppRouteRouteImport } from './routes/_app/route'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppWhatsappIndexRouteImport } from './routes/_app/whatsapp/index'
 import { Route as AppWeightsIndexRouteImport } from './routes/_app/weights/index'
 import { Route as AppSimulateIndexRouteImport } from './routes/_app/simulate/index'
 import { Route as AppReviewIndexRouteImport } from './routes/_app/review/index'
@@ -22,6 +24,11 @@ import { Route as AppGroupsIndexRouteImport } from './routes/_app/groups/index'
 import { Route as AppDashboardIndexRouteImport } from './routes/_app/dashboard/index'
 import { Route as AppAuditIndexRouteImport } from './routes/_app/audit/index'
 
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppRouteRoute = AppRouteRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
@@ -34,6 +41,11 @@ const LoginIndexRoute = LoginIndexRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppWhatsappIndexRoute = AppWhatsappIndexRouteImport.update({
+  id: '/whatsapp/',
+  path: '/whatsapp/',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppWeightsIndexRoute = AppWeightsIndexRouteImport.update({
@@ -84,6 +96,7 @@ const AppAuditIndexRoute = AppAuditIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/$': typeof SplatRoute
   '/login/': typeof LoginIndexRoute
   '/audit/': typeof AppAuditIndexRoute
   '/dashboard/': typeof AppDashboardIndexRoute
@@ -94,8 +107,10 @@ export interface FileRoutesByFullPath {
   '/review/': typeof AppReviewIndexRoute
   '/simulate/': typeof AppSimulateIndexRoute
   '/weights/': typeof AppWeightsIndexRoute
+  '/whatsapp/': typeof AppWhatsappIndexRoute
 }
 export interface FileRoutesByTo {
+  '/$': typeof SplatRoute
   '/': typeof AppIndexRoute
   '/login': typeof LoginIndexRoute
   '/audit': typeof AppAuditIndexRoute
@@ -107,10 +122,12 @@ export interface FileRoutesByTo {
   '/review': typeof AppReviewIndexRoute
   '/simulate': typeof AppSimulateIndexRoute
   '/weights': typeof AppWeightsIndexRoute
+  '/whatsapp': typeof AppWhatsappIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteRouteWithChildren
+  '/$': typeof SplatRoute
   '/_app/': typeof AppIndexRoute
   '/login/': typeof LoginIndexRoute
   '/_app/audit/': typeof AppAuditIndexRoute
@@ -122,11 +139,13 @@ export interface FileRoutesById {
   '/_app/review/': typeof AppReviewIndexRoute
   '/_app/simulate/': typeof AppSimulateIndexRoute
   '/_app/weights/': typeof AppWeightsIndexRoute
+  '/_app/whatsapp/': typeof AppWhatsappIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
     | '/login/'
     | '/audit/'
     | '/dashboard/'
@@ -137,8 +156,10 @@ export interface FileRouteTypes {
     | '/review/'
     | '/simulate/'
     | '/weights/'
+    | '/whatsapp/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/$'
     | '/'
     | '/login'
     | '/audit'
@@ -150,9 +171,11 @@ export interface FileRouteTypes {
     | '/review'
     | '/simulate'
     | '/weights'
+    | '/whatsapp'
   id:
     | '__root__'
     | '/_app'
+    | '/$'
     | '/_app/'
     | '/login/'
     | '/_app/audit/'
@@ -164,15 +187,24 @@ export interface FileRouteTypes {
     | '/_app/review/'
     | '/_app/simulate/'
     | '/_app/weights/'
+    | '/_app/whatsapp/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  SplatRoute: typeof SplatRoute
   LoginIndexRoute: typeof LoginIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -192,6 +224,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/whatsapp/': {
+      id: '/_app/whatsapp/'
+      path: '/whatsapp'
+      fullPath: '/whatsapp/'
+      preLoaderRoute: typeof AppWhatsappIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/weights/': {
@@ -271,6 +310,7 @@ interface AppRouteRouteChildren {
   AppReviewIndexRoute: typeof AppReviewIndexRoute
   AppSimulateIndexRoute: typeof AppSimulateIndexRoute
   AppWeightsIndexRoute: typeof AppWeightsIndexRoute
+  AppWhatsappIndexRoute: typeof AppWhatsappIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -284,6 +324,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppReviewIndexRoute: AppReviewIndexRoute,
   AppSimulateIndexRoute: AppSimulateIndexRoute,
   AppWeightsIndexRoute: AppWeightsIndexRoute,
+  AppWhatsappIndexRoute: AppWhatsappIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
@@ -292,6 +333,7 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
+  SplatRoute: SplatRoute,
   LoginIndexRoute: LoginIndexRoute,
 }
 export const routeTree = rootRouteImport

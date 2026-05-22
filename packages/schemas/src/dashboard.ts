@@ -13,7 +13,7 @@ export const GetDashboardStatsResponse = z.object({
   totalMatches: z.number(),
   pendingMatches: z.number(),
   autoConfirmed: z.number(),
-  avgMatchScore: z.number(),
+  avgMatchScore: z.number().min(0).max(1),
   activeGroups: z.number(),
   todayMessages: z.number(),
   matchRate: z.number(),

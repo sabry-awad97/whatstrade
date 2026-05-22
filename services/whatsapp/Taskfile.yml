@@ -1,0 +1,235 @@
+version: "3"
+
+vars:
+  BINARY_NAME: whatsapp-service
+  DOCKER_IMAGE: whatsapp-service:latest
+  COVERAGE_FILE: coverage.out
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o bin/{{.BINARY_NAME}} ./cmd/server
+    sources:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+    generates:
+      - bin/{{.BINARY_NAME}}
+
+  run:
+    desc: Run the service
+    cmds:
+      - go run ./cmd/server/main.go
+
+  dev:
+    desc: Run with hot reload (requires air)
+    cmds:
+      - air
+    preconditions:
+      - sh: command -v air
+        msg: "air is not installed. Run: task tools:air"
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v -coverprofile={{.COVERAGE_FILE}} ./...
+
+  test:race:
+    desc: Run tests with race detector (not supported on Windows 32-bit)
+    cmds:
+      - go test -v -race -coverprofile={{.COVERAGE_FILE}} ./...
+
+  test:coverage:
+    desc: Run tests and show coverage report
+    deps: [test]
+    cmds:
+      - go tool cover -html={{.COVERAGE_FILE}}
+
+  test:watch:
+    desc: Run tests in watch mode (requires reflex - install with 'go install github.com/cespare/reflex@latest')
+    cmds:
+      - reflex -r '\.go$' -s -- go test -v ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - golangci-lint run
+    preconditions:
+      - sh: command -v golangci-lint
+        msg: "golangci-lint is not installed. Run: task tools:lint"
+
+  lint:fix:
+    desc: Run linter and fix issues
+    cmds:
+      - golangci-lint run --fix
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - cmd: rm -rf bin/
+        platforms: [linux, darwin]
+      - cmd: rmdir /s /q bin
+        platforms: [windows]
+        ignore_error: true
+      - cmd: rm -f {{.COVERAGE_FILE}}
+        platforms: [linux, darwin]
+      - cmd: del /f /q {{.COVERAGE_FILE}}
+        platforms: [windows]
+        ignore_error: true
+
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t {{.DOCKER_IMAGE}} .
+
+  docker:check:
+    desc: Validate Dockerfile syntax without building
+    cmds:
+      - docker build --check .
+
+  docker:run:
+    desc: Run Docker container
+    cmds:
+      - docker run -p 8080:8080 --env-file .env {{.DOCKER_IMAGE}}
+
+  docker:up:
+    desc: Start services with docker-compose
+    dir: ../..
+    cmds:
+      - docker-compose up -d
+
+  docker:down:
+    desc: Stop services with docker-compose
+    dir: ../..
+    cmds:
+      - docker-compose down
+
+  docker:logs:
+    desc: View docker-compose logs
+    dir: ../..
+    cmds:
+      - docker-compose logs -f whatsapp-service
+
+  deps:
+    desc: Download and tidy dependencies
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  deps:upgrade:
+    desc: Upgrade all dependencies
+    cmds:
+      - go get -u ./...
+      - go mod tidy
+
+  tools:air:
+    desc: Install air for hot reload
+    cmds:
+      - go install github.com/cosmtrek/air@latest
+
+  tools:lint:
+    desc: Install golangci-lint
+    cmds:
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+  tools:goimports:
+    desc: Install goimports for code formatting
+    cmds:
+      - go install golang.org/x/tools/cmd/goimports@latest
+
+  tools:
+    desc: Install all development tools
+    cmds:
+      - task: tools:air
+      - task: tools:lint
+      - task: tools:goimports
+
+  verify:
+    desc: Run all verification checks
+    cmds:
+      - task: lint
+      - task: test
+
+  ci:
+    desc: Run CI pipeline (lint + test)
+    cmds:
+      - task: deps
+      - task: lint
+      - task: test
+      - task: build
+
+  format:
+    desc: Format Go code
+    cmds:
+      - go fmt ./...
+      - goimports -w .
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...
+
+  check:
+    desc: Run all checks (format, vet, lint, test, docker)
+    cmds:
+      - task: format
+      - task: vet
+      - task: lint
+      - task: test
+      - task: docker:check
+
+  migrate:up:
+    desc: Run database migrations (via Bun server)
+    dir: ../..
+    cmds:
+      - echo "Migrations are run by the Bun server"
+      - echo "Run - cd apps/server and bun run db:push"
+
+  migrate:status:
+    desc: Check migration status
+    dir: ../..
+    cmds:
+      - echo "Check Prisma migration status"
+      - echo "Run - cd packages/db and bunx prisma migrate status"
+
+  gen:mocks:
+    desc: Generate test mocks (if using mockgen)
+    cmds:
+      - echo "Mocks are manually maintained in internal/testutil/"
+
+  benchmark:
+    desc: Run benchmarks
+    cmds:
+      - go test -bench=. -benchmem ./...
+
+  profile:cpu:
+    desc: Run CPU profiling
+    cmds:
+      - go test -cpuprofile=cpu.prof -bench=. ./...
+      - go tool pprof cpu.prof
+
+  profile:mem:
+    desc: Run memory profiling
+    cmds:
+      - go test -memprofile=mem.prof -bench=. ./...
+      - go tool pprof mem.prof
+
+  install:
+    desc: Install the binary to $GOPATH/bin
+    cmds:
+      - go install ./cmd/server
+
+  uninstall:
+    desc: Remove the binary from $GOPATH/bin
+    cmds:
+      - cmd: rm $(go env GOPATH)/bin/{{.BINARY_NAME}}
+        platforms: [linux, darwin]
+      - cmd: del /f /q %GOPATH%\bin\{{.BINARY_NAME}}.exe
+        platforms: [windows]
+        ignore_error: true

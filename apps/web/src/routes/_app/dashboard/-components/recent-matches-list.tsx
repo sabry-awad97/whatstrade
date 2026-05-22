@@ -76,7 +76,7 @@ export function RecentMatchesList({
                 }}
               >
                 {match.confidenceBand.toUpperCase()}
-              </Badge>{" "}
+              </Badge>
             </div>
           ))}
         </div>

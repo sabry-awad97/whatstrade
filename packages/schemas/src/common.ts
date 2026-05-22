@@ -4,6 +4,11 @@
 import { z } from "zod";
 
 /**
+ * Matching engine constants
+ */
+export const MATCH_SCORE_THRESHOLD = 0.2;
+
+/**
  * UUID identifier schema
  */
 export const UuidSchema = z.string().uuid();

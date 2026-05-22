@@ -13,6 +13,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@workspace/ai": "workspace:*",
     "@workspace/api": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/db": "workspace:*",
@@ -20,10 +21,13 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "hono": "catalog:",
+    "p-limit": "^7.3.0",
+    "pg": "^8.13.1",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
+    "@types/pg": "^8.11.10",
     "@workspace/config": "workspace:*",
     "tsdown": "^0.21.9",
     "typescript": "catalog:"

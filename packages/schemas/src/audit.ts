@@ -24,12 +24,14 @@ export const ListAuditLogResponseItem = z.object({
   action: z.string(),
   entityType: z.string(),
   entityId: UuidSchema,
-  operatorId: UuidSchema,
-  operator: z.object({
-    id: UuidSchema,
-    name: z.string(),
-    email: z.string(),
-  }),
+  operatorId: UuidSchema.nullable(),
+  operator: z
+    .object({
+      id: UuidSchema,
+      name: z.string(),
+      email: z.string(),
+    })
+    .nullable(),
   details: z
     .union([
       z.record(z.string(), z.unknown()), // JSON object

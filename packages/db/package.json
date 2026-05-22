@@ -5,6 +5,12 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./check-trigger": {
+      "default": "./check-trigger.ts"
+    },
+    "./pg-notifier": {
+      "default": "./src/pg-notifier.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }

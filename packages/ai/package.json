@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/ai",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./google": {
+      "default": "./src/providers/google.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc -b"
+  },
+  "dependencies": {
+    "ai": "^6.0.183",
+    "@ai-sdk/google": "^3.0.74",
+    "@workspace/env": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@workspace/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

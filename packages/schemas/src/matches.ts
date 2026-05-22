@@ -25,13 +25,28 @@ export const ListMatchesQueryParams = PaginationQueryParams.extend({
 
 // Response schemas
 /**
+ * @summary Score breakdown for a match
+ */
+export const ScoreBreakdown = z.object({
+  medication: z
+    .number()
+    .min(0)
+    .max(1)
+    .describe("Medication name similarity score"),
+  quantity: z.number().min(0).max(1).describe("Quantity match score"),
+  dosage: z.number().min(0).max(1).describe("Dosage similarity score"),
+  price: z.number().min(0).max(1).describe("Price fit score"),
+  recency: z.number().min(0).max(1).describe("Recency score"),
+});
+
+/**
  * @summary Single match item in list response
  */
 export const ListMatchesResponseItem = z.object({
   id: UuidSchema,
   offerId: UuidSchema,
   requestId: UuidSchema,
-  score: z.number(),
+  score: z.number().min(0).max(1),
   confidenceBand: z.string(),
   status: z.string(),
   operatorNote: z.string().nullish(),
@@ -41,6 +56,9 @@ export const ListMatchesResponseItem = z.object({
   offerPrice: z.string().nullish(),
   maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
+  scoreBreakdown: ScoreBreakdown.optional().describe(
+    "Detailed score breakdown by component",
+  ),
 });
 
 /**
@@ -57,7 +75,7 @@ export const GetMatchStatsResponse = z.object({
   confirmed: z.number(),
   rejected: z.number(),
   autoConfirmed: z.number(),
-  avgScore: z.number(),
+  avgScore: z.number().min(0).max(1),
   bandBreakdown: z.object({
     auto: z.number(),
     suggest: z.number(),
@@ -78,7 +96,7 @@ export const GetMatchResponse = z.object({
   id: UuidSchema,
   offerId: UuidSchema,
   requestId: UuidSchema,
-  score: z.number(),
+  score: z.number().min(0).max(1),
   confidenceBand: z.string(),
   status: z.string(),
   operatorNote: z.string().nullish(),
@@ -88,6 +106,9 @@ export const GetMatchResponse = z.object({
   offerPrice: z.string().nullish(),
   maxPrice: z.string().nullish(),
   createdAt: z.coerce.date(),
+  scoreBreakdown: ScoreBreakdown.optional().describe(
+    "Detailed score breakdown by component",
+  ),
 });
 
 /**
@@ -121,6 +142,7 @@ export const RejectMatchBody = OptionalNoteBody;
 export const RejectMatchResponse = GetMatchResponse;
 
 // Type exports
+export type ScoreBreakdown = z.infer<typeof ScoreBreakdown>;
 export type ListMatchesQueryParams = z.infer<typeof ListMatchesQueryParams>;
 export type ListMatchesResponseItem = z.infer<typeof ListMatchesResponseItem>;
 export type ListMatchesResponse = z.infer<typeof ListMatchesResponse>;
