@@ -120,7 +120,12 @@ process.on("SIGINT", async () => {
   isShuttingDown = true;
 
   try {
-    await Promise.all([stopWhatsAppListener(), pgNotifier.disconnect()]);
+    await Promise.race([
+      Promise.all([stopWhatsAppListener(), pgNotifier.disconnect()]),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Shutdown timeout")), 30000),
+      ),
+    ]);
     console.log("Services stopped successfully");
     process.exit(0);
   } catch (error) {

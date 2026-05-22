@@ -231,13 +231,19 @@ export function useBulkToggleGroupMonitoring() {
 
   return useMutation({
     mutationFn: async (params: { jids: string[]; enabled: boolean }) => {
-      // Execute all mutations in parallel
-      const promises = params.jids.map((jid) =>
-        params.enabled
-          ? orpc.groups.enableGroupMonitoring.call({ jid })
-          : orpc.groups.disableGroupMonitoring.call({ jid }),
+      // Use p-limit to cap concurrency at 10 requests
+      const pLimit = (await import("p-limit")).default;
+      const limit = pLimit(10);
+
+      // Execute mutations with concurrency control
+      const limitedTasks = params.jids.map((jid) =>
+        limit(() =>
+          params.enabled
+            ? orpc.groups.enableGroupMonitoring.call({ jid })
+            : orpc.groups.disableGroupMonitoring.call({ jid }),
+        ),
       );
-      return Promise.all(promises);
+      return Promise.all(limitedTasks);
     },
     onSuccess: (data, params) => {
       queryClient.invalidateQueries({

@@ -135,7 +135,7 @@ export async function processMessage(messageId: string): Promise<void> {
       where: { id: messageId },
       data: {
         status: "completed",
-        extractedData: extracted as any, // Store extracted data for audit
+        extractedData: extracted,
         createdOfferId,
         createdRequestId,
         completedAt: new Date(),

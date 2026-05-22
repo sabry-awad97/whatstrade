@@ -131,7 +131,7 @@ function RouteComponent() {
       {view === "list" ? (
         <div className="flex-1 overflow-auto">
           <MatchesList
-            matches={matches as ListMatchesResponseItem[] | undefined}
+            matches={matches}
             isLoading={isLoading}
             statusFilter={statusFilter}
             onSelectMatch={handleSelectMatch}

@@ -43,8 +43,8 @@ async function parseMatchWithBreakdown(m: MatchWithDecimal) {
     medicationName: m.medicationName,
     offerQuantity: m.offerQuantity,
     requestQuantity: m.requestQuantity,
-    offerPrice: m.offerPrice !== null ? Number(m.offerPrice) : null,
-    maxPrice: m.maxPrice !== null ? Number(m.maxPrice) : null,
+    offerPrice: m.offerPrice !== null ? m.offerPrice.toString() : null,
+    maxPrice: m.maxPrice !== null ? m.maxPrice.toString() : null,
     createdAt: m.createdAt,
     scoreBreakdown,
   };

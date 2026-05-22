@@ -156,8 +156,14 @@ export async function startWhatsAppListener(
     });
 
     // Process existing pending messages on startup (if enabled)
+    // Fire-and-forget to avoid blocking HTTP server startup
     if (processExistingOnStartup) {
-      await processExistingPendingMessages();
+      processExistingPendingMessages().catch((error) => {
+        console.error(
+          "[WhatsApp Listener] Error processing existing messages on startup:",
+          error,
+        );
+      });
     }
 
     // Start periodic retry processor (every 10 seconds)
@@ -238,15 +244,25 @@ async function processExistingPendingMessages(): Promise<void> {
     // Process all messages (pending + reset failed) with concurrency control
     const allMessages = [...pendingMessages, ...failedMessages];
 
-    // Start all processing tasks without awaiting (p-limit will control concurrency)
+    // Start all processing tasks without awaiting (fire-and-forget)
+    // p-limit will control concurrency, and each task has its own error handling
     const processingPromises = allMessages.map((message) =>
       processMessageWithLimit(message.id),
     );
 
-    // Wait for all tasks to complete
-    await Promise.all(processingPromises);
+    // Attach error handlers to each promise (fire-and-forget)
+    processingPromises.forEach((promise) => {
+      promise.catch((error) => {
+        console.error(
+          "[WhatsApp Listener] Error processing message on startup:",
+          error,
+        );
+      });
+    });
 
-    console.log("[WhatsApp Listener] Finished processing existing messages");
+    console.log(
+      `[WhatsApp Listener] Started processing ${allMessages.length} messages in background`,
+    );
   } catch (error) {
     console.error(
       "[WhatsApp Listener] Error processing existing messages:",

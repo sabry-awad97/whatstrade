@@ -36,6 +36,7 @@
     "dotenv": "catalog:",
     "lucide-react": "^1.8.0",
     "next-themes": "catalog:",
+    "p-limit": "^7.3.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
