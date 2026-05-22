@@ -23,6 +23,7 @@
  */
 import { Client } from "pg";
 import { EventEmitter } from "events";
+import { env } from "@workspace/env/server";
 
 export type NotifyChannel =
   | "whatsapp_status"
@@ -51,14 +52,9 @@ class PgNotifier extends EventEmitter {
 
     this.isConnecting = true;
 
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error("DATABASE_URL environment variable is required");
-    }
-
     try {
       this.client = new Client({
-        connectionString: databaseUrl,
+        connectionString: env.DATABASE_URL,
       });
 
       await this.client.connect();

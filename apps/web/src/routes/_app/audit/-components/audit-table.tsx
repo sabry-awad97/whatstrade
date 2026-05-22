@@ -125,8 +125,17 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
           const details = getValue<unknown>();
           if (!details) return <span className="text-muted-foreground">—</span>;
 
-          const detailsStr =
-            typeof details === "string" ? details : JSON.stringify(details);
+          let detailsStr: string;
+          if (typeof details === "string") {
+            detailsStr = details;
+          } else {
+            try {
+              detailsStr = JSON.stringify(details);
+            } catch (error) {
+              // Handle circular references or unsupported types
+              detailsStr = "[unserializable details]";
+            }
+          }
 
           return (
             <span className="text-muted-foreground truncate max-w-[200px] block text-[11px]">

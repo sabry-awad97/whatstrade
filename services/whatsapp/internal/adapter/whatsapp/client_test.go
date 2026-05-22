@@ -92,26 +92,23 @@ func TestParseJID(t *testing.T) {
 }
 
 // TestClient_SyncHistory_ValidationLogic tests the validation logic in SyncHistory
+// Note: Since client is nil, all calls will return ErrNotAuthenticated
 func TestClient_SyncHistory_ValidationLogic(t *testing.T) {
 	tests := []struct {
-		name       string
-		groupJID   string
-		wantErrMsg string
+		name     string
+		groupJID string
 	}{
 		{
-			name:       "invalid JID format",
-			groupJID:   "invalid-jid",
-			wantErrMsg: "invalid JID",
+			name:     "invalid JID format",
+			groupJID: "invalid-jid",
 		},
 		{
-			name:       "empty JID",
-			groupJID:   "",
-			wantErrMsg: "invalid JID",
+			name:     "empty JID",
+			groupJID: "",
 		},
 		{
-			name:       "valid JID but not implemented",
-			groupJID:   "123456789@g.us",
-			wantErrMsg: "not yet implemented",
+			name:     "valid JID",
+			groupJID: "123456789@g.us",
 		},
 	}
 
@@ -120,6 +117,7 @@ func TestClient_SyncHistory_ValidationLogic(t *testing.T) {
 			logger := zaptest.NewLogger(t)
 			eventHandler := &testutil.MockWhatsAppEventHandler{}
 
+			// Client with nil whatsmeow client - will always return ErrNotAuthenticated
 			client := &Client{
 				logger:       logger,
 				eventHandler: eventHandler,
@@ -129,16 +127,10 @@ func TestClient_SyncHistory_ValidationLogic(t *testing.T) {
 			ctx := context.Background()
 			err := client.SyncHistory(ctx, tt.groupJID)
 
-			if err == nil {
-				t.Errorf("SyncHistory() error = nil, want error containing %q", tt.wantErrMsg)
-				return
-			}
-
-			if tt.wantErrMsg != "" {
-				errMsg := err.Error()
-				if errMsg == "" {
-					t.Errorf("SyncHistory() error message is empty, want %q", tt.wantErrMsg)
-				}
+			// Since client is nil, IsLoggedIn() returns false
+			// So SyncHistory should always return ErrNotAuthenticated
+			if err != domain.ErrNotAuthenticated {
+				t.Errorf("SyncHistory() error = %v, want %v", err, domain.ErrNotAuthenticated)
 			}
 		})
 	}

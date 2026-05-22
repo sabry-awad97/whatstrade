@@ -278,9 +278,9 @@ function RouteComponent() {
                     className="text-right text-xs p-2 rounded-lg border border-border/60 hover:bg-accent/50 transition-colors text-foreground/70 leading-relaxed"
                     dir="rtl"
                   >
-                    {m.slice(0, 60)}…
+                    {[...m].slice(0, 60).join("")}…
                   </button>
-                ))}
+                ))}{" "}
               </div>
             </div>
           )}

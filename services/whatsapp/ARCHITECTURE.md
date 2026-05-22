@@ -253,16 +253,57 @@ func TestWhatsAppMessageFlow(t *testing.T) {
 
 ## Configuration
 
-Configuration is loaded from environment variables using `envconfig`:
+Configuration is loaded from environment variables and `.env` files using **Viper**:
 
 ```go
 type Config struct {
-    DatabaseURL      string `envconfig:"DATABASE_URL" required:"true"`
-    Port             int    `envconfig:"PORT" default:"8080"`
-    LogLevel         string `envconfig:"LOG_LEVEL" default:"info"`
-    WhatsAppLogLevel string `envconfig:"WHATSAPP_LOG_LEVEL" default:"INFO"`
+    // Database
+    DatabaseURL string
+
+    // Server
+    Port     int
+    LogLevel string
+
+    // WhatsApp
+    WhatsAppLogLevel string
+
+    // Message Processing
+    MaxRetries int
+}
+
+// Load reads configuration from .env file and environment variables
+func Load() (*Config, error) {
+    // Set config file name and type
+    viper.SetConfigName(".env")
+    viper.SetConfigType("env")
+    viper.AddConfigPath(".")
+
+    // Enable reading from environment variables
+    viper.AutomaticEnv()
+
+    // Set defaults
+    viper.SetDefault("PORT", 8080)
+    viper.SetDefault("LOG_LEVEL", "info")
+    viper.SetDefault("WHATSAPP_LOG_LEVEL", "INFO")
+    viper.SetDefault("MAX_RETRIES", 3)
+
+    // Read config file (optional - will use env vars if not found)
+    viper.ReadInConfig()
+
+    // Build Config struct from Viper values
+    cfg := &Config{
+        DatabaseURL:      viper.GetString("DATABASE_URL"),
+        Port:             viper.GetInt("PORT"),
+        LogLevel:         viper.GetString("LOG_LEVEL"),
+        WhatsAppLogLevel: viper.GetString("WHATSAPP_LOG_LEVEL"),
+        MaxRetries:       viper.GetInt("MAX_RETRIES"),
+    }
+
+    return cfg, nil
 }
 ```
+
+Environment variables can be set directly or via a `.env` file in the service root.
 
 ## Logging
 

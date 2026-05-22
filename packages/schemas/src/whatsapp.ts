@@ -76,8 +76,8 @@ export type FailedMessageItem = z.infer<typeof FailedMessageItem>;
  * @summary List failed messages query params
  */
 export const ListFailedMessagesParams = z.object({
-  page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(20),
+  page: z.coerce.number().min(1).default(1),
+  limit: z.coerce.number().min(1).max(100).default(20),
   groupName: z.string().optional(),
 });
 

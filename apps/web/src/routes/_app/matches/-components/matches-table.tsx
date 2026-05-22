@@ -148,7 +148,12 @@ export function MatchesTable({
               variant="outline"
               className={`text-[9px] h-4 px-1.5 ${STATUS_COLORS[status] ?? ""}`}
             >
-              {status.replace("_", " ")}
+              <Badge
+                variant="outline"
+                className={`text-[9px] h-4 px-1.5 ${STATUS_COLORS[status] ?? ""}`}
+              >
+                {status.replaceAll("_", " ")}
+              </Badge>{" "}
             </Badge>
           );
         },
