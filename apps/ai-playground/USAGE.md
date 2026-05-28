@@ -7,6 +7,8 @@ Complete guide for using the AI Playground CLI tool.
 | Flag             | Description                         | Example                              |
 | ---------------- | ----------------------------------- | ------------------------------------ |
 | `--concurrent`   | Run multiple prompts simultaneously | `bun run dev --concurrent "Q1" "Q2"` |
+| `--benchmark`    | Compare sequential vs concurrent    | `bun run dev --benchmark "Q1" "Q2"`  |
+| `--limit <n>`    | Set concurrency limit (default: 5)  | `bun run dev --limit 3 "Q1" "Q2"`    |
 | `--batch <file>` | Load prompts from a text file       | `bun run dev --batch prompts.txt`    |
 | `--no-stream`    | Skip the streaming test             | `bun run dev --no-stream "Hello"`    |
 

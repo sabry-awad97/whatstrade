@@ -118,13 +118,6 @@ bun run dev "What is 2+2?" "What is the capital of Spain?" "Name a color"
 bun run dev --concurrent "What is 2+2?" "What is the capital of Spain?" "Name a color"
 ```
 
-### Multiple Prompts (Concurrent)
-
-```bash
-# Runs all prompts at the same time - much faster!
-bun run dev --concurrent "What is 2+2?" "What is the capital of Spain?" "Name a color"
-```
-
 **Performance comparison:**
 
 - Sequential: ~2 seconds for 3 prompts (one at a time)
@@ -195,11 +188,12 @@ bun run dev "Hello!"
 
 ## What it does
 
-The playground supports three modes:
+The playground supports four execution modes:
 
 1. **Single Prompt**: Sends one prompt and displays the response with statistics + streaming test
 2. **Sequential Multiple**: Processes multiple prompts one after another
 3. **Concurrent Multiple**: Processes all prompts simultaneously (much faster!)
+4. **Benchmark**: Compares sequential vs concurrent performance with detailed metrics
 
 ## Output Example
 

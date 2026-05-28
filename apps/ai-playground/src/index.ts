@@ -18,8 +18,8 @@
  *   --limit N     Set concurrency limit (default: 5)
  *
  * Environment Variables:
- *   AI_BASE_URL - Model endpoint URL (default: http://localhost:8080/v1)
- *   AI_MODEL - Model name (default: gemma2:2b)
+ *   AI_BASE_URL - Model endpoint URL (default: http://localhost:12434/engines/v1)
+ *   AI_MODEL - Model name (default: gemma4)
  *   AI_API_KEY - API key (optional, default: not-needed)
  *   CONCURRENCY_LIMIT - Default concurrency limit (default: 5)
  */
@@ -34,8 +34,8 @@ import pLimit from "p-limit";
 
 // Configuration from environment
 const config = {
-  baseUrl: process.env.AI_BASE_URL || "http://localhost:8080/v1",
-  model: process.env.AI_MODEL || "gemma2:2b",
+  baseUrl: process.env.AI_BASE_URL || "http://localhost:12434/engines/v1",
+  model: process.env.AI_MODEL || "gemma4",
   apiKey: process.env.AI_API_KEY || "not-needed",
   concurrencyLimit: parseInt(process.env.CONCURRENCY_LIMIT || "5", 10),
 };
@@ -324,7 +324,10 @@ async function runBenchmark(model: any, prompts: string[], limitCount: number) {
   // Create comparison table
   console.log(pc.bold(pc.magenta("\n⚡ Performance Comparison\n")));
 
-  const speedup = sequential.totalDuration / concurrent.totalDuration;
+  const speedup =
+    concurrent.totalDuration > 0
+      ? sequential.totalDuration / concurrent.totalDuration
+      : 0;
   const speedupColor =
     speedup > 2 ? pc.green : speedup > 1.5 ? pc.yellow : pc.red;
 
