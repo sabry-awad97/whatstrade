@@ -12,6 +12,7 @@ use rust_decimal::Decimal;
 use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -48,7 +49,7 @@ impl fmt::Display for OfferStatus {
 #[sea_orm(table_name = "offers")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     #[sea_orm(column_name = "medication_name")]
     medication_name: String,
     dosage: Option<String>,
@@ -62,9 +63,9 @@ pub struct Model {
     #[sea_orm(column_name = "raw_text")]
     raw_text: Option<String>,
     #[sea_orm(column_name = "whatsapp_message_id")]
-    whatsapp_message_id: Option<String>,
+    whatsapp_message_id: Option<Id>,
     #[sea_orm(column_name = "whatsapp_group_id")]
-    whatsapp_group_id: Option<String>,
+    whatsapp_group_id: Option<Id>,
     #[sea_orm(column_name = "created_at")]
     created_at: DateTimeUtc,
     #[sea_orm(column_name = "updated_at")]
@@ -95,7 +96,7 @@ impl ActiveModel {
     ///
     /// A new ActiveModel with all optional fields set to NotSet
     pub fn new(
-        id: impl Into<String>,
+        id: impl Into<Id>,
         medication_name: impl Into<String>,
         quantity: i32,
         group_name: impl Into<String>,
@@ -139,13 +140,13 @@ impl ActiveModel {
     }
 
     /// Set the WhatsApp message ID
-    pub fn with_whatsapp_message_id(mut self, message_id: Option<impl Into<String>>) -> Self {
+    pub fn with_whatsapp_message_id(mut self, message_id: Option<impl Into<Id>>) -> Self {
         self.whatsapp_message_id = Set(message_id.map(Into::into));
         self
     }
 
     /// Set the WhatsApp group ID
-    pub fn with_whatsapp_group_id(mut self, group_id: Option<impl Into<String>>) -> Self {
+    pub fn with_whatsapp_group_id(mut self, group_id: Option<impl Into<Id>>) -> Self {
         self.whatsapp_group_id = Set(group_id.map(Into::into));
         self
     }

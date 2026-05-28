@@ -5,6 +5,7 @@ use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -18,9 +19,9 @@ pub enum MessageQueueStatusDto {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct WhatsAppMessageQueueDto {
-    id: String,
-    whatsapp_message_id: String,
-    whatsapp_group_id: String,
+    id: Id,
+    whatsapp_message_id: Id,
+    whatsapp_group_id: Id,
     group_name: String,
     sender_phone: String,
     #[builder(default, setter(strip_option))]
@@ -44,7 +45,7 @@ pub struct WhatsAppMessageQueueDto {
     #[builder(default, setter(strip_option))]
     extracted_data: Option<JsonValue>,
     #[builder(default, setter(strip_option))]
-    created_offer_id: Option<String>,
+    created_offer_id: Option<Id>,
     #[builder(default, setter(strip_option))]
-    created_request_id: Option<String>,
+    created_request_id: Option<Id>,
 }

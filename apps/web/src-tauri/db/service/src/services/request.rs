@@ -10,7 +10,7 @@ use chrono::Utc;
 use sea_orm::{DatabaseConnection, Set, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
-use uuid::Uuid;
+use utilities::Id;
 
 /// Service for managing requests
 pub struct RequestService {
@@ -58,10 +58,10 @@ impl RequestService {
         }
 
         let now = Utc::now();
-        let request_id = Uuid::new_v4().to_string();
+        let request_id = Id::new();
 
         let request_model = request::ActiveModel::new(
-            request_id.clone(),
+            request_id,
             dto.medication_name().clone(),
             *dto.quantity(),
             dto.group_name().clone(),
@@ -71,8 +71,8 @@ impl RequestService {
         .with_dosage(dto.dosage().clone())
         .with_max_price(*dto.max_price())
         .with_raw_text(dto.raw_text().clone())
-        .with_whatsapp_message_id(dto.whatsapp_message_id().clone())
-        .with_whatsapp_group_id(dto.whatsapp_group_id().clone())
+        .with_whatsapp_message_id(*dto.whatsapp_message_id())
+        .with_whatsapp_group_id(*dto.whatsapp_group_id())
         .with_created_at(now)
         .with_updated_at(now);
 
@@ -103,7 +103,7 @@ impl RequestService {
     ///
     /// * `Ok(RequestResponseDto)` - Request if found
     /// * `Err(ServiceError)` - If request not found or query fails
-    pub async fn get_by_id(&self, request_id: &str) -> ServiceResult<RequestResponseDto> {
+    pub async fn get_by_id(&self, request_id: Id) -> ServiceResult<RequestResponseDto> {
         let request = request::Entity::find_by_id(request_id)
             .one(self.db.as_ref())
             .await?
@@ -175,7 +175,7 @@ impl RequestService {
     /// * `Err(ServiceError)` - If update fails
     pub async fn update_status(
         &self,
-        request_id: &str,
+        request_id: Id,
         status: RequestStatus,
     ) -> ServiceResult<RequestResponseDto> {
         let request = request::Entity::find_by_id(request_id)
@@ -212,7 +212,7 @@ impl RequestService {
     ///
     /// * `Ok(())` - If deletion succeeds
     /// * `Err(ServiceError)` - If deletion fails
-    pub async fn delete(&self, request_id: &str) -> ServiceResult<()> {
+    pub async fn delete(&self, request_id: Id) -> ServiceResult<()> {
         let request = request::Entity::find_by_id(request_id)
             .one(self.db.as_ref())
             .await?

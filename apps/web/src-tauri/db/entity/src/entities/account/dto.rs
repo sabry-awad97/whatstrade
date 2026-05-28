@@ -4,13 +4,14 @@ use chrono::{DateTime, Utc};
 use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct AccountDto {
-    id: String,
-    account_id: String,
-    provider_id: String,
-    user_id: String,
+    id: Id,
+    account_id: Id,
+    provider_id: Id,
+    user_id: Id,
     #[builder(default, setter(strip_option))]
     access_token: Option<String>,
     #[builder(default, setter(strip_option))]

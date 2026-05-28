@@ -13,7 +13,7 @@ use argon2::{
 use sea_orm::{DatabaseConnection, TransactionTrait, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
-use uuid::Uuid;
+use utilities::Id;
 
 /// Service for authentication operations
 pub struct AuthService {
@@ -79,27 +79,18 @@ impl AuthService {
         }
 
         // Create user within transaction
-        let user_id = Uuid::new_v4().to_string();
+        let user_id = Id::new();
         let now = chrono::Utc::now();
-        let user_model = user::ActiveModel::new(
-            user_id.clone(),
-            dto.name().clone(),
-            dto.email().clone(),
-            false,
-        )
-        .with_created_at(now)
-        .with_updated_at(now);
+        let user_model =
+            user::ActiveModel::new(user_id, dto.name().clone(), dto.email().clone(), false)
+                .with_created_at(now)
+                .with_updated_at(now);
 
         let user = user_model.insert(&txn).await?;
 
         // Create account with password within same transaction
-        let account_model = account::ActiveModel::new(
-            Uuid::new_v4().to_string(),
-            user_id.clone(),
-            "credentials",
-            user_id.clone(),
-        )
-        .with_password(password_hash);
+        let account_model = account::ActiveModel::new(Id::new(), user_id, "credentials", user_id)
+            .with_password(password_hash);
 
         account_model.insert(&txn).await?;
 
@@ -143,7 +134,7 @@ impl AuthService {
 
         // Find account with password
         let account_model = account::Entity::find()
-            .filter(account::COLUMN.user_id.eq(user_model.id()))
+            .filter(account::COLUMN.user_id.eq(*user_model.id()))
             .filter(account::COLUMN.provider_id.eq("credentials"))
             .one(self.db.as_ref())
             .await?
@@ -199,7 +190,7 @@ impl AuthService {
         let claims = self.jwt_service.validate_refresh_token(refresh_token)?;
 
         // Get user
-        let user = self.user_service.get_by_id(claims.sub()).await?;
+        let user = self.user_service.get_by_id(*claims.sub()).await?;
 
         // Generate new tokens
         let new_access_token = self
@@ -228,7 +219,7 @@ impl AuthService {
     /// * `Err(ServiceError)` - If token is invalid
     pub async fn validate_token(&self, access_token: &str) -> ServiceResult<UserResponseDto> {
         let claims = self.jwt_service.validate_token(access_token)?;
-        self.user_service.get_by_id(claims.sub()).await
+        self.user_service.get_by_id(*claims.sub()).await
     }
 
     /// Hash a password using Argon2

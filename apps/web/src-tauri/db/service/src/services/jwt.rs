@@ -3,6 +3,7 @@
 use crate::{error::ServiceResult, types::JwtClaims};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use utilities::Id;
 use std::sync::Arc;
 
 /// JWT service for handling authentication tokens
@@ -48,7 +49,7 @@ impl JwtService {
     /// * `Err(ServiceError)` - If token generation fails
     pub fn generate_access_token(
         &self,
-        user_id: impl Into<String>,
+        user_id: impl Into<Id>,
         email: impl Into<String>,
     ) -> ServiceResult<String> {
         let now = Utc::now();
@@ -80,7 +81,7 @@ impl JwtService {
     /// * `Err(ServiceError)` - If token generation fails
     pub fn generate_refresh_token(
         &self,
-        user_id: impl Into<String>,
+        user_id: impl Into<Id>,
         email: impl Into<String>,
     ) -> ServiceResult<String> {
         let now = Utc::now();
@@ -146,9 +147,9 @@ impl JwtService {
     ///
     /// * `Ok(String)` - User ID
     /// * `Err(ServiceError)` - If token is invalid or expired
-    pub fn extract_user_id(&self, token: &str) -> ServiceResult<String> {
+    pub fn extract_user_id(&self, token: &str) -> ServiceResult<Id> {
         let claims = self.validate_token(token)?;
-        Ok(claims.sub().clone())
+        Ok(*claims.sub())
     }
 }
 

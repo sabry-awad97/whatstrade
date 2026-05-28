@@ -10,6 +10,7 @@ use sea_orm::{
 };
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -46,11 +47,11 @@ pub enum MatchStatus {
 #[sea_orm(table_name = "matches")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     #[sea_orm(column_name = "offer_id")]
-    offer_id: String,
+    offer_id: Id,
     #[sea_orm(column_name = "request_id")]
-    request_id: String,
+    request_id: Id,
     score: Decimal,
     #[sea_orm(column_name = "confidence_band")]
     confidence_band: ConfidenceBand,
@@ -101,9 +102,9 @@ impl ActiveModel {
     /// A new ActiveModel with all optional fields set to NotSet
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        id: impl Into<String>,
-        offer_id: impl Into<String>,
-        request_id: impl Into<String>,
+        id: impl Into<Id>,
+        offer_id: impl Into<Id>,
+        request_id: impl Into<Id>,
         score: Decimal,
         confidence_band: ConfidenceBand,
         status: MatchStatus,

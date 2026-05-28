@@ -3,9 +3,9 @@
 use crate::{entities::audit_log, error::ServiceResult, types::CreateAuditLogDto};
 use chrono::Utc;
 use sea_orm::{DatabaseConnection, entity::*, query::*};
+use utilities::Id;
 use std::sync::Arc;
 use tracing::info;
-use uuid::Uuid;
 
 /// Service for managing audit logs
 pub struct AuditService {
@@ -44,12 +44,12 @@ impl AuditService {
             .and_then(|d| serde_json::to_value(d).ok());
 
         let audit_log = audit_log::ActiveModel::new(
-            Uuid::new_v4().to_string(),
+            Id::new(),
             dto.action().clone(),
             dto.entity_type().clone(),
-            dto.entity_id().clone(),
+            dto.entity_id(),
         )
-        .with_operator_id(dto.operator_id().clone())
+        .with_operator_id(*dto.operator_id())
         .with_details(details_json)
         .with_created_at(Utc::now());
 
@@ -70,8 +70,8 @@ impl AuditService {
     pub async fn log_create(
         &self,
         entity_type: impl Into<String>,
-        entity_id: impl Into<String>,
-        operator_id: Option<String>,
+        entity_id: impl Into<Id>,
+        operator_id: Option<Id>,
     ) -> ServiceResult<()> {
         self.log(
             CreateAuditLogDto::builder()
@@ -88,8 +88,8 @@ impl AuditService {
     pub async fn log_update(
         &self,
         entity_type: impl Into<String>,
-        entity_id: impl Into<String>,
-        operator_id: Option<String>,
+        entity_id: impl Into<Id>,
+        operator_id: Option<Id>,
         details: Option<serde_json::Value>,
     ) -> ServiceResult<()> {
         self.log(
@@ -108,8 +108,8 @@ impl AuditService {
     pub async fn log_delete(
         &self,
         entity_type: impl Into<String>,
-        entity_id: impl Into<String>,
-        operator_id: Option<String>,
+        entity_id: impl Into<Id>,
+        operator_id: Option<Id>,
     ) -> ServiceResult<()> {
         self.log(
             CreateAuditLogDto::builder()

@@ -4,10 +4,11 @@ use chrono::{DateTime, Utc};
 use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct GroupDto {
-    id: String,
+    id: Id,
     jid: String,
     name: String,
     is_monitored: bool,

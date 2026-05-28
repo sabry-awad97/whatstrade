@@ -5,10 +5,11 @@ use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct WhatsAppSessionDto {
-    id: String,
+    id: Id,
     phone_number: String,
     session_data: JsonValue,
     is_connected: bool,

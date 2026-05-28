@@ -1,0 +1,11 @@
+[package]
+name = "utilities"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+derive-getters.workspace = true
+sea-orm.workspace = true
+serde.workspace = true
+typed-builder.workspace = true
+uuid.workspace = true

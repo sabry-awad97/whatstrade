@@ -5,6 +5,7 @@ use derive_getters::Getters;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -26,9 +27,9 @@ pub enum MatchStatusDto {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct MatchDto {
-    id: String,
-    offer_id: String,
-    request_id: String,
+    id: Id,
+    offer_id: Id,
+    request_id: Id,
     score: Decimal,
     confidence_band: ConfidenceBandDto,
     status: MatchStatusDto,

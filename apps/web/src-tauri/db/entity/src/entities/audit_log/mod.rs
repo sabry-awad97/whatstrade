@@ -7,6 +7,7 @@ use derive_getters::Getters;
 use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -17,14 +18,14 @@ pub mod dto;
 #[sea_orm(table_name = "audit_log")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     action: String,
     #[sea_orm(column_name = "entity_type")]
     entity_type: String,
     #[sea_orm(column_name = "entity_id")]
-    entity_id: String,
+    entity_id: Id,
     #[sea_orm(column_name = "operator_id")]
-    operator_id: Option<String>,
+    operator_id: Option<Id>,
     details: Option<Json>,
     #[sea_orm(column_name = "created_at")]
     created_at: DateTimeUtc,
@@ -50,10 +51,10 @@ impl ActiveModel {
     ///
     /// A new ActiveModel with all optional fields set to NotSet
     pub fn new(
-        id: impl Into<String>,
+        id: impl Into<Id>,
         action: impl Into<String>,
         entity_type: impl Into<String>,
-        entity_id: impl Into<String>,
+        entity_id: impl Into<Id>,
     ) -> Self {
         let now = chrono::Utc::now();
         Self {
@@ -68,7 +69,7 @@ impl ActiveModel {
     }
 
     /// Set the operator ID
-    pub fn with_operator_id(mut self, operator_id: Option<impl Into<String>>) -> Self {
+    pub fn with_operator_id(mut self, operator_id: Option<impl Into<Id>>) -> Self {
         self.operator_id = Set(operator_id.map(Into::into));
         self
     }

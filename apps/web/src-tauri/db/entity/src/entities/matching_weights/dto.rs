@@ -5,10 +5,11 @@ use derive_getters::Getters;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct MatchingWeightsDto {
-    id: String,
+    id: Id,
     medication: Decimal,
     quantity: Decimal,
     dosage: Decimal,

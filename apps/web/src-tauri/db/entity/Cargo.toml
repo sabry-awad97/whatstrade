@@ -4,18 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# SeaORM v2 dependencies
-sea-orm = { version = "2.0.0-rc", features = [
-    "sqlx-postgres",
-    "runtime-tokio-rustls",
-    "macros",
-] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
-rust_decimal = { version = "1.36", features = ["serde"] }
-uuid = { version = "1.11", features = ["serde", "v4"] }
+sea-orm.workspace = true
 
-# DTO and builder dependencies
-derive-getters = "0.5.0"
-typed-builder = "0.23.2"
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+uuid.workspace = true
+
+derive-getters.workspace = true
+typed-builder.workspace = true
+
+utilities.workspace = true

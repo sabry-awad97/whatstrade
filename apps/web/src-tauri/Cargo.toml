@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "db/*"]
+members = [".", "crates/*", "db/*"]
 resolver = "2"
 
 [package]
@@ -22,8 +22,50 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6.2", features = [] }
 
 [dependencies]
-serde_json = "1.0.150"
+db_entity = { workspace = true }
+db_service = { workspace = true }
+utilities = { workspace = true }
+
+derive-getters.workspace = true
+dotenvy.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+tauri.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+typed-builder.workspace = true
+uuid.workspace = true
+
+[workspace.dependencies]
+db_entity = { path = "db/entity" }
+db_service = { path = "db/service" }
+utilities = { path = "crates/utilities" }
+
+chrono = { version = "0.4", features = ["serde"] }
+dotenvy = "0.15.7"
+derive-getters = "0.5.0"
+rust_decimal = { version = "1.36", features = ["serde"] }
+# SeaORM v2 dependencies
+sea-orm = { version = "2.0.0-rc", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "macros",
+    "entity-registry",
+    "schema-sync",
+] }
 serde = { version = "1.0.228", features = ["derive"] }
-log = "0.4.30"
+serde_json = "1.0.150"
 tauri = { version = "2.11.2", features = [] }
-tauri-plugin-log = "2.8.0"
+tokio = { version = "1.52.3", features = ["full"] }
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+thiserror = "2.0.18"
+typed-builder = "0.23.2"
+uuid = { version = "1.20.0", features = ["serde", "v7"] }
+# JWT (for auth service)
+jsonwebtoken = "9.3"
+
+# Password hashing
+argon2 = "0.5"

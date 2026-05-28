@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -23,7 +24,7 @@ pub enum ReviewTypeDto {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct ReviewItemDto {
-    id: String,
+    id: Id,
     r#type: ReviewTypeDto,
     medication_name: String,
     #[builder(default, setter(strip_option))]

@@ -8,6 +8,7 @@ use derive_getters::Getters;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -37,11 +38,11 @@ pub enum MessageQueueStatus {
 #[sea_orm(table_name = "whatsapp_message_queue")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     #[sea_orm(unique, column_name = "whatsapp_message_id")]
-    whatsapp_message_id: String,
+    whatsapp_message_id: Id,
     #[sea_orm(column_name = "whatsapp_group_id")]
-    whatsapp_group_id: String,
+    whatsapp_group_id: Id,
     #[sea_orm(column_name = "group_name")]
     group_name: String,
     #[sea_orm(column_name = "sender_phone")]
@@ -72,9 +73,9 @@ pub struct Model {
     #[sea_orm(column_name = "extracted_data")]
     extracted_data: Option<Json>,
     #[sea_orm(column_name = "created_offer_id")]
-    created_offer_id: Option<String>,
+    created_offer_id: Option<Id>,
     #[sea_orm(column_name = "created_request_id")]
-    created_request_id: Option<String>,
+    created_request_id: Option<Id>,
 
     // Relations
     #[sea_orm(

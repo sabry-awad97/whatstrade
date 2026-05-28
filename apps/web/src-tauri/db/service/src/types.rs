@@ -6,6 +6,7 @@ use derive_getters::Getters;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 // ============================================================================
 // User DTOs
@@ -15,7 +16,7 @@ use typed_builder::TypedBuilder;
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct CreateUserDto {
     #[builder(setter(into))]
-    id: String,
+    id: Id,
     #[builder(setter(into))]
     name: String,
     #[builder(setter(into))]
@@ -30,7 +31,7 @@ pub struct CreateUserDto {
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct UserResponseDto {
     #[builder(setter(into))]
-    id: String,
+    id: Id,
     #[builder(setter(into))]
     name: String,
     #[builder(setter(into))]
@@ -103,7 +104,7 @@ pub struct AuthResponseDto {
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct CreateSessionDto {
     #[builder(setter(into))]
-    id: String,
+    id: Id,
     #[builder(setter(into))]
     user_id: String,
     #[builder(setter(into))]
@@ -138,16 +139,16 @@ pub struct CreateOfferDto {
     #[builder(default, setter(into))]
     raw_text: Option<String>,
     #[builder(default, setter(into))]
-    whatsapp_message_id: Option<String>,
+    whatsapp_message_id: Option<Id>,
     #[builder(default, setter(into))]
-    whatsapp_group_id: Option<String>,
+    whatsapp_group_id: Option<Id>,
 }
 
 /// Response DTO for offer operations
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct OfferResponseDto {
     #[builder(setter(into))]
-    id: String,
+    id: Id,
     #[builder(setter(into))]
     medication_name: String,
     #[builder(setter(into))]
@@ -165,9 +166,9 @@ pub struct OfferResponseDto {
     #[builder(setter(into))]
     raw_text: Option<String>,
     #[builder(setter(into))]
-    whatsapp_message_id: Option<String>,
+    whatsapp_message_id: Option<Id>,
     #[builder(setter(into))]
-    whatsapp_group_id: Option<String>,
+    whatsapp_group_id: Option<Id>,
     #[builder(setter(into))]
     created_at: DateTime<Utc>,
     #[builder(setter(into))]
@@ -187,8 +188,8 @@ impl From<offer::Model> for OfferResponseDto {
             .sender_phone(offer.sender_phone())
             .status(offer.status().to_string())
             .raw_text(offer.raw_text().clone())
-            .whatsapp_message_id(offer.whatsapp_message_id().clone())
-            .whatsapp_group_id(offer.whatsapp_group_id().clone())
+            .whatsapp_message_id(*offer.whatsapp_message_id())
+            .whatsapp_group_id(*offer.whatsapp_group_id())
             .created_at(*offer.created_at())
             .updated_at(*offer.updated_at())
             .build()
@@ -217,16 +218,16 @@ pub struct CreateRequestDto {
     #[builder(default, setter(into))]
     raw_text: Option<String>,
     #[builder(default, setter(into))]
-    whatsapp_message_id: Option<String>,
+    whatsapp_message_id: Option<Id>,
     #[builder(default, setter(into))]
-    whatsapp_group_id: Option<String>,
+    whatsapp_group_id: Option<Id>,
 }
 
 /// Response DTO for request operations
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct RequestResponseDto {
     #[builder(setter(into))]
-    id: String,
+    id: Id,
     #[builder(setter(into))]
     medication_name: String,
     #[builder(setter(into))]
@@ -244,9 +245,9 @@ pub struct RequestResponseDto {
     #[builder(setter(into))]
     raw_text: Option<String>,
     #[builder(setter(into))]
-    whatsapp_message_id: Option<String>,
+    whatsapp_message_id: Option<Id>,
     #[builder(setter(into))]
-    whatsapp_group_id: Option<String>,
+    whatsapp_group_id: Option<Id>,
     #[builder(setter(into))]
     created_at: DateTime<Utc>,
     #[builder(setter(into))]
@@ -266,8 +267,8 @@ impl From<request::Model> for RequestResponseDto {
             .sender_phone(request.sender_phone())
             .status(request.status().to_string())
             .raw_text(request.raw_text().clone())
-            .whatsapp_message_id(request.whatsapp_message_id().clone())
-            .whatsapp_group_id(request.whatsapp_group_id().clone())
+            .whatsapp_message_id(*request.whatsapp_message_id())
+            .whatsapp_group_id(*request.whatsapp_group_id())
             .created_at(*request.created_at())
             .updated_at(*request.updated_at())
             .build()
@@ -282,9 +283,9 @@ impl From<request::Model> for RequestResponseDto {
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct CreateMatchDto {
     #[builder(setter(into))]
-    offer_id: String,
+    offer_id: Id,
     #[builder(setter(into))]
-    request_id: String,
+    request_id: Id,
     #[builder(setter(into))]
     score: Decimal,
     #[builder(setter(into))]
@@ -305,11 +306,11 @@ pub struct CreateMatchDto {
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct MatchResponseDto {
     #[builder(setter(into))]
-    id: String,
+    id: Id,
     #[builder(setter(into))]
     offer_id: String,
     #[builder(setter(into))]
-    request_id: String,
+    request_id: Id,
     #[builder(setter(into))]
     score: Decimal,
     #[builder(setter(into))]
@@ -346,9 +347,9 @@ pub struct CreateAuditLogDto {
     #[builder(setter(into))]
     entity_type: String,
     #[builder(setter(into))]
-    entity_id: String,
+    entity_id: Id,
     #[builder(default, setter(into))]
-    operator_id: Option<String>,
+    operator_id: Option<Id>,
     #[builder(default, setter(into))]
     details: Option<serde_json::Value>,
 }
@@ -361,7 +362,7 @@ pub struct CreateAuditLogDto {
 #[derive(Debug, Clone, Serialize, Deserialize, Getters, TypedBuilder)]
 pub struct JwtClaims {
     #[builder(setter(into))]
-    sub: String, // Subject (user ID)
+    sub: Id, // Subject (user ID)
     #[builder(setter(into))]
     email: String, // User email
     #[builder(setter(into))]

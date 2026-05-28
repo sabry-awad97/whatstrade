@@ -10,6 +10,7 @@ use chrono::Utc;
 use sea_orm::{DatabaseConnection, Set, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
+use utilities::Id;
 
 /// Service for managing users
 pub struct UserService {
@@ -56,7 +57,7 @@ impl UserService {
 
         let now = Utc::now();
         let user_model = user::ActiveModel::new(
-            dto.id().clone(),
+            *dto.id(),
             dto.name().clone(),
             dto.email().clone(),
             *dto.email_verified(),
@@ -87,7 +88,7 @@ impl UserService {
     ///
     /// * `Ok(UserResponseDto)` - User if found
     /// * `Err(ServiceError)` - If user not found or query fails
-    pub async fn get_by_id(&self, user_id: &str) -> ServiceResult<UserResponseDto> {
+    pub async fn get_by_id(&self, user_id: Id) -> ServiceResult<UserResponseDto> {
         let user = user::Entity::find_by_id(user_id)
             .one(self.db.as_ref())
             .await?
@@ -129,7 +130,7 @@ impl UserService {
     /// * `Err(ServiceError)` - If update fails
     pub async fn update_email_verification(
         &self,
-        user_id: &str,
+        user_id: Id,
         verified: bool,
     ) -> ServiceResult<UserResponseDto> {
         let user = user::Entity::find_by_id(user_id)
@@ -187,7 +188,7 @@ impl UserService {
     ///
     /// * `Ok(())` - If deletion succeeds
     /// * `Err(ServiceError)` - If deletion fails
-    pub async fn delete(&self, user_id: &str) -> ServiceResult<()> {
+    pub async fn delete(&self, user_id: Id) -> ServiceResult<()> {
         let user = user::Entity::find_by_id(user_id)
             .one(self.db.as_ref())
             .await?

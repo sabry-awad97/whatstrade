@@ -11,7 +11,7 @@ use rust_decimal::Decimal;
 use sea_orm::{DatabaseConnection, Set, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
-use uuid::Uuid;
+use utilities::Id;
 
 /// Service for managing matches between offers and requests
 pub struct MatchingService {
@@ -66,8 +66,8 @@ impl MatchingService {
     /// * `Err(ServiceError)` - If creation fails
     pub async fn create(&self, dto: CreateMatchDto) -> ServiceResult<MatchResponseDto> {
         // Validate that offer and request exist
-        self.offer_service.get_by_id(dto.offer_id()).await?;
-        self.request_service.get_by_id(dto.request_id()).await?;
+        self.offer_service.get_by_id(*dto.offer_id()).await?;
+        self.request_service.get_by_id(*dto.request_id()).await?;
 
         // Validate score
         if *dto.score() < Decimal::ZERO || *dto.score() > Decimal::ONE {
@@ -78,12 +78,12 @@ impl MatchingService {
         let confidence_band = self.parse_confidence_band(dto.confidence_band())?;
 
         let now = Utc::now();
-        let match_id = Uuid::new_v4().to_string();
+        let match_id = Id::new();
 
         let match_model = r#match::ActiveModel::new(
-            match_id.clone(),
-            dto.offer_id().clone(),
-            dto.request_id().clone(),
+            match_id,
+            *dto.offer_id(),
+            *dto.request_id(),
             *dto.score(),
             confidence_band,
             MatchStatus::Pending,
@@ -125,7 +125,7 @@ impl MatchingService {
     ///
     /// * `Ok(MatchResponseDto)` - Match if found
     /// * `Err(ServiceError)` - If match not found or query fails
-    pub async fn get_by_id(&self, match_id: &str) -> ServiceResult<MatchResponseDto> {
+    pub async fn get_by_id(&self, match_id: Id) -> ServiceResult<MatchResponseDto> {
         let match_result = r#match::Entity::find_by_id(match_id)
             .one(self.db.as_ref())
             .await?
@@ -194,7 +194,7 @@ impl MatchingService {
     /// * `Err(ServiceError)` - If update fails
     pub async fn update_status(
         &self,
-        match_id: &str,
+        match_id: Id,
         status: MatchStatus,
         operator_note: Option<String>,
     ) -> ServiceResult<MatchResponseDto> {
@@ -243,7 +243,7 @@ impl MatchingService {
     fn model_to_response(&self, match_result: r#match::Model) -> MatchResponseDto {
         MatchResponseDto::builder()
             .id(match_result.id())
-            .offer_id(match_result.offer_id())
+            .offer_id(*match_result.offer_id())
             .request_id(match_result.request_id())
             .score(*match_result.score())
             .confidence_band(format!("{:?}", match_result.confidence_band()))

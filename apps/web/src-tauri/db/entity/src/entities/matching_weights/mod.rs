@@ -7,6 +7,7 @@ use rust_decimal::Decimal;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -17,7 +18,7 @@ pub mod dto;
 #[sea_orm(table_name = "matching_weights")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     medication: Decimal,
     quantity: Decimal,
     dosage: Decimal,

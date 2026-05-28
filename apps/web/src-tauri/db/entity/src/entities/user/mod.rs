@@ -6,6 +6,7 @@ use derive_getters::Getters;
 use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -16,7 +17,7 @@ pub mod dto;
 #[sea_orm(table_name = "user")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     name: String,
     email: String,
     #[sea_orm(column_name = "email_verified")]
@@ -52,7 +53,7 @@ impl ActiveModel {
     ///
     /// A new ActiveModel with all optional fields set to NotSet
     pub fn new(
-        id: impl Into<String>,
+        id: impl Into<Id>,
         name: impl Into<String>,
         email: impl Into<String>,
         email_verified: bool,

@@ -6,6 +6,7 @@ use derive_getters::Getters;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -16,7 +17,7 @@ pub mod dto;
 #[sea_orm(table_name = "groups")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     #[sea_orm(unique)]
     jid: String,
     name: String,

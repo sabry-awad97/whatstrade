@@ -10,7 +10,7 @@ use chrono::Utc;
 use sea_orm::{DatabaseConnection, Set, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
-use uuid::Uuid;
+use utilities::Id;
 
 /// Service for managing offers
 pub struct OfferService {
@@ -58,10 +58,10 @@ impl OfferService {
         }
 
         let now = Utc::now();
-        let offer_id = Uuid::new_v4().to_string();
+        let offer_id = Id::new();
 
         let offer_model = offer::ActiveModel::new(
-            offer_id.clone(),
+            offer_id,
             dto.medication_name().clone(),
             *dto.quantity(),
             dto.group_name().clone(),
@@ -71,8 +71,8 @@ impl OfferService {
         .with_dosage(dto.dosage().clone())
         .with_price(*dto.price())
         .with_raw_text(dto.raw_text().clone())
-        .with_whatsapp_message_id(dto.whatsapp_message_id().clone())
-        .with_whatsapp_group_id(dto.whatsapp_group_id().clone())
+        .with_whatsapp_message_id(*dto.whatsapp_message_id())
+        .with_whatsapp_group_id(*dto.whatsapp_group_id())
         .with_created_at(now)
         .with_updated_at(now);
 
@@ -103,7 +103,7 @@ impl OfferService {
     ///
     /// * `Ok(OfferResponseDto)` - Offer if found
     /// * `Err(ServiceError)` - If offer not found or query fails
-    pub async fn get_by_id(&self, offer_id: &str) -> ServiceResult<OfferResponseDto> {
+    pub async fn get_by_id(&self, offer_id: Id) -> ServiceResult<OfferResponseDto> {
         let offer = offer::Entity::find_by_id(offer_id)
             .one(self.db.as_ref())
             .await?
@@ -175,7 +175,7 @@ impl OfferService {
     /// * `Err(ServiceError)` - If update fails
     pub async fn update_status(
         &self,
-        offer_id: &str,
+        offer_id: Id,
         status: OfferStatus,
     ) -> ServiceResult<OfferResponseDto> {
         let offer = offer::Entity::find_by_id(offer_id)
@@ -212,7 +212,7 @@ impl OfferService {
     ///
     /// * `Ok(())` - If deletion succeeds
     /// * `Err(ServiceError)` - If deletion fails
-    pub async fn delete(&self, offer_id: &str) -> ServiceResult<()> {
+    pub async fn delete(&self, offer_id: Id) -> ServiceResult<()> {
         let offer = offer::Entity::find_by_id(offer_id)
             .one(self.db.as_ref())
             .await?

@@ -6,6 +6,7 @@ use derive_getters::Getters;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -16,7 +17,7 @@ pub mod dto;
 #[sea_orm(table_name = "session")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     #[sea_orm(column_name = "expires_at")]
     expires_at: DateTimeUtc,
     #[sea_orm(unique)]
@@ -30,7 +31,7 @@ pub struct Model {
     #[sea_orm(column_name = "user_agent")]
     user_agent: Option<String>,
     #[sea_orm(column_name = "user_id")]
-    user_id: String,
+    user_id: Id,
 
     // Relations
     #[sea_orm(belongs_to, from = "user_id", to = "id")]

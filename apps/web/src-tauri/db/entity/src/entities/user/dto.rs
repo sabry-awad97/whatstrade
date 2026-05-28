@@ -4,10 +4,11 @@ use chrono::{DateTime, Utc};
 use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TypedBuilder, Getters)]
 pub struct UserDto {
-    id: String,
+    id: Id,
     name: String,
     email: String,
     email_verified: bool,

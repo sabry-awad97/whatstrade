@@ -3,9 +3,13 @@
 //! Represents OAuth/authentication provider accounts linked to users.
 
 use derive_getters::Getters;
-use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    entity::prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -16,13 +20,13 @@ pub mod dto;
 #[sea_orm(table_name = "account")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    id: String,
+    id: Id,
     #[sea_orm(column_name = "account_id")]
-    account_id: String,
+    account_id: Id,
     #[sea_orm(column_name = "provider_id")]
     provider_id: String,
     #[sea_orm(column_name = "user_id")]
-    user_id: String,
+    user_id: Id,
     #[sea_orm(column_name = "access_token")]
     access_token: Option<String>,
     #[sea_orm(column_name = "refresh_token")]
@@ -61,10 +65,10 @@ impl ActiveModel {
     ///
     /// A new ActiveModel with all optional fields set to NotSet
     pub fn new(
-        id: impl Into<String>,
-        account_id: impl Into<String>,
+        id: impl Into<Id>,
+        account_id: impl Into<Id>,
         provider_id: impl Into<String>,
-        user_id: impl Into<String>,
+        user_id: impl Into<Id>,
     ) -> Self {
         let now = chrono::Utc::now();
         Self {
