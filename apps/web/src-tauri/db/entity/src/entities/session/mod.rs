@@ -2,25 +2,29 @@
 //!
 //! Represents user authentication sessions.
 
+use derive_getters::Getters;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 pub mod dto;
 
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize, Getters, TypedBuilder,
+)]
 #[sea_orm(table_name = "session")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     id: String,
     #[sea_orm(column_name = "expires_at")]
-    expires_at: DateTime,
+    expires_at: DateTimeUtc,
     #[sea_orm(unique)]
     token: String,
     #[sea_orm(column_name = "created_at")]
-    created_at: DateTime,
+    created_at: DateTimeUtc,
     #[sea_orm(column_name = "updated_at")]
-    updated_at: DateTime,
+    updated_at: DateTimeUtc,
     #[sea_orm(column_name = "ip_address")]
     ip_address: Option<String>,
     #[sea_orm(column_name = "user_agent")]

@@ -4,8 +4,10 @@
 //! - senderPhone: Personal identifier (PII)
 //! - rawText: May contain unstructured PII/PHI
 
+use derive_getters::Getters;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 pub mod dto;
 
@@ -29,7 +31,9 @@ pub enum MessageQueueStatus {
 }
 
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize, Getters, TypedBuilder,
+)]
 #[sea_orm(table_name = "whatsapp_message_queue")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -47,24 +51,24 @@ pub struct Model {
     #[sea_orm(column_name = "raw_text")]
     raw_text: String,
     #[sea_orm(column_name = "received_at")]
-    received_at: DateTimeWithTimeZone,
+    received_at: DateTimeUtc,
     status: MessageQueueStatus,
     #[sea_orm(column_name = "retry_count")]
     retry_count: i32,
     #[sea_orm(column_name = "max_retries")]
     max_retries: i32,
     #[sea_orm(column_name = "next_retry_at")]
-    next_retry_at: Option<DateTimeWithTimeZone>,
+    next_retry_at: Option<DateTimeUtc>,
     #[sea_orm(column_name = "last_error")]
     last_error: Option<String>,
     #[sea_orm(column_name = "last_error_at")]
-    last_error_at: Option<DateTimeWithTimeZone>,
+    last_error_at: Option<DateTimeUtc>,
     #[sea_orm(column_name = "created_at")]
-    created_at: DateTimeWithTimeZone,
+    created_at: DateTimeUtc,
     #[sea_orm(column_name = "processed_at")]
-    processed_at: Option<DateTimeWithTimeZone>,
+    processed_at: Option<DateTimeUtc>,
     #[sea_orm(column_name = "completed_at")]
-    completed_at: Option<DateTimeWithTimeZone>,
+    completed_at: Option<DateTimeUtc>,
     #[sea_orm(column_name = "extracted_data")]
     extracted_data: Option<Json>,
     #[sea_orm(column_name = "created_offer_id")]

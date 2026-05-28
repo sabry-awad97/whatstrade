@@ -5,9 +5,13 @@
 //! - senderPhone: Personal identifier (PII)
 //! - rawText: May contain unstructured PII/PHI
 
+use std::fmt;
+
+use derive_getters::Getters;
 use rust_decimal::Decimal;
-use sea_orm::entity::prelude::*;
+use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 pub mod dto;
 
@@ -24,8 +28,23 @@ pub enum OfferStatus {
     Cancelled,
 }
 
+impl fmt::Display for OfferStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = match self {
+            Self::Active => "active",
+            Self::Matched => "matched",
+            Self::Expired => "expired",
+            Self::Cancelled => "cancelled",
+        };
+
+        write!(f, "{value}")
+    }
+}
+
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize, Getters, TypedBuilder,
+)]
 #[sea_orm(table_name = "offers")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -47,9 +66,9 @@ pub struct Model {
     #[sea_orm(column_name = "whatsapp_group_id")]
     whatsapp_group_id: Option<String>,
     #[sea_orm(column_name = "created_at")]
-    created_at: DateTimeWithTimeZone,
+    created_at: DateTimeUtc,
     #[sea_orm(column_name = "updated_at")]
-    updated_at: DateTimeWithTimeZone,
+    updated_at: DateTimeUtc,
 
     // Relations
     #[sea_orm(has_many)]
@@ -59,3 +78,87 @@ pub struct Model {
 }
 
 impl ActiveModelBehavior for ActiveModel {}
+
+impl ActiveModel {
+    /// Create a new ActiveModel with all required fields
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - Offer ID
+    /// * `medication_name` - Name of the medication
+    /// * `quantity` - Quantity offered
+    /// * `group_name` - WhatsApp group name
+    /// * `sender_phone` - Phone number of sender
+    /// * `status` - Offer status
+    ///
+    /// # Returns
+    ///
+    /// A new ActiveModel with all optional fields set to NotSet
+    pub fn new(
+        id: impl Into<String>,
+        medication_name: impl Into<String>,
+        quantity: i32,
+        group_name: impl Into<String>,
+        sender_phone: impl Into<String>,
+        status: OfferStatus,
+    ) -> Self {
+        let now = chrono::Utc::now();
+        Self {
+            id: Set(id.into()),
+            medication_name: Set(medication_name.into()),
+            dosage: NotSet,
+            quantity: Set(quantity),
+            price: NotSet,
+            group_name: Set(group_name.into()),
+            sender_phone: Set(sender_phone.into()),
+            status: Set(status),
+            raw_text: NotSet,
+            whatsapp_message_id: NotSet,
+            whatsapp_group_id: NotSet,
+            created_at: Set(now),
+            updated_at: Set(now),
+        }
+    }
+
+    /// Set the dosage
+    pub fn with_dosage(mut self, dosage: Option<impl Into<String>>) -> Self {
+        self.dosage = Set(dosage.map(Into::into));
+        self
+    }
+
+    /// Set the price
+    pub fn with_price(mut self, price: Option<Decimal>) -> Self {
+        self.price = Set(price);
+        self
+    }
+
+    /// Set the raw text
+    pub fn with_raw_text(mut self, raw_text: Option<impl Into<String>>) -> Self {
+        self.raw_text = Set(raw_text.map(Into::into));
+        self
+    }
+
+    /// Set the WhatsApp message ID
+    pub fn with_whatsapp_message_id(mut self, message_id: Option<impl Into<String>>) -> Self {
+        self.whatsapp_message_id = Set(message_id.map(Into::into));
+        self
+    }
+
+    /// Set the WhatsApp group ID
+    pub fn with_whatsapp_group_id(mut self, group_id: Option<impl Into<String>>) -> Self {
+        self.whatsapp_group_id = Set(group_id.map(Into::into));
+        self
+    }
+
+    /// Set the created_at timestamp
+    pub fn with_created_at(mut self, created_at: DateTimeUtc) -> Self {
+        self.created_at = Set(created_at);
+        self
+    }
+
+    /// Set the updated_at timestamp
+    pub fn with_updated_at(mut self, updated_at: DateTimeUtc) -> Self {
+        self.updated_at = Set(updated_at);
+        self
+    }
+}

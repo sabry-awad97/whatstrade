@@ -4,3 +4,47 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# Local dependencies
+db_entity = { path = "../entity" }
+
+# SeaORM
+sea-orm = { version = "2.0.0-rc", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "macros",
+    "entity-registry",
+    "schema-sync",
+] }
+
+# Async runtime
+tokio = { version = "1.52", features = ["full"] }
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Decimal
+rust_decimal = { version = "1.36", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.11", features = ["serde", "v4"] }
+
+# Builder and getters
+typed-builder = "0.23.2"
+derive-getters = "0.5.0"
+
+# Logging
+tracing = "0.1"
+
+# JWT (for auth service)
+jsonwebtoken = "9.3"
+
+# Password hashing
+argon2 = "0.5"

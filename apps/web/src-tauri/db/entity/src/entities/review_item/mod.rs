@@ -6,8 +6,10 @@
 //! - rawText: May contain unstructured PII/PHI
 //! - parsedData: May contain extracted PII/PHI
 
+use derive_getters::Getters;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use typed_builder::TypedBuilder;
 
 pub mod dto;
 
@@ -34,7 +36,9 @@ pub enum ReviewType {
 }
 
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(
+    Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize, Getters, TypedBuilder,
+)]
 #[sea_orm(table_name = "review_items")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
@@ -54,9 +58,9 @@ pub struct Model {
     #[sea_orm(column_name = "parsed_data")]
     parsed_data: Option<String>,
     #[sea_orm(column_name = "created_at")]
-    created_at: DateTimeWithTimeZone,
+    created_at: DateTimeUtc,
     #[sea_orm(column_name = "updated_at")]
-    updated_at: DateTimeWithTimeZone,
+    updated_at: DateTimeUtc,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
