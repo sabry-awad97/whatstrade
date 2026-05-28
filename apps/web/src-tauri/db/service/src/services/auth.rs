@@ -4,13 +4,13 @@ use crate::{
     entities::{account, user},
     error::{ServiceError, ServiceResult},
     services::{JwtService, UserService},
-    types::{AuthResponseDto, CreateUserDto, LoginDto, RegisterDto, UserResponseDto},
+    types::{AuthResponseDto, LoginDto, RegisterDto, UserResponseDto},
 };
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use sea_orm::{DatabaseConnection, entity::*, query::*};
+use sea_orm::{DatabaseConnection, TransactionTrait, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
 use uuid::Uuid;
@@ -65,21 +65,34 @@ impl AuthService {
         // Hash password
         let password_hash = self.hash_password(dto.password())?;
 
-        // Create user
-        let user_id = Uuid::new_v4().to_string();
-        let user = self
-            .user_service
-            .create(
-                CreateUserDto::builder()
-                    .id(user_id.clone())
-                    .name(dto.name().clone())
-                    .email(dto.email().clone())
-                    .email_verified(false)
-                    .build(),
-            )
+        // Start transaction to ensure both user and account are created atomically
+        let txn = self.db.begin().await?;
+
+        // Check if user with email already exists
+        let existing = user::Entity::find()
+            .filter(user::COLUMN.email.eq(dto.email()))
+            .one(&txn)
             .await?;
 
-        // Create account with password
+        if existing.is_some() {
+            return Err(ServiceError::duplicate("User", "email", dto.email()));
+        }
+
+        // Create user within transaction
+        let user_id = Uuid::new_v4().to_string();
+        let now = chrono::Utc::now();
+        let user_model = user::ActiveModel::new(
+            user_id.clone(),
+            dto.name().clone(),
+            dto.email().clone(),
+            false,
+        )
+        .with_created_at(now)
+        .with_updated_at(now);
+
+        let user = user_model.insert(&txn).await?;
+
+        // Create account with password within same transaction
         let account_model = account::ActiveModel::new(
             Uuid::new_v4().to_string(),
             user_id.clone(),
@@ -88,9 +101,12 @@ impl AuthService {
         )
         .with_password(password_hash);
 
-        account_model.insert(self.db.as_ref()).await?;
+        account_model.insert(&txn).await?;
 
-        // Generate tokens
+        // Commit transaction - both user and account are now persisted
+        txn.commit().await?;
+
+        // Generate tokens after successful transaction
         let access_token = self
             .jwt_service
             .generate_access_token(user.id(), user.email())?;
@@ -101,7 +117,7 @@ impl AuthService {
         info!(user_id = %user.id(), email = %user.email(), "User registered");
 
         Ok(AuthResponseDto::builder()
-            .user(user)
+            .user(UserResponseDto::from(user))
             .access_token(access_token)
             .refresh_token(refresh_token)
             .build())
@@ -179,8 +195,8 @@ impl AuthService {
     /// * `Ok(AuthResponseDto)` - User and new tokens
     /// * `Err(ServiceError)` - If refresh fails
     pub async fn refresh_token(&self, refresh_token: &str) -> ServiceResult<AuthResponseDto> {
-        // Validate refresh token
-        let claims = self.jwt_service.validate_token(refresh_token)?;
+        // Validate refresh token and ensure it's the correct token type
+        let claims = self.jwt_service.validate_refresh_token(refresh_token)?;
 
         // Get user
         let user = self.user_service.get_by_id(claims.sub()).await?;

@@ -60,6 +60,7 @@ impl JwtService {
             .email(email)
             .exp(exp)
             .iat(iat)
+            .token_type("access")
             .build();
 
         let token = encode(&Header::default(), &claims, &self.encoding_key)?;
@@ -91,6 +92,7 @@ impl JwtService {
             .email(email)
             .exp(exp)
             .iat(iat)
+            .token_type("refresh")
             .build();
 
         let token = encode(&Header::default(), &claims, &self.encoding_key)?;
@@ -112,7 +114,29 @@ impl JwtService {
         Ok(token_data.claims)
     }
 
-    /// Extract user ID from a token without full validation
+    /// Validate a refresh token and ensure it has the correct token type
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - JWT refresh token to validate
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(JwtClaims)` - Decoded claims if valid and token_type is "refresh"
+    /// * `Err(ServiceError)` - If token is invalid, expired, or not a refresh token
+    pub fn validate_refresh_token(&self, token: &str) -> ServiceResult<JwtClaims> {
+        let claims = self.validate_token(token)?;
+
+        if claims.token_type() != "refresh" {
+            return Err(crate::error::ServiceError::authentication(
+                "Invalid token type: expected refresh token",
+            ));
+        }
+
+        Ok(claims)
+    }
+
+    /// Extract user ID from a validated token
     ///
     /// # Arguments
     ///
@@ -121,7 +145,7 @@ impl JwtService {
     /// # Returns
     ///
     /// * `Ok(String)` - User ID
-    /// * `Err(ServiceError)` - If token cannot be decoded
+    /// * `Err(ServiceError)` - If token is invalid or expired
     pub fn extract_user_id(&self, token: &str) -> ServiceResult<String> {
         let claims = self.validate_token(token)?;
         Ok(claims.sub().clone())

@@ -49,9 +49,9 @@ impl From<user::Model> for UserResponseDto {
     /// Convert model to response DTO
     fn from(user: user::Model) -> Self {
         UserResponseDto::builder()
-            .id(user.id().clone())
-            .name(user.name().clone())
-            .email(user.email().clone())
+            .id(user.id())
+            .name(user.name())
+            .email(user.email())
             .email_verified(*user.email_verified())
             .image(user.image().clone())
             .created_at(*user.created_at())
@@ -368,4 +368,6 @@ pub struct JwtClaims {
     exp: usize, // Expiration time
     #[builder(setter(into))]
     iat: usize, // Issued at
+    #[builder(setter(into))]
+    token_type: String, // Token type ("access" or "refresh")
 }
