@@ -1,0 +1,9 @@
+# Example prompts file
+# Lines starting with # are ignored
+# One prompt per line
+
+What is the capital of France?
+Explain quantum computing in simple terms
+Write a haiku about programming
+What are the benefits of TypeScript?
+How does async/await work in JavaScript?

@@ -1,29 +1,23 @@
 {
-  "name": "@workspace/ai",
+  "name": "ai-playground",
   "version": "0.1.0",
   "type": "module",
-  "exports": {
-    ".": {
-      "default": "./src/index.ts"
-    },
-    "./google": {
-      "default": "./src/providers/google.ts"
-    },
-    "./dmr": {
-      "default": "./src/providers/dmr.ts"
-    }
-  },
   "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
     "check-types": "tsc -b"
   },
   "dependencies": {
-    "@ai-sdk/google": "^3.0.74",
     "@ai-sdk/openai-compatible": "^2.0.48",
-    "@workspace/env": "workspace:*",
     "ai": "^6.0.183",
+    "cli-table3": "^0.6.5",
+    "p-limit": "^7.3.0",
+    "picocolors": "^1.1.1",
+    "pretty-ms": "^9.3.0",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/bun": "catalog:",
     "@workspace/config": "workspace:*",
     "typescript": "catalog:"
   }

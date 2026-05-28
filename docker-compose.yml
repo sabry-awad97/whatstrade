@@ -68,6 +68,20 @@ services:
     networks:
       - whatstrade-network
 
+# ============================================
+# AI Models (Docker Model Runner)
+# Requires: Docker Compose v2.38+ and Docker Model Runner enabled
+# ============================================
+models:
+  llm:
+    model: ${AI_MODEL:-ai/gemma4:latest}
+    context_size: 4096
+    runtime_flags:
+      - "--verbose"
+      - "--log-prefix"
+      - "--temp"
+      - "0.7"
+
 volumes:
   postgres_data:
     driver: local
