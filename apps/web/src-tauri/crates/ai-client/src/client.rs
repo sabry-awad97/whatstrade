@@ -18,6 +18,7 @@ use std::io::{Write, stdout};
 use std::time::Instant;
 
 /// AI client for OpenAI-compatible APIs
+#[derive(Clone)]
 pub struct AiClient {
     client: Client<OpenAIConfig>,
     model: String,
@@ -210,6 +211,52 @@ impl AiClient {
         result.calculate_tokens_per_sec();
 
         Ok(result)
+    }
+
+    /// Generate structured output with JSON schema validation using a simple user prompt
+    ///
+    /// # Type Parameters
+    /// * `T` - The type to deserialize the response into. Must implement `Serialize`, `DeserializeOwned`, and `JsonSchema`
+    ///
+    /// # Arguments
+    /// * `user_prompt` - The user message content
+    /// * `schema_name` - Name for the JSON schema (e.g., "math_reasoning")
+    /// * `schema_description` - Optional description for the schema
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// use schemars::JsonSchema;
+    /// use serde::{Deserialize, Serialize};
+    ///
+    /// #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+    /// #[serde(deny_unknown_fields)]
+    /// struct MathResponse {
+    ///     final_answer: String,
+    ///     steps: Vec<String>,
+    /// }
+    ///
+    /// let response: Option<MathResponse> = client
+    ///     .generate_structured_simple("Solve 2x + 5 = 15", "math_response", None)
+    ///     .await?;
+    /// ```
+    pub async fn generate_structured_simple<T>(
+        &self,
+        user_prompt: &str,
+        schema_name: &str,
+        schema_description: Option<String>,
+    ) -> Result<Option<T>>
+    where
+        T: serde::Serialize + DeserializeOwned + JsonSchema,
+    {
+        let messages = vec![
+            ChatCompletionRequestUserMessageArgs::default()
+                .content(user_prompt)
+                .build()?
+                .into(),
+        ];
+
+        self.generate_structured(messages, schema_name, schema_description)
+            .await
     }
 
     /// Generate structured output with JSON schema validation

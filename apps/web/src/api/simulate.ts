@@ -8,6 +8,13 @@ const logger = createLogger("SimulateApi");
 // Schemas
 // ============================================================================
 
+export const pipelineStepSchema = z.object({
+  step: z.string(),
+  status: z.string(),
+  detail: z.string(),
+  duration_ms: z.number(),
+});
+
 export const parsedFieldSchema = z.object({
   field: z.string(),
   value: z.string(),
@@ -31,8 +38,10 @@ export const simulateResponseSchema = z.object({
   candidates: z.array(candidateSchema),
   inserted_id: z.string().nullable(),
   duration_ms: z.number(),
+  pipeline_steps: z.array(pipelineStepSchema),
 });
 
+export type PipelineStep = z.infer<typeof pipelineStepSchema>;
 export type ParsedField = z.infer<typeof parsedFieldSchema>;
 export type Candidate = z.infer<typeof candidateSchema>;
 export type SimulateResponse = z.infer<typeof simulateResponseSchema>;

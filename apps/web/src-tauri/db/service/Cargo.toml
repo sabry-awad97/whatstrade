@@ -17,6 +17,9 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 typed-builder.workspace = true
+schemars.workspace = true
+tera.workspace = true
 
+ai-client.workspace = true
 db_entity.workspace = true
 utilities.workspace = true

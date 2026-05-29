@@ -21,6 +21,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.6.2", features = [] }
 
 [dependencies]
+ai-client = { workspace = true }
 db_entity = { workspace = true }
 db_service = { workspace = true }
 utilities = { workspace = true }
@@ -42,12 +43,13 @@ uuid.workspace = true
 db_entity = { path = "db/entity" }
 db_service = { path = "db/service" }
 utilities = { path = "crates/utilities" }
+ai-client = { path = "crates/ai-client" }
 
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { version = "0.4.44", features = ["serde"] }
 dotenvy = "0.15.7"
 derive-getters = "0.5.0"
 reqwest = { version = "0.13.4", features = ["json"] }
-rust_decimal = { version = "1.36", features = ["serde"] }
+rust_decimal = { version = "1.42.0", features = ["serde"] }
 # SeaORM v2 dependencies
 sea-orm = { version = "2.0.0-rc", features = [
     "sqlx-postgres",
@@ -64,11 +66,15 @@ tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 thiserror = "2.0.18"
 typed-builder = "0.23.2"
-uuid = { version = "1.20.0", features = ["serde", "v7"] }
+uuid = { version = "1.23.2", features = ["serde", "v7"] }
 validator = { version = "0.20.0", features = ["derive"] }
 
 # JWT (for auth service)
-jsonwebtoken = "9.3"
+jsonwebtoken = "10.4.0"
 
 # Password hashing
-argon2 = "0.5"
+argon2 = "0.5.3"
+
+# AI and templating
+schemars = "1.2.1"
+tera = "1.20.1"

@@ -1,0 +1,46 @@
+[CONTEXT]
+Current year: {{ current_year }}
+Current year (2-digit): {{ current_year_short }}
+Max valid year: {{ max_year }}
+Max valid year (2-digit): {{ max_year_short }}
+
+{% if medication_mappings %}# MEDICATION MAPPINGS (Arabic -> English)
+{% for mapping in medication_mappings %}- {{ mapping }}
+{% endfor %}
+{% endif %}
+[TASK] Analyze this pharmaceutical WhatsApp message:
+
+=== MESSAGE TO PARSE ===
+{% if sender_name %}From: {{ sender_name }}
+{% endif %}Group: {{ group_name }}
+{% if reply_to %}Replying to: "{{ reply_to }}"
+{% endif %}Content:
+"""
+{{ content }}
+"""
+=== END MESSAGE ===
+
+[VERIFY BEFORE ANSWERING]
+1. Is this an OFFER (announcing stock) or REQUEST (asking for products)?
+2. What is the URGENCY level? (critical/urgent/soon/normal)
+3. How many SEPARATE medications are mentioned?
+4. Are there any "و" (and) indicating multiple concentrations for same drug?
+5. Have I kept all names in their ORIGINAL language?
+6. Are there any dates (XX/XX format) that are EXPIRY dates, not concentrations?
+
+[OUTPUT FORMAT]
+{
+  "intent": "offer" | "request",
+  "urgency": "critical" | "urgent" | "soon" | "normal",
+  "reason": "brief explanation including urgency assessment",
+  "medications": [
+    {
+      "name": "exact medication name from message",
+      "concentration": "dosage or null",
+      "form": "امبول/فايل/اقراص/etc or null",
+      "expiry": "MM/YY or null",
+      "confidence": 0.0-1.0,
+      "reason": "extraction accuracy explanation"
+    }
+  ]
+}

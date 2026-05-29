@@ -55,6 +55,10 @@ pub struct ServiceManagerConfig {
     /// Go WhatsApp service URL
     #[builder(default, setter(into))]
     go_whatsapp_service_url: Option<String>,
+
+    /// AI client configuration
+    #[builder(default, setter(into))]
+    ai_config: Option<ai_client::Config>,
 }
 
 /// Service manager containing all application services
@@ -138,6 +142,10 @@ pub struct ServiceManager {
     /// WhatsApp service for WhatsApp integration
     #[builder(setter(into))]
     whatsapp_service: Arc<WhatsAppService>,
+
+    /// AI client for message extraction
+    #[builder(setter(into))]
+    ai_client: Arc<ai_client::AiClient>,
 }
 
 impl ServiceManager {
@@ -224,8 +232,23 @@ impl ServiceManager {
         let weights_service = WeightsService::arc(db.clone());
         let review_service = ReviewService::arc(db.clone(), audit_service.clone());
         let stats_service = StatsService::arc(db.clone());
-        let simulate_service =
-            SimulateService::arc(db.clone(), offer_service.clone(), request_service.clone());
+
+        // Initialize AI client
+        let ai_config = config
+            .ai_config()
+            .clone()
+            .unwrap_or_default();
+        let ai_client =
+            Arc::new(ai_client::AiClient::new(&ai_config).map_err(|e| {
+                sea_orm::DbErr::Custom(format!("Failed to create AI client: {}", e))
+            })?);
+
+        let simulate_service = SimulateService::arc(
+            db.clone(),
+            offer_service.clone(),
+            request_service.clone(),
+            ai_client.clone(),
+        );
         let whatsapp_service = WhatsAppService::arc(
             db.clone(),
             config
@@ -249,6 +272,7 @@ impl ServiceManager {
             stats_service,
             simulate_service,
             whatsapp_service,
+            ai_client,
         })
     }
 }

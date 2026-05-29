@@ -31,6 +31,14 @@ pub async fn try_init_state(_app_handle: &tauri::AppHandle) -> AppResult<AppStat
         "change-this-secret-in-production".to_string()
     });
 
+    // Load AI configuration from environment
+    let ai_config = ai_client::load_from_env().ok();
+    if ai_config.is_some() {
+        tracing::info!("AI client configuration loaded from environment");
+    } else {
+        tracing::warn!("AI client configuration not found, using defaults");
+    }
+
     tracing::info!(
         "Initializing service manager with database: {}",
         database_url
@@ -40,6 +48,7 @@ pub async fn try_init_state(_app_handle: &tauri::AppHandle) -> AppResult<AppStat
     let config = db_service::ServiceManagerConfig::builder()
         .database_url(database_url)
         .jwt_secret(jwt_secret)
+        .ai_config(ai_config)
         .build();
 
     // Initialize service manager with database connection

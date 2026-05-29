@@ -1,21 +1,21 @@
 //! Simulate service for message simulation pipeline
 //!
-//! ⚠️ DECISION PENDING: AI extraction strategy
-//! - Option A: Reimplement in Rust using reqwest + OpenAI API
-//! - Option B: Keep as Node.js sidecar with Tauri sidecar API
-//! - Option C: Move to Go service alongside WhatsApp integration
-//!
-//! Current implementation: Stub with placeholder for AI extraction
+//! Integrates AI client for pharmaceutical message extraction and matching
 
 use crate::{
     entities::{matching_weights, offer, request},
     error::{ServiceError, ServiceResult},
     services::{OfferService, RequestService},
 };
+use ai_client::AiClient;
+use chrono::Datelike;
 use rust_decimal::Decimal;
+use schemars::JsonSchema;
 use sea_orm::{DatabaseConnection, entity::*, query::*};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{info, warn};
+use tera::{Context, Tera};
+use tracing::info;
 use utilities::Id;
 
 /// Service for message simulation
@@ -23,6 +23,7 @@ pub struct SimulateService {
     db: Arc<DatabaseConnection>,
     offer_service: Arc<OfferService>,
     request_service: Arc<RequestService>,
+    ai_client: Arc<AiClient>,
 }
 
 impl SimulateService {
@@ -33,15 +34,18 @@ impl SimulateService {
     /// * `db` - Database connection
     /// * `offer_service` - Offer service
     /// * `request_service` - Request service
+    /// * `ai_client` - AI client for message extraction
     pub fn new(
         db: Arc<DatabaseConnection>,
         offer_service: Arc<OfferService>,
         request_service: Arc<RequestService>,
+        ai_client: Arc<AiClient>,
     ) -> Self {
         Self {
             db,
             offer_service,
             request_service,
+            ai_client,
         }
     }
 
@@ -50,8 +54,9 @@ impl SimulateService {
         db: Arc<DatabaseConnection>,
         offer_service: Arc<OfferService>,
         request_service: Arc<RequestService>,
+        ai_client: Arc<AiClient>,
     ) -> Arc<Self> {
-        Arc::new(Self::new(db, offer_service, request_service))
+        Arc::new(Self::new(db, offer_service, request_service, ai_client))
     }
 
     /// Simulate message processing
@@ -77,8 +82,10 @@ impl SimulateService {
         insert_into_system: bool,
     ) -> ServiceResult<SimulateResponseDto> {
         let start_time = std::time::Instant::now();
+        let mut pipeline_steps = Vec::new();
 
         // Step 1: Input validation
+        let step_start = std::time::Instant::now();
         if raw_text.trim().is_empty() {
             return Err(ServiceError::validation("Raw text cannot be empty"));
         }
@@ -89,34 +96,86 @@ impl SimulateService {
                 raw_text.len()
             )));
         }
+        pipeline_steps.push(PipelineStepDto {
+            step: "Input Validation".to_string(),
+            status: "success".to_string(),
+            detail: format!("Validated {} characters", raw_text.len()),
+            duration_ms: step_start.elapsed().as_millis() as u64,
+        });
 
-        // Step 2: AI extraction (PLACEHOLDER - needs implementation)
-        warn!("AI extraction not yet implemented - using placeholder");
-        let extracted = self.extract_placeholder(&raw_text)?;
+        // Step 2: AI extraction
+        let step_start = std::time::Instant::now();
+        info!("Starting AI extraction for message");
+        let extracted = self
+            .extract_with_ai(
+                &raw_text,
+                group_name.as_deref(),
+                sender_phone.as_deref(),
+                message_type.as_deref(),
+            )
+            .await?;
+        pipeline_steps.push(PipelineStepDto {
+            step: "AI Extraction".to_string(),
+            status: "success".to_string(),
+            detail: format!(
+                "Extracted {} as {}",
+                extracted.medication_name, extracted.message_type
+            ),
+            duration_ms: step_start.elapsed().as_millis() as u64,
+        });
 
         // Step 3: Load weights
+        let step_start = std::time::Instant::now();
         let weights = matching_weights::Entity::find()
             .one(self.db.as_ref())
             .await?
             .ok_or_else(|| ServiceError::not_found("MatchingWeights", "default"))?;
+        pipeline_steps.push(PipelineStepDto {
+            step: "Load Weights".to_string(),
+            status: "success".to_string(),
+            detail: "Loaded matching algorithm weights".to_string(),
+            duration_ms: step_start.elapsed().as_millis() as u64,
+        });
 
         // Step 4: Score candidates
+        let step_start = std::time::Instant::now();
         let candidates = self
             .score_candidates(&extracted, &weights, &message_type)
             .await?;
+        pipeline_steps.push(PipelineStepDto {
+            step: "Score Candidates".to_string(),
+            status: "success".to_string(),
+            detail: format!(
+                "Found {} matching {}",
+                candidates.len(),
+                if extracted.message_type == "offer" {
+                    "requests"
+                } else {
+                    "offers"
+                }
+            ),
+            duration_ms: step_start.elapsed().as_millis() as u64,
+        });
 
         // Step 5: Insert if requested
         let inserted_id = if insert_into_system {
-            Some(
-                self.insert_extracted(
+            let step_start = std::time::Instant::now();
+            let id = self
+                .insert_extracted(
                     &extracted,
                     &message_type,
                     &group_name.unwrap_or_else(|| "Simulation".to_string()),
                     &sender_phone.unwrap_or_else(|| "+20000000000".to_string()),
                     &raw_text,
                 )
-                .await?,
-            )
+                .await?;
+            pipeline_steps.push(PipelineStepDto {
+                step: "Database Insert".to_string(),
+                status: "success".to_string(),
+                detail: format!("Created {} #{}", extracted.message_type, id),
+                duration_ms: step_start.elapsed().as_millis() as u64,
+            });
+            Some(id)
         } else {
             None
         };
@@ -137,42 +196,176 @@ impl SimulateService {
             candidates,
             inserted_id,
             duration_ms,
+            pipeline_steps,
         })
     }
 
-    /// Placeholder AI extraction (TODO: implement actual AI service call)
-    fn extract_placeholder(&self, raw_text: &str) -> ServiceResult<ExtractedData> {
-        // Simple regex-based extraction as fallback
-        let medication_name = raw_text
-            .split_whitespace()
-            .find(|w| w.len() > 3 && w.chars().next().unwrap().is_uppercase())
-            .unwrap_or("Unknown")
-            .to_string();
+    /// Extract medication data using AI
+    async fn extract_with_ai(
+        &self,
+        raw_text: &str,
+        group_name: Option<&str>,
+        sender_phone: Option<&str>,
+        message_type_hint: Option<&str>,
+    ) -> ServiceResult<ExtractedData> {
+        // Build prompts using Tera templates
+        let system_prompt = Self::build_system_prompt()
+            .map_err(|e| ServiceError::internal(format!("Failed to build system prompt: {}", e)))?;
 
-        let quantity = raw_text
-            .split_whitespace()
-            .find_map(|w| w.parse::<i32>().ok())
+        let user_prompt = Self::build_user_prompt(
+            raw_text,
+            sender_phone,
+            group_name.unwrap_or("Simulation"),
+            None,
+            None,
+        )
+        .map_err(|e| ServiceError::internal(format!("Failed to build user prompt: {}", e)))?;
+
+        // Clone the AI client and add system prompt
+        let client_with_prompt = self
+            .ai_client
+            .as_ref()
+            .clone()
+            .with_system_prompt(system_prompt);
+
+        // Call AI with structured output using the simple method
+        let pharma_response = client_with_prompt
+            .generate_structured_simple::<PharmaMessage>(
+                &user_prompt,
+                "pharma_message",
+                Some("Pharmaceutical message parsing".to_string()),
+            )
+            .await
+            .map_err(|e| ServiceError::internal(format!("AI extraction failed: {}", e)))?
+            .ok_or_else(|| ServiceError::internal("AI returned no response"))?;
+
+        // Convert PharmaMessage to ExtractedData
+        Self::convert_pharma_to_extracted(pharma_response, message_type_hint)
+    }
+
+    /// Build system prompt using Tera template
+    fn build_system_prompt() -> Result<String, tera::Error> {
+        let mut tera = Tera::default();
+        let system_template = include_str!("../prompts/pharma_system.txt");
+        tera.add_raw_template("system", system_template)?;
+
+        let now = chrono::Utc::now();
+        let current_year = now.year();
+        let current_year_short = current_year % 100;
+        let max_year = current_year + 10;
+        let max_year_short = max_year % 100;
+
+        let mut context = Context::new();
+        context.insert("current_year", &current_year);
+        context.insert("current_year_short", &current_year_short);
+        context.insert("max_year", &max_year);
+        context.insert("max_year_short", &max_year_short);
+
+        tera.render("system", &context)
+    }
+
+    /// Build user prompt using Tera template
+    fn build_user_prompt(
+        content: &str,
+        sender_name: Option<&str>,
+        group_name: &str,
+        reply_to: Option<&str>,
+        medication_mappings: Option<&[String]>,
+    ) -> Result<String, tera::Error> {
+        let mut tera = Tera::default();
+        let user_template = include_str!("../prompts/pharma_user.txt");
+        tera.add_raw_template("user", user_template)?;
+
+        let now = chrono::Utc::now();
+        let current_year = now.year();
+        let current_year_short = current_year % 100;
+        let max_year = current_year + 10;
+        let max_year_short = max_year % 100;
+
+        let mut context = Context::new();
+        context.insert("current_year", &current_year);
+        context.insert("current_year_short", &current_year_short);
+        context.insert("max_year", &max_year);
+        context.insert("max_year_short", &max_year_short);
+        context.insert("content", content);
+        context.insert("group_name", group_name);
+
+        if let Some(sender) = sender_name {
+            context.insert("sender_name", sender);
+        }
+
+        if let Some(reply) = reply_to {
+            context.insert("reply_to", reply);
+        }
+
+        if let Some(mappings) = medication_mappings {
+            context.insert("medication_mappings", mappings);
+        }
+
+        tera.render("user", &context)
+    }
+
+    /// Convert PharmaMessage to ExtractedData
+    fn convert_pharma_to_extracted(
+        pharma: PharmaMessage,
+        message_type_hint: Option<&str>,
+    ) -> ServiceResult<ExtractedData> {
+        // Use the first medication as the primary one (or create a default)
+        let first_med = pharma
+            .medications
+            .first()
+            .ok_or_else(|| ServiceError::validation("AI extracted no medications from message"))?;
+
+        // Determine message type
+        let message_type = message_type_hint
+            .map(|s| s.to_string())
+            .unwrap_or(pharma.intent.clone());
+
+        // Parse concentration to get quantity estimate
+        let quantity = first_med
+            .concentration
+            .as_ref()
+            .and_then(|c| c.parse::<i32>().ok())
             .unwrap_or(100);
 
+        // Convert parsed fields
+        let fields = pharma
+            .medications
+            .iter()
+            .flat_map(|med| {
+                vec![
+                    ParsedField {
+                        field: "medicationName".to_string(),
+                        value: med.name.clone(),
+                        confidence: med.confidence,
+                    },
+                    ParsedField {
+                        field: "concentration".to_string(),
+                        value: med.concentration.clone().unwrap_or_default(),
+                        confidence: med.confidence,
+                    },
+                    ParsedField {
+                        field: "form".to_string(),
+                        value: med.form.clone().unwrap_or_default(),
+                        confidence: med.confidence,
+                    },
+                    ParsedField {
+                        field: "expiry".to_string(),
+                        value: med.expiry.clone().unwrap_or_default(),
+                        confidence: med.confidence,
+                    },
+                ]
+            })
+            .collect();
+
         Ok(ExtractedData {
-            message_type: "offer".to_string(),
-            medication_name,
-            dosage: None,
+            message_type,
+            medication_name: first_med.name.clone(),
+            dosage: first_med.concentration.clone(),
             quantity,
             price: None,
-            reasoning: "Placeholder extraction - AI service not yet integrated".to_string(),
-            fields: vec![
-                ParsedField {
-                    field: "medicationName".to_string(),
-                    value: "Unknown".to_string(),
-                    confidence: 0.5,
-                },
-                ParsedField {
-                    field: "quantity".to_string(),
-                    value: quantity.to_string(),
-                    confidence: 0.5,
-                },
-            ],
+            reasoning: pharma.reason,
+            fields,
         })
     }
 
@@ -466,4 +659,40 @@ pub struct SimulateResponseDto {
     pub candidates: Vec<CandidateDto>,
     pub inserted_id: Option<Id>,
     pub duration_ms: u64,
+    pub pipeline_steps: Vec<PipelineStepDto>,
+}
+
+/// Pipeline step DTO
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PipelineStepDto {
+    pub step: String,
+    pub status: String,
+    pub detail: String,
+    pub duration_ms: u64,
+}
+
+// ============================================================================
+// AI Extraction Types (from pharma_parsing example)
+// ============================================================================
+
+/// Medication extracted from message
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Medication {
+    pub name: String,
+    pub concentration: Option<String>,
+    pub form: Option<String>,
+    pub expiry: Option<String>,
+    pub confidence: f64,
+    pub reason: String,
+}
+
+/// Parsed pharmaceutical message
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PharmaMessage {
+    pub intent: String,
+    pub urgency: String,
+    pub reason: String,
+    pub medications: Vec<Medication>,
 }

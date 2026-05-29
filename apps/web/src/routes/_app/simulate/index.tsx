@@ -24,7 +24,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import type { SimulateResponse } from "@/api/simulate";
+import type {
+  SimulateResponse,
+  PipelineStep as ApiPipelineStep,
+} from "@/api/simulate";
 import { useSimulateMessage } from "@/hooks/simulate";
 import {
   ConfidenceRing,
@@ -86,21 +89,24 @@ function RouteComponent() {
       },
       {
         onSuccess: async (data) => {
+          // Use real pipeline steps from backend
+          const backendSteps: PipelineStep[] = data.pipeline_steps.map(
+            (step) => ({
+              step: step.step,
+              status: step.status as "success" | "error" | "pending",
+              detail: step.detail,
+              durationMs: step.duration_ms,
+            }),
+          );
+
           // Animate steps appearing with mount check
           setStreamingSteps([]);
-          // Note: pipeline_steps would come from backend if implemented
-          // For now, we'll create a simple completion step
-          const completionStep: PipelineStep = {
-            step: "Analysis Complete",
-            status: "success",
-            detail: `Parsed as ${data.parsed_type}, found ${data.candidates.length} matches`,
-            durationMs: data.duration_ms,
-          };
-
-          if (!isMountedRef.current) return;
-          await new Promise((r) => setTimeout(r, 180));
-          if (!isMountedRef.current) return;
-          setStreamingSteps([completionStep]);
+          for (let i = 0; i < backendSteps.length; i++) {
+            if (!isMountedRef.current) return;
+            await new Promise((r) => setTimeout(r, 180));
+            if (!isMountedRef.current) return;
+            setStreamingSteps((prev) => [...prev, backendSteps[i]]);
+          }
 
           if (!isMountedRef.current) return;
 
