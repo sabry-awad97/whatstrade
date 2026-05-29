@@ -8,7 +8,10 @@ use crate::{
     error::{ServiceError, ServiceResult},
     services::AuditService,
 };
-use sea_orm::{DatabaseConnection, Set, entity::*, query::*};
+use sea_orm::{
+    DatabaseConnection, FromQueryResult, Set, TransactionTrait, entity::*, query::*,
+    sea_query::LockType,
+};
 use std::sync::Arc;
 use tracing::info;
 use utilities::Id;
@@ -76,24 +79,26 @@ impl ReviewService {
             .await?;
 
         // Calculate average processing time (created_at to updated_at for non-pending items)
-        // This is a simplified version - in production, use raw SQL for better performance
-        let processed_items = review_item::Entity::find()
-            .filter(review_item::Column::Status.ne(ReviewStatus::Pending))
-            .all(self.db.as_ref())
-            .await?;
+        // Use raw SQL aggregate query for better performance
+        #[derive(Debug, FromQueryResult)]
+        struct AvgProcessingTime {
+            avg_seconds: Option<f64>,
+        }
 
-        let avg_processing_time = if !processed_items.is_empty() {
-            let total_seconds: i64 = processed_items
-                .iter()
-                .map(|item| {
-                    let diff = item.updated_at().timestamp() - item.created_at().timestamp();
-                    std::cmp::max(diff, 0)
-                })
-                .sum();
-            (total_seconds as f64) / (processed_items.len() as f64)
-        } else {
-            0.0
-        };
+        let avg_processing_time = review_item::Entity::find()
+            .select_only()
+            .column_as(
+                sea_orm::sea_query::Expr::cust(
+                    "AVG(EXTRACT(EPOCH FROM (updated_at - created_at)))",
+                ),
+                "avg_seconds",
+            )
+            .filter(review_item::Column::Status.ne(ReviewStatus::Pending))
+            .into_model::<AvgProcessingTime>()
+            .one(self.db.as_ref())
+            .await?
+            .and_then(|result| result.avg_seconds)
+            .unwrap_or(0.0);
 
         Ok(ReviewStatsDto {
             total,
@@ -115,8 +120,12 @@ impl ReviewService {
     /// * `Ok(ReviewItemDto)` - Updated review item
     /// * `Err(ServiceError)` - If item not found or update fails
     pub async fn approve_item(&self, id: Id) -> ServiceResult<ReviewItemDto> {
+        let txn = self.db.begin().await?;
+
+        // Load the row with FOR UPDATE lock to prevent concurrent modifications
         let item = review_item::Entity::find_by_id(id)
-            .one(self.db.as_ref())
+            .lock(LockType::Update)
+            .one(&txn)
             .await?
             .ok_or_else(|| ServiceError::not_found("ReviewItem", id))?;
 
@@ -124,9 +133,11 @@ impl ReviewService {
         item_active.status = Set(ReviewStatus::Approved);
         item_active.updated_at = Set(chrono::Utc::now());
 
-        let updated_item = item_active.update(self.db.as_ref()).await?;
+        let updated_item = item_active.update(&txn).await?;
 
-        // Log audit entry
+        txn.commit().await?;
+
+        // Log audit entry after commit
         self.audit_service
             .log_update(
                 "ReviewItem",
@@ -152,8 +163,12 @@ impl ReviewService {
     /// * `Ok(ReviewItemDto)` - Updated review item
     /// * `Err(ServiceError)` - If item not found or update fails
     pub async fn reject_item(&self, id: Id) -> ServiceResult<ReviewItemDto> {
+        let txn = self.db.begin().await?;
+
+        // Load the row with FOR UPDATE lock to prevent concurrent modifications
         let item = review_item::Entity::find_by_id(id)
-            .one(self.db.as_ref())
+            .lock(LockType::Update)
+            .one(&txn)
             .await?
             .ok_or_else(|| ServiceError::not_found("ReviewItem", id))?;
 
@@ -161,9 +176,11 @@ impl ReviewService {
         item_active.status = Set(ReviewStatus::Rejected);
         item_active.updated_at = Set(chrono::Utc::now());
 
-        let updated_item = item_active.update(self.db.as_ref()).await?;
+        let updated_item = item_active.update(&txn).await?;
 
-        // Log audit entry
+        txn.commit().await?;
+
+        // Log audit entry after commit
         self.audit_service
             .log_update(
                 "ReviewItem",
@@ -189,7 +206,7 @@ impl ReviewService {
             })
             .medication_name(item.medication_name().clone())
             .dosage(item.dosage().clone())
-            .quantity(item.quantity().clone())
+            .quantity(*item.quantity())
             .raw_text(item.raw_text().clone())
             .group_name(item.group_name().clone())
             .sender_phone(item.sender_phone().clone())
@@ -198,7 +215,7 @@ impl ReviewService {
                 ReviewStatus::Approved => ReviewStatusDto::Approved,
                 ReviewStatus::Rejected => ReviewStatusDto::Rejected,
             })
-            .parsed_data(item.parsed_data().as_ref().map(|s| s.clone()))
+            .parsed_data(item.parsed_data().clone())
             .created_at(*item.created_at())
             .updated_at(*item.updated_at())
             .build()

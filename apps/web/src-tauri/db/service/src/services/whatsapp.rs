@@ -12,7 +12,7 @@ use crate::{
     },
     error::{ServiceError, ServiceResult},
 };
-use sea_orm::{DatabaseConnection, Set, entity::*, query::*};
+use sea_orm::{DatabaseConnection, TransactionTrait, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
 use utilities::Id;
@@ -143,19 +143,47 @@ impl WhatsAppService {
     /// * `Ok(WhatsAppMessageQueueDto)` - Updated message
     /// * `Err(ServiceError)` - If message not found or update fails
     pub async fn retry_message(&self, id: Id) -> ServiceResult<WhatsAppMessageQueueDto> {
-        let message = whatsapp_message_queue::Entity::find_by_id(id)
-            .one(self.db.as_ref())
+        let txn = self.db.begin().await?;
+
+        // Perform atomic update
+        let update_result = whatsapp_message_queue::Entity::update_many()
+            .col_expr(
+                whatsapp_message_queue::Column::Status,
+                sea_orm::sea_query::Expr::value(MessageQueueStatus::Pending),
+            )
+            .col_expr(
+                whatsapp_message_queue::Column::RetryCount,
+                sea_orm::sea_query::Expr::value(0),
+            )
+            .col_expr(
+                whatsapp_message_queue::Column::NextRetryAt,
+                sea_orm::sea_query::Expr::value(sea_orm::sea_query::Value::ChronoDateTimeUtc(None)),
+            )
+            .col_expr(
+                whatsapp_message_queue::Column::LastError,
+                sea_orm::sea_query::Expr::value(sea_orm::sea_query::Value::String(None)),
+            )
+            .col_expr(
+                whatsapp_message_queue::Column::LastErrorAt,
+                sea_orm::sea_query::Expr::value(sea_orm::sea_query::Value::ChronoDateTimeUtc(None)),
+            )
+            .filter(whatsapp_message_queue::Column::Id.eq(id))
+            .exec(&txn)
+            .await?;
+
+        // Check if any row was updated
+        if update_result.rows_affected == 0 {
+            txn.rollback().await?;
+            return Err(ServiceError::not_found("WhatsAppMessageQueue", id));
+        }
+
+        // Fetch the updated row within the same transaction
+        let updated_message = whatsapp_message_queue::Entity::find_by_id(id)
+            .one(&txn)
             .await?
             .ok_or_else(|| ServiceError::not_found("WhatsAppMessageQueue", id))?;
 
-        let mut message_active: whatsapp_message_queue::ActiveModel = message.into();
-        message_active.status = Set(MessageQueueStatus::Pending);
-        message_active.retry_count = Set(0);
-        message_active.next_retry_at = Set(None);
-        message_active.last_error = Set(None);
-        message_active.last_error_at = Set(None);
-
-        let updated_message = message_active.update(self.db.as_ref()).await?;
+        txn.commit().await?;
 
         info!(message_id = %id, "Message retry initiated");
 
@@ -257,15 +285,15 @@ impl WhatsAppService {
             })
             .retry_count(*message.retry_count())
             .max_retries(*message.max_retries())
-            .next_retry_at(message.next_retry_at().clone())
+            .next_retry_at(*message.next_retry_at())
             .last_error(message.last_error().clone())
-            .last_error_at(message.last_error_at().clone())
+            .last_error_at(*message.last_error_at())
             .created_at(*message.created_at())
-            .processed_at(message.processed_at().clone())
-            .completed_at(message.completed_at().clone())
+            .processed_at(*message.processed_at())
+            .completed_at(*message.completed_at())
             .extracted_data(message.extracted_data().clone())
-            .created_offer_id(message.created_offer_id().clone())
-            .created_request_id(message.created_request_id().clone())
+            .created_offer_id(*message.created_offer_id())
+            .created_request_id(*message.created_request_id())
             .build()
     }
 }

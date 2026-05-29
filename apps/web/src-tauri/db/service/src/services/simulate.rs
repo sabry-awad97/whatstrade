@@ -191,6 +191,10 @@ impl SimulateService {
             .map(|t| t == "offer")
             .unwrap_or(extracted.message_type == "offer");
 
+        // Create match params for the extracted data
+        let now = chrono::Utc::now();
+        let extracted_params = MatchParams::from_extracted(extracted, &now);
+
         if is_offer {
             // Score against requests
             let requests = request::Entity::find()
@@ -200,20 +204,8 @@ impl SimulateService {
                 .await?;
 
             for req in requests {
-                let score = self.calculate_score(
-                    &extracted.medication_name,
-                    extracted.quantity,
-                    extracted.dosage.as_deref(),
-                    extracted.price,
-                    req.medication_name(),
-                    *req.quantity(),
-                    req.dosage().as_deref(),
-                    req.max_price()
-                        .as_ref()
-                        .map(|d| d.to_string().parse::<f64>().unwrap_or(0.0)),
-                    req.created_at(),
-                    weights,
-                );
+                let req_params = MatchParams::from_request(&req);
+                let score = self.calculate_score(&extracted_params, &req_params, weights);
 
                 if score > 0.5 {
                     // Threshold
@@ -237,20 +229,8 @@ impl SimulateService {
                 .await?;
 
             for off in offers {
-                let score = self.calculate_score(
-                    &extracted.medication_name,
-                    extracted.quantity,
-                    extracted.dosage.as_deref(),
-                    extracted.price,
-                    off.medication_name(),
-                    *off.quantity(),
-                    off.dosage().as_deref(),
-                    off.price()
-                        .as_ref()
-                        .map(|d| d.to_string().parse::<f64>().unwrap_or(0.0)),
-                    off.created_at(),
-                    weights,
-                );
+                let off_params = MatchParams::from_offer(&off);
+                let score = self.calculate_score(&extracted_params, &off_params, weights);
 
                 if score > 0.5 {
                     candidates.push(CandidateDto {
@@ -276,45 +256,50 @@ impl SimulateService {
     /// Calculate match score (simplified version)
     fn calculate_score(
         &self,
-        med1: &str,
-        qty1: i32,
-        dose1: Option<&str>,
-        price1: Option<f64>,
-        med2: &str,
-        qty2: i32,
-        dose2: Option<&str>,
-        price2: Option<f64>,
-        created_at: &chrono::DateTime<chrono::Utc>,
+        params1: &MatchParams,
+        params2: &MatchParams,
         weights: &matching_weights::Model,
     ) -> f64 {
         // Medication similarity (simple string comparison)
-        let med_score = if med1.to_lowercase() == med2.to_lowercase() {
-            1.0
-        } else {
-            0.0
-        };
+        let med_score =
+            if params1.medication_name.to_lowercase() == params2.medication_name.to_lowercase() {
+                1.0
+            } else {
+                0.0
+            };
 
         // Quantity score
-        let qty_score = 1.0 - ((qty1 - qty2).abs() as f64 / std::cmp::max(qty1, qty2) as f64);
+        let qty_score = {
+            let max_qty = std::cmp::max(params1.quantity, params2.quantity);
+            if max_qty == 0 {
+                1.0 // Both zero means perfect match
+            } else {
+                1.0 - ((params1.quantity - params2.quantity).abs() as f64 / max_qty as f64)
+            }
+        };
 
         // Dosage score
-        let dose_score = match (dose1, dose2) {
+        let dose_score = match (params1.dosage, params2.dosage) {
             (Some(d1), Some(d2)) if d1 == d2 => 1.0,
             (None, None) => 0.5,
             _ => 0.0,
         };
 
         // Price score
-        let price_score = match (price1, price2) {
+        let price_score = match (params1.price, params2.price) {
             (Some(p1), Some(p2)) => {
                 let max_price = p1.max(p2);
-                1.0 - ((p1 - p2).abs() / max_price)
+                if max_price == 0.0 {
+                    1.0 // Both zero means perfect match
+                } else {
+                    1.0 - ((p1 - p2).abs() / max_price)
+                }
             }
             _ => 0.5,
         };
 
         // Recency score (days old)
-        let days_old = (chrono::Utc::now() - *created_at).num_days() as f64;
+        let days_old = (chrono::Utc::now() - *params2.created_at).num_days() as f64;
         let recency_score = (1.0 / (1.0 + days_old / 30.0)).max(0.0);
 
         // Weighted sum
@@ -357,7 +342,7 @@ impl SimulateService {
                         .medication_name(extracted.medication_name.clone())
                         .dosage(extracted.dosage.clone())
                         .quantity(extracted.quantity)
-                        .price(extracted.price.map(Decimal::from_f64_retain).flatten())
+                        .price(extracted.price.and_then(Decimal::from_f64_retain))
                         .group_name(group_name.to_string())
                         .sender_phone(sender_phone.to_string())
                         .raw_text(Some(raw_text.to_string()))
@@ -375,7 +360,7 @@ impl SimulateService {
                         .medication_name(extracted.medication_name.clone())
                         .dosage(extracted.dosage.clone())
                         .quantity(extracted.quantity)
-                        .max_price(extracted.price.map(Decimal::from_f64_retain).flatten())
+                        .max_price(extracted.price.and_then(Decimal::from_f64_retain))
                         .group_name(group_name.to_string())
                         .sender_phone(sender_phone.to_string())
                         .raw_text(Some(raw_text.to_string()))
@@ -399,6 +384,57 @@ struct ExtractedData {
     price: Option<f64>,
     reasoning: String,
     fields: Vec<ParsedField>,
+}
+
+/// Match scoring parameters
+#[derive(Debug, Clone)]
+struct MatchParams<'a> {
+    medication_name: &'a str,
+    quantity: i32,
+    dosage: Option<&'a str>,
+    price: Option<f64>,
+    created_at: &'a chrono::DateTime<chrono::Utc>,
+}
+
+impl<'a> MatchParams<'a> {
+    fn from_offer(offer: &'a offer::Model) -> Self {
+        Self {
+            medication_name: offer.medication_name(),
+            quantity: *offer.quantity(),
+            dosage: offer.dosage().as_deref(),
+            price: offer
+                .price()
+                .as_ref()
+                .map(|d| d.to_string().parse::<f64>().unwrap_or(0.0)),
+            created_at: offer.created_at(),
+        }
+    }
+
+    fn from_request(request: &'a request::Model) -> Self {
+        Self {
+            medication_name: request.medication_name(),
+            quantity: *request.quantity(),
+            dosage: request.dosage().as_deref(),
+            price: request
+                .max_price()
+                .as_ref()
+                .map(|d| d.to_string().parse::<f64>().unwrap_or(0.0)),
+            created_at: request.created_at(),
+        }
+    }
+
+    fn from_extracted(
+        extracted: &'a ExtractedData,
+        created_at: &'a chrono::DateTime<chrono::Utc>,
+    ) -> Self {
+        Self {
+            medication_name: &extracted.medication_name,
+            quantity: extracted.quantity,
+            dosage: extracted.dosage.as_deref(),
+            price: extracted.price,
+            created_at,
+        }
+    }
 }
 
 /// Parsed field
