@@ -13,9 +13,9 @@ pub struct AuditLogDto {
     action: String,
     entity_type: String,
     entity_id: Id,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     operator_id: Option<Id>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     details: Option<JsonValue>,
     created_at: DateTime<Utc>,
 }

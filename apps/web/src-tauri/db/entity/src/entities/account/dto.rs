@@ -12,19 +12,19 @@ pub struct AccountDto {
     account_id: Id,
     provider_id: Id,
     user_id: Id,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     access_token: Option<String>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     refresh_token: Option<String>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     id_token: Option<String>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     access_token_expires_at: Option<DateTime<Utc>>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     refresh_token_expires_at: Option<DateTime<Utc>>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     scope: Option<String>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     password: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,

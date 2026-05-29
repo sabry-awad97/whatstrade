@@ -27,15 +27,15 @@ pub struct ReviewItemDto {
     id: Id,
     r#type: ReviewTypeDto,
     medication_name: String,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     dosage: Option<String>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     quantity: Option<i32>,
     raw_text: String,
     group_name: String,
     sender_phone: String,
     status: ReviewStatusDto,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     parsed_data: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,

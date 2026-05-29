@@ -2,17 +2,29 @@
 
 pub mod audit;
 pub mod auth;
+pub mod group;
 pub mod jwt;
 pub mod matching;
 pub mod offer;
 pub mod request;
+pub mod review;
+pub mod simulate;
+pub mod stats;
 pub mod user;
+pub mod weights;
+pub mod whatsapp;
 
 // Re-export services
 pub use audit::AuditService;
 pub use auth::AuthService;
+pub use group::GroupService;
 pub use jwt::JwtService;
 pub use matching::MatchingService;
 pub use offer::OfferService;
 pub use request::RequestService;
+pub use review::ReviewService;
+pub use simulate::SimulateService;
+pub use stats::StatsService;
 pub use user::UserService;
+pub use weights::WeightsService;
+pub use whatsapp::WhatsAppService;

@@ -13,7 +13,7 @@ pub struct WhatsAppSessionDto {
     phone_number: String,
     session_data: JsonValue,
     is_connected: bool,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     last_connected: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,

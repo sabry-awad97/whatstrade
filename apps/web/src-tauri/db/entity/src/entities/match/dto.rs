@@ -33,14 +33,14 @@ pub struct MatchDto {
     score: Decimal,
     confidence_band: ConfidenceBandDto,
     status: MatchStatusDto,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     operator_note: Option<String>,
     medication_name: String,
     offer_quantity: i32,
     request_quantity: i32,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     offer_price: Option<Decimal>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     max_price: Option<Decimal>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,

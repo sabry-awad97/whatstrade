@@ -20,19 +20,19 @@ pub enum RequestStatusDto {
 pub struct RequestDto {
     id: Id,
     medication_name: String,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     dosage: Option<String>,
     quantity: i32,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     max_price: Option<Decimal>,
     group_name: String,
     sender_phone: String,
     status: RequestStatusDto,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     raw_text: Option<String>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     whatsapp_message_id: Option<Id>,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     whatsapp_group_id: Option<Id>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,

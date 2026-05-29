@@ -3,8 +3,9 @@
 use crate::{
     run_migrations,
     services::{
-        AuditService, AuthService, JwtService, MatchingService, OfferService, RequestService,
-        UserService,
+        AuditService, AuthService, GroupService, JwtService, MatchingService, OfferService,
+        RequestService, ReviewService, SimulateService, StatsService, UserService, WeightsService,
+        WhatsAppService,
     },
 };
 use derive_getters::Getters;
@@ -50,6 +51,10 @@ pub struct ServiceManagerConfig {
     /// Enable SQLx logging (default: true)
     #[builder(default = true)]
     sqlx_logging: bool,
+
+    /// Go WhatsApp service URL
+    #[builder(default, setter(into))]
+    go_whatsapp_service_url: Option<String>,
 }
 
 /// Service manager containing all application services
@@ -109,6 +114,30 @@ pub struct ServiceManager {
     /// Matching service for creating matches
     #[builder(setter(into))]
     matching_service: Arc<MatchingService>,
+
+    /// Group service for managing WhatsApp groups
+    #[builder(setter(into))]
+    group_service: Arc<GroupService>,
+
+    /// Weights service for matching algorithm weights
+    #[builder(setter(into))]
+    weights_service: Arc<WeightsService>,
+
+    /// Review service for review queue management
+    #[builder(setter(into))]
+    review_service: Arc<ReviewService>,
+
+    /// Stats service for dashboard statistics
+    #[builder(setter(into))]
+    stats_service: Arc<StatsService>,
+
+    /// Simulate service for message simulation
+    #[builder(setter(into))]
+    simulate_service: Arc<SimulateService>,
+
+    /// WhatsApp service for WhatsApp integration
+    #[builder(setter(into))]
+    whatsapp_service: Arc<WhatsAppService>,
 }
 
 impl ServiceManager {
@@ -190,6 +219,21 @@ impl ServiceManager {
             request_service.clone(),
         );
 
+        // Initialize new services
+        let group_service = GroupService::arc(db.clone());
+        let weights_service = WeightsService::arc(db.clone());
+        let review_service = ReviewService::arc(db.clone(), audit_service.clone());
+        let stats_service = StatsService::arc(db.clone());
+        let simulate_service =
+            SimulateService::arc(db.clone(), offer_service.clone(), request_service.clone());
+        let whatsapp_service = WhatsAppService::arc(
+            db.clone(),
+            config
+                .go_whatsapp_service_url()
+                .clone()
+                .unwrap_or_else(|| "http://localhost:8080".to_string()),
+        );
+
         Ok(Self {
             db,
             jwt_service,
@@ -199,6 +243,12 @@ impl ServiceManager {
             offer_service,
             request_service,
             matching_service,
+            group_service,
+            weights_service,
+            review_service,
+            stats_service,
+            simulate_service,
+            whatsapp_service,
         })
     }
 }

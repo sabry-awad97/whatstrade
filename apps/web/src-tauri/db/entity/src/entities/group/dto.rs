@@ -13,7 +13,7 @@ pub struct GroupDto {
     name: String,
     is_monitored: bool,
     member_count: i32,
-    #[builder(default, setter(strip_option))]
+    #[builder(default, setter(into))]
     last_message_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
