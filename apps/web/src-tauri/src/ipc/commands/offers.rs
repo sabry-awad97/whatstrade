@@ -47,22 +47,32 @@ pub async fn list_offers(
         };
 
         // Get offers based on filter
-        let offers = if let Some(filter) = params.filter() {
+        let (offers, total) = if let Some(filter) = params.filter() {
             if let Some(search) = &filter.search {
-                // Search by medication name
-                offer_service.search_by_medication(search).await?
+                // Search by medication name with pagination
+                tokio::try_join!(
+                    offer_service.search_by_medication(search, page, page_size),
+                    offer_service.count_by_medication(search)
+                )?
             } else {
                 // No search term, list active offers
-                offer_service.list_active(page, page_size).await?
+                tokio::try_join!(
+                    offer_service.list_active(page, page_size),
+                    offer_service.count_active()
+                )?
             }
         } else {
             // No filter, list active offers
-            offer_service.list_active(page, page_size).await?
+            tokio::try_join!(
+                offer_service.list_active(page, page_size),
+                offer_service.count_active()
+            )?
         };
 
-        let total = offers.len();
-
-        Ok(OfferListResponse { offers, total })
+        Ok(OfferListResponse {
+            offers,
+            total: total as usize,
+        })
     }
     .await
     .into()

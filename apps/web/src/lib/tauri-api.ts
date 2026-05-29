@@ -19,10 +19,11 @@ const logger = createLogger("TauriAPI");
 
 /**
  * Check if running in Tauri environment
+ * Uses the official isTauri flag set by Tauri's initialization script
  * @returns Boolean indicating if Tauri API is available
  */
 export function isTauriEnvironment(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  return typeof window !== "undefined" && !!window.isTauri;
 }
 
 /**

@@ -55,6 +55,8 @@ impl UpdateWeightsDto {
     }
 
     pub fn validate_total(&self) -> Result<(), ValidationErrors> {
+        self.validate()?;
+
         let weight_tolerance: Decimal = Decimal::new(1, 2); // 0.01
 
         let sum = self.total_weight();

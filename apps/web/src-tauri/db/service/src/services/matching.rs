@@ -219,6 +219,29 @@ impl MatchingService {
             .collect())
     }
 
+    /// Count all matches with optional status filter
+    ///
+    /// # Arguments
+    ///
+    /// * `status` - Optional status filter
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(u64)` - Total count of matches
+    /// * `Err(ServiceError)` - If query fails
+    pub async fn count(&self, status: Option<MatchStatus>) -> ServiceResult<u64> {
+        let mut query = r#match::Entity::find();
+
+        // Apply status filter if provided
+        if let Some(status_filter) = status {
+            query = query.filter(r#match::COLUMN.status.eq(status_filter));
+        }
+
+        let count = query.count(self.db.as_ref()).await?;
+
+        Ok(count)
+    }
+
     /// Update match status
     ///
     /// # Arguments

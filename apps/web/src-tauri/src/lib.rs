@@ -48,6 +48,11 @@ pub async fn run() {
         ipc::commands::disable_group_monitoring,
         ipc::commands::get_weights,
         ipc::commands::update_weights,
+        ipc::commands::get_review_queue,
+        ipc::commands::get_review_stats,
+        ipc::commands::approve_review_item,
+        ipc::commands::reject_review_item,
+        ipc::commands::list_audit_log,
     ]);
 
     builder

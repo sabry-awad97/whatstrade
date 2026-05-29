@@ -50,6 +50,7 @@ impl StatsService {
             total_matches,
             pending_matches,
             auto_confirmed,
+            rejected_matches,
             active_groups,
             today_offers,
             today_requests,
@@ -62,6 +63,9 @@ impl StatsService {
                 .count(self.db.as_ref()),
             r#match::Entity::find()
                 .filter(r#match::Column::Status.eq(r#match::MatchStatus::AutoConfirmed))
+                .count(self.db.as_ref()),
+            r#match::Entity::find()
+                .filter(r#match::Column::Status.eq(r#match::MatchStatus::Rejected))
                 .count(self.db.as_ref()),
             group::Entity::find()
                 .filter(group::Column::IsMonitored.eq(true))
@@ -90,6 +94,7 @@ impl StatsService {
             total_matches,
             pending_matches,
             auto_confirmed,
+            rejected_matches,
             avg_match_score,
             active_groups,
             today_messages,
@@ -123,6 +128,7 @@ pub struct DashboardStatsDto {
     pub total_matches: u64,
     pub pending_matches: u64,
     pub auto_confirmed: u64,
+    pub rejected_matches: u64,
     pub avg_match_score: f64,
     pub active_groups: u64,
     pub today_messages: u64,

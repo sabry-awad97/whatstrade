@@ -138,11 +138,28 @@ impl RequestService {
         Ok(requests.into_iter().map(RequestResponseDto::from).collect())
     }
 
+    /// Count active requests
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(u64)` - Total count of active requests
+    /// * `Err(ServiceError)` - If query fails
+    pub async fn count_active(&self) -> ServiceResult<u64> {
+        let count = request::Entity::find()
+            .filter(request::COLUMN.status.eq(RequestStatus::Active))
+            .count(self.db.as_ref())
+            .await?;
+
+        Ok(count)
+    }
+
     /// Search requests by medication name
     ///
     /// # Arguments
     ///
     /// * `medication_name` - Medication name to search for
+    /// * `page` - Page number (0-indexed)
+    /// * `page_size` - Number of items per page
     ///
     /// # Returns
     ///
@@ -151,15 +168,38 @@ impl RequestService {
     pub async fn search_by_medication(
         &self,
         medication_name: &str,
+        page: u64,
+        page_size: u64,
     ) -> ServiceResult<Vec<RequestResponseDto>> {
         let requests = request::Entity::find()
             .filter(request::COLUMN.medication_name.contains(medication_name))
             .filter(request::COLUMN.status.eq(RequestStatus::Active))
             .order_by_desc(request::COLUMN.created_at)
-            .all(self.db.as_ref())
+            .paginate(self.db.as_ref(), page_size)
+            .fetch_page(page)
             .await?;
 
         Ok(requests.into_iter().map(RequestResponseDto::from).collect())
+    }
+
+    /// Count requests by medication name search
+    ///
+    /// # Arguments
+    ///
+    /// * `medication_name` - Medication name to search for
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(u64)` - Total count of matching requests
+    /// * `Err(ServiceError)` - If query fails
+    pub async fn count_by_medication(&self, medication_name: &str) -> ServiceResult<u64> {
+        let count = request::Entity::find()
+            .filter(request::COLUMN.medication_name.contains(medication_name))
+            .filter(request::COLUMN.status.eq(RequestStatus::Active))
+            .count(self.db.as_ref())
+            .await?;
+
+        Ok(count)
     }
 
     /// Update request status

@@ -138,11 +138,28 @@ impl OfferService {
         Ok(offers.into_iter().map(OfferResponseDto::from).collect())
     }
 
+    /// Count active offers
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(u64)` - Total count of active offers
+    /// * `Err(ServiceError)` - If query fails
+    pub async fn count_active(&self) -> ServiceResult<u64> {
+        let count = offer::Entity::find()
+            .filter(offer::COLUMN.status.eq(OfferStatus::Active))
+            .count(self.db.as_ref())
+            .await?;
+
+        Ok(count)
+    }
+
     /// Search offers by medication name
     ///
     /// # Arguments
     ///
     /// * `medication_name` - Medication name to search for
+    /// * `page` - Page number (0-indexed)
+    /// * `page_size` - Number of items per page
     ///
     /// # Returns
     ///
@@ -151,15 +168,38 @@ impl OfferService {
     pub async fn search_by_medication(
         &self,
         medication_name: &str,
+        page: u64,
+        page_size: u64,
     ) -> ServiceResult<Vec<OfferResponseDto>> {
         let offers = offer::Entity::find()
             .filter(offer::COLUMN.medication_name.contains(medication_name))
             .filter(offer::COLUMN.status.eq(OfferStatus::Active))
             .order_by_desc(offer::COLUMN.created_at)
-            .all(self.db.as_ref())
+            .paginate(self.db.as_ref(), page_size)
+            .fetch_page(page)
             .await?;
 
         Ok(offers.into_iter().map(OfferResponseDto::from).collect())
+    }
+
+    /// Count offers by medication name search
+    ///
+    /// # Arguments
+    ///
+    /// * `medication_name` - Medication name to search for
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(u64)` - Total count of matching offers
+    /// * `Err(ServiceError)` - If query fails
+    pub async fn count_by_medication(&self, medication_name: &str) -> ServiceResult<u64> {
+        let count = offer::Entity::find()
+            .filter(offer::COLUMN.medication_name.contains(medication_name))
+            .filter(offer::COLUMN.status.eq(OfferStatus::Active))
+            .count(self.db.as_ref())
+            .await?;
+
+        Ok(count)
     }
 
     /// Update offer status

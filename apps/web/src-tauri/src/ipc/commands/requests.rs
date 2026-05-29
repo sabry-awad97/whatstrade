@@ -47,22 +47,32 @@ pub async fn list_requests(
         };
 
         // Get requests based on filter
-        let requests = if let Some(filter) = params.filter() {
+        let (requests, total) = if let Some(filter) = params.filter() {
             if let Some(search) = &filter.search {
-                // Search by medication name
-                request_service.search_by_medication(search).await?
+                // Search by medication name with pagination
+                tokio::try_join!(
+                    request_service.search_by_medication(search, page, page_size),
+                    request_service.count_by_medication(search)
+                )?
             } else {
                 // No search term, list active requests
-                request_service.list_active(page, page_size).await?
+                tokio::try_join!(
+                    request_service.list_active(page, page_size),
+                    request_service.count_active()
+                )?
             }
         } else {
             // No filter, list active requests
-            request_service.list_active(page, page_size).await?
+            tokio::try_join!(
+                request_service.list_active(page, page_size),
+                request_service.count_active()
+            )?
         };
 
-        let total = requests.len();
-
-        Ok(RequestListResponse { requests, total })
+        Ok(RequestListResponse {
+            requests,
+            total: total as usize,
+        })
     }
     .await
     .into()

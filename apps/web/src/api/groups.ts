@@ -63,7 +63,7 @@ export async function listMonitoredGroups(): Promise<GroupResponse[]> {
 export async function enableGroupMonitoring(
   jid: string,
 ): Promise<GroupResponse> {
-  logger.info("Enabling group monitoring", { jid });
+  logger.info("Enabling group monitoring");
   return invokeCommand("enable_group_monitoring", groupResponseSchema, {
     params: {
       data: { jid },
@@ -77,7 +77,7 @@ export async function enableGroupMonitoring(
 export async function disableGroupMonitoring(
   jid: string,
 ): Promise<GroupResponse> {
-  logger.info("Disabling group monitoring", { jid });
+  logger.info("Disabling group monitoring");
   return invokeCommand("disable_group_monitoring", groupResponseSchema, {
     params: {
       data: { jid },

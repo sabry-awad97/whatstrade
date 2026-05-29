@@ -137,4 +137,25 @@ impl AuditService {
 
         Ok(logs)
     }
+
+    /// List all audit logs with pagination
+    ///
+    /// # Arguments
+    ///
+    /// * `page` - Page number (0-indexed)
+    /// * `page_size` - Number of items per page
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Vec<audit_log::Model>)` - List of audit logs
+    /// * `Err(ServiceError)` - If query fails
+    pub async fn list(&self, page: u64, page_size: u64) -> ServiceResult<Vec<audit_log::Model>> {
+        let logs = audit_log::Entity::find()
+            .order_by_desc(audit_log::COLUMN.created_at)
+            .paginate(self.db.as_ref(), page_size)
+            .fetch_page(page)
+            .await?;
+
+        Ok(logs)
+    }
 }

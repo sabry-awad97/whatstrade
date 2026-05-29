@@ -58,13 +58,14 @@ pub async fn get_match_stats(app: AppHandle) -> IpcResponse<MatchStatsResponse> 
         let confirmed_matches = dashboard_stats
             .total_matches
             .saturating_sub(dashboard_stats.pending_matches)
+            .saturating_sub(dashboard_stats.rejected_matches)
             .saturating_sub(dashboard_stats.auto_confirmed);
 
         Ok(MatchStatsResponse {
             total_matches: dashboard_stats.total_matches,
             pending_matches: dashboard_stats.pending_matches,
             confirmed_matches,
-            rejected_matches: 0, // Not tracked separately in dashboard stats
+            rejected_matches: dashboard_stats.rejected_matches,
             auto_confirmed_matches: dashboard_stats.auto_confirmed,
             avg_match_score: dashboard_stats.avg_match_score,
         })
@@ -105,11 +106,16 @@ pub async fn list_matches(
             None
         };
 
-        // Use the matching service to list matches
-        let matches = matching_service.list(status, page, page_size).await?;
-        let total = matches.len();
+        // Use the matching service to list matches and get total count
+        let (matches, total) = tokio::try_join!(
+            matching_service.list(status.clone(), page, page_size),
+            matching_service.count(status)
+        )?;
 
-        Ok(MatchListResponse { matches, total })
+        Ok(MatchListResponse {
+            matches,
+            total: total as usize,
+        })
     }
     .await
     .into()

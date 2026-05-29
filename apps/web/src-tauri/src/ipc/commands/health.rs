@@ -1,4 +1,5 @@
 use serde::Serialize;
+use tauri::AppHandle;
 
 use crate::ipc::response::IpcResponse;
 
@@ -11,7 +12,7 @@ pub struct HealthResponse {
 /// Health check command
 /// Returns the current health status of the application
 #[tauri::command]
-pub async fn health() -> IpcResponse<HealthResponse> {
+pub async fn health(_app: AppHandle) -> IpcResponse<HealthResponse> {
     async {
         Ok(HealthResponse {
             status: "ok".to_string(),

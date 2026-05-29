@@ -58,7 +58,7 @@ export type ValidateTokenRequest = z.infer<typeof validateTokenRequestSchema>;
  * Register a new user
  */
 export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  logger.info("Registering user", { email: data.email });
+  logger.info("Registering user");
   return invokeCommand("auth_register", authResponseSchema, {
     params: { data },
   });
@@ -68,7 +68,7 @@ export async function register(data: RegisterRequest): Promise<AuthResponse> {
  * Login a user
  */
 export async function login(data: LoginRequest): Promise<AuthResponse> {
-  logger.info("Logging in user", { email: data.email });
+  logger.info("Logging in user");
   return invokeCommand("auth_login", authResponseSchema, {
     params: { data },
   });
