@@ -10,7 +10,7 @@ const logger = createLogger("SimulateApi");
 
 export const pipelineStepSchema = z.object({
   step: z.string(),
-  status: z.string(),
+  status: z.enum(["success", "error", "pending"]),
   detail: z.string(),
   duration_ms: z.number(),
 });

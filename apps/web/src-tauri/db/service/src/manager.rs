@@ -11,7 +11,28 @@ use crate::{
 use derive_getters::Getters;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::sync::Arc;
+use thiserror::Error;
 use typed_builder::TypedBuilder;
+
+/// Errors that can occur during ServiceManager initialization
+#[derive(Debug, Error)]
+pub enum InitializationError {
+    /// Database connection or operation error
+    #[error("Database error: {0}")]
+    Database(#[from] sea_orm::DbErr),
+
+    /// AI client configuration is missing
+    #[error("AI configuration is required but was not provided")]
+    MissingAiConfig,
+
+    /// AI client configuration is invalid
+    #[error("Invalid AI configuration: {0}")]
+    InvalidAiConfig(String),
+
+    /// AI client initialization failed
+    #[error("Failed to initialize AI client: {0}")]
+    AiClient(String),
+}
 
 /// Configuration for ServiceManager initialization
 #[derive(Clone, TypedBuilder, Getters)]
@@ -162,6 +183,13 @@ impl ServiceManager {
     ///
     /// A fully configured ServiceManager with all services initialized
     ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Database connection fails
+    /// - AI configuration is missing or invalid
+    /// - Service initialization fails
+    ///
     /// # Example
     ///
     /// ```rust,no_run
@@ -182,7 +210,7 @@ impl ServiceManager {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn new(config: ServiceManagerConfig) -> Result<Self, sea_orm::DbErr> {
+    pub async fn new(config: ServiceManagerConfig) -> Result<Self, InitializationError> {
         // Build database connection options from config
         let mut opt = ConnectOptions::new(config.database_url.clone());
         opt.max_connections(*config.max_connections())
@@ -194,7 +222,11 @@ impl ServiceManager {
             .sqlx_logging(*config.sqlx_logging());
 
         // Connect to database
-        let db = Arc::new(Database::connect(opt).await?);
+        let db = Arc::new(
+            Database::connect(opt)
+                .await
+                .map_err(InitializationError::Database)?,
+        );
 
         // Run migrations with error handling
         match run_migrations(&db).await {
@@ -233,16 +265,29 @@ impl ServiceManager {
         let review_service = ReviewService::arc(db.clone(), audit_service.clone());
         let stats_service = StatsService::arc(db.clone());
 
-        // Initialize AI client
+        // Initialize AI client - validate configuration
         let ai_config = config
             .ai_config()
             .clone()
-            .unwrap_or_default();
-        let ai_client =
-            Arc::new(ai_client::AiClient::new(&ai_config).map_err(|e| {
-                sea_orm::DbErr::Custom(format!("Failed to create AI client: {}", e))
-            })?);
+            .ok_or_else(|| InitializationError::MissingAiConfig)?;
 
+        // Validate AI config has required fields
+        if ai_config.api_key.is_empty() || ai_config.api_key == "not-needed" {
+            return Err(InitializationError::InvalidAiConfig(
+                "AI API key is required and cannot be 'not-needed'".to_string(),
+            ));
+        }
+
+        if ai_config.base_url.is_empty() {
+            return Err(InitializationError::InvalidAiConfig(
+                "AI base URL is required".to_string(),
+            ));
+        }
+
+        let ai_client = Arc::new(
+            ai_client::AiClient::new(&ai_config)
+                .map_err(|e| InitializationError::AiClient(e.to_string()))?,
+        );
         let simulate_service = SimulateService::arc(
             db.clone(),
             offer_service.clone(),

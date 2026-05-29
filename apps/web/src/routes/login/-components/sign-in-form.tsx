@@ -1,8 +1,21 @@
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@workspace/ui/components/field";
 import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
+import { Brain } from "lucide-react";
 import { toast } from "sonner";
 import z from "zod";
 
@@ -46,7 +59,7 @@ export default function SignInForm({
     },
     validators: {
       onSubmit: z.object({
-        email: z.email("Invalid email address"),
+        email: z.string().email("Invalid email address"),
         password: z.string().min(8, "Password must be at least 8 characters"),
       }),
     },
@@ -57,90 +70,130 @@ export default function SignInForm({
   }
 
   return (
-    <div className="mx-auto w-full mt-10 max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Welcome Back</h1>
-
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          form.handleSubmit();
-        }}
-        className="space-y-4"
-      >
-        <div>
-          <form.Field name="email">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Email</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
+    <section className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-lg">
+        <Card className="px-6 py-8 sm:p-12">
+          <CardHeader className="text-center gap-6 p-0 mb-6">
+            <div className="mx-auto">
+              <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+                <Brain className="h-6 w-6 text-primary-foreground" />
               </div>
-            )}
-          </form.Field>
-        </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <CardTitle className="text-2xl font-medium text-card-foreground">
+                Welcome Back
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground font-normal">
+                Sign in to your WhatsTrade account
+              </CardDescription>
+            </div>
+          </CardHeader>
 
-        <div>
-          <form.Field name="password">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Password</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-red-500">
-                    {error?.message}
-                  </p>
-                ))}
-              </div>
-            )}
-          </form.Field>
-        </div>
-
-        <form.Subscribe
-          selector={(state) => ({
-            canSubmit: state.canSubmit,
-            isSubmitting: state.isSubmitting,
-          })}
-        >
-          {({ canSubmit, isSubmitting }) => (
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={!canSubmit || isSubmitting}
+          <CardContent className="p-0">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.handleSubmit();
+              }}
             >
-              {isSubmitting ? "Submitting..." : "Sign In"}
-            </Button>
-          )}
-        </form.Subscribe>
-      </form>
+              <FieldGroup className="gap-6">
+                <form.Field name="email">
+                  {(field) => {
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <FieldLabel
+                          htmlFor={field.name}
+                          className="text-sm text-muted-foreground font-normal"
+                        >
+                          Email*
+                        </FieldLabel>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          type="email"
+                          placeholder="example@whatstrade.com"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          className="dark:bg-background h-9 shadow-xs"
+                          aria-invalid={isInvalid}
+                        />
+                        {isInvalid && (
+                          <FieldError errors={field.state.meta.errors} />
+                        )}
+                      </Field>
+                    );
+                  }}
+                </form.Field>
 
-      <div className="mt-4 text-center">
-        <Button
-          variant="link"
-          onClick={onSwitchToSignUp}
-          className="text-indigo-600 hover:text-indigo-800"
-        >
-          Need an account? Sign Up
-        </Button>
+                <form.Field name="password">
+                  {(field) => {
+                    const isInvalid =
+                      field.state.meta.isTouched && !field.state.meta.isValid;
+                    return (
+                      <Field data-invalid={isInvalid}>
+                        <FieldLabel
+                          htmlFor={field.name}
+                          className="text-sm text-muted-foreground font-normal"
+                        >
+                          Password*
+                        </FieldLabel>
+                        <Input
+                          id={field.name}
+                          name={field.name}
+                          type="password"
+                          placeholder="Enter your password"
+                          value={field.state.value}
+                          onBlur={field.handleBlur}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          className="dark:bg-background h-9 shadow-xs"
+                          aria-invalid={isInvalid}
+                        />
+                        {isInvalid && (
+                          <FieldError errors={field.state.meta.errors} />
+                        )}
+                      </Field>
+                    );
+                  }}
+                </form.Field>
+
+                <form.Subscribe
+                  selector={(state) => ({
+                    canSubmit: state.canSubmit,
+                    isSubmitting: state.isSubmitting,
+                  })}
+                >
+                  {({ canSubmit, isSubmitting }) => (
+                    <Field>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="rounded-lg h-10 hover:bg-primary/80 cursor-pointer"
+                        disabled={!canSubmit || isSubmitting}
+                      >
+                        {isSubmitting ? "Signing in..." : "Sign in"}
+                      </Button>
+                      <p className="text-center text-sm font-normal text-muted-foreground">
+                        Don&apos;t have an account?{" "}
+                        <button
+                          type="button"
+                          onClick={onSwitchToSignUp}
+                          className="font-medium text-card-foreground hover:underline cursor-pointer"
+                        >
+                          Create an account
+                        </button>
+                      </p>
+                    </Field>
+                  )}
+                </form.Subscribe>
+              </FieldGroup>
+            </form>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </section>
   );
 }

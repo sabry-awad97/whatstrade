@@ -139,9 +139,7 @@ impl SimulateService {
 
         // Step 4: Score candidates
         let step_start = std::time::Instant::now();
-        let candidates = self
-            .score_candidates(&extracted, &weights, &message_type)
-            .await?;
+        let candidates = self.score_candidates(&extracted, &weights).await?;
         pipeline_steps.push(PipelineStepDto {
             step: "Score Candidates".to_string(),
             status: "success".to_string(),
@@ -163,7 +161,6 @@ impl SimulateService {
             let id = self
                 .insert_extracted(
                     &extracted,
-                    &message_type,
                     &group_name.unwrap_or_else(|| "Simulation".to_string()),
                     &sender_phone.unwrap_or_else(|| "+20000000000".to_string()),
                     &raw_text,
@@ -192,6 +189,7 @@ impl SimulateService {
         Ok(SimulateResponseDto {
             parsed_type: extracted.message_type,
             parsed_fields: extracted.fields,
+            urgency: extracted.urgency,
             ai_reasoning: extracted.reasoning,
             candidates,
             inserted_id,
@@ -316,41 +314,50 @@ impl SimulateService {
             .first()
             .ok_or_else(|| ServiceError::validation("AI extracted no medications from message"))?;
 
-        // Determine message type
+        // Determine message type - treat "auto" as absent to fall back to AI intent
         let message_type = message_type_hint
+            .filter(|&s| s != "auto")
             .map(|s| s.to_string())
             .unwrap_or(pharma.intent.clone());
 
-        // Parse concentration to get quantity estimate
-        let quantity = first_med
-            .concentration
-            .as_ref()
-            .and_then(|c| c.parse::<i32>().ok())
-            .unwrap_or(100);
+        // Use dedicated quantity field, fallback to 0 if not provided
+        let quantity = first_med.quantity.unwrap_or(0);
 
-        // Convert parsed fields
+        // Convert parsed fields with medication index to avoid ambiguity
         let fields = pharma
             .medications
             .iter()
-            .flat_map(|med| {
+            .enumerate()
+            .flat_map(|(idx, med)| {
+                let prefix = if pharma.medications.len() > 1 {
+                    format!("medication[{}].", idx)
+                } else {
+                    String::new()
+                };
+
                 vec![
                     ParsedField {
-                        field: "medicationName".to_string(),
+                        field: format!("{}medicationName", prefix),
                         value: med.name.clone(),
                         confidence: med.confidence,
                     },
                     ParsedField {
-                        field: "concentration".to_string(),
+                        field: format!("{}concentration", prefix),
                         value: med.concentration.clone().unwrap_or_default(),
                         confidence: med.confidence,
                     },
                     ParsedField {
-                        field: "form".to_string(),
+                        field: format!("{}form", prefix),
                         value: med.form.clone().unwrap_or_default(),
                         confidence: med.confidence,
                     },
                     ParsedField {
-                        field: "expiry".to_string(),
+                        field: format!("{}quantity", prefix),
+                        value: med.quantity.map(|q| q.to_string()).unwrap_or_default(),
+                        confidence: med.confidence,
+                    },
+                    ParsedField {
+                        field: format!("{}expiry", prefix),
                         value: med.expiry.clone().unwrap_or_default(),
                         confidence: med.confidence,
                     },
@@ -364,6 +371,7 @@ impl SimulateService {
             dosage: first_med.concentration.clone(),
             quantity,
             price: None,
+            urgency: pharma.urgency,
             reasoning: pharma.reason,
             fields,
         })
@@ -374,15 +382,11 @@ impl SimulateService {
         &self,
         extracted: &ExtractedData,
         weights: &matching_weights::Model,
-        message_type: &Option<String>,
     ) -> ServiceResult<Vec<CandidateDto>> {
         let mut candidates = Vec::new();
 
-        // Determine if this is an offer or request
-        let is_offer = message_type
-            .as_ref()
-            .map(|t| t == "offer")
-            .unwrap_or(extracted.message_type == "offer");
+        // Use the normalized message type from extracted data
+        let is_offer = extracted.message_type == "offer";
 
         // Create match params for the extracted data
         let now = chrono::Utc::now();
@@ -517,15 +521,12 @@ impl SimulateService {
     async fn insert_extracted(
         &self,
         extracted: &ExtractedData,
-        message_type: &Option<String>,
         group_name: &str,
         sender_phone: &str,
         raw_text: &str,
     ) -> ServiceResult<Id> {
-        let is_offer = message_type
-            .as_ref()
-            .map(|t| t == "offer")
-            .unwrap_or(extracted.message_type == "offer");
+        // Use the normalized message type from extracted data
+        let is_offer = extracted.message_type == "offer";
 
         if is_offer {
             let offer = self
@@ -575,6 +576,7 @@ struct ExtractedData {
     dosage: Option<String>,
     quantity: i32,
     price: Option<f64>,
+    urgency: String,
     reasoning: String,
     fields: Vec<ParsedField>,
 }
@@ -655,6 +657,7 @@ pub struct CandidateDto {
 pub struct SimulateResponseDto {
     pub parsed_type: String,
     pub parsed_fields: Vec<ParsedField>,
+    pub urgency: String,
     pub ai_reasoning: String,
     pub candidates: Vec<CandidateDto>,
     pub inserted_id: Option<Id>,
@@ -682,6 +685,7 @@ pub struct Medication {
     pub name: String,
     pub concentration: Option<String>,
     pub form: Option<String>,
+    pub quantity: Option<i32>,
     pub expiry: Option<String>,
     pub confidence: f64,
     pub reason: String,

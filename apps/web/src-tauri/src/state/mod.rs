@@ -32,13 +32,16 @@ pub async fn try_init_state(_app_handle: &tauri::AppHandle) -> AppResult<AppStat
     });
 
     // Load AI configuration from environment
-    let ai_config = ai_client::load_from_env().ok();
-    if ai_config.is_some() {
-        tracing::info!("AI client configuration loaded from environment");
-    } else {
-        tracing::warn!("AI client configuration not found, using defaults");
-    }
-
+    let ai_config = match ai_client::load_from_env() {
+        Ok(cfg) => {
+            tracing::info!("AI client configuration loaded from environment");
+            Some(cfg)
+        }
+        Err(e) => {
+            tracing::warn!("AI client configuration unavailable, using defaults: {e}");
+            None
+        }
+    };
     tracing::info!(
         "Initializing service manager with database: {}",
         database_url

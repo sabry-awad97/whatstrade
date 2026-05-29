@@ -26,7 +26,7 @@ Max valid year (2-digit): {{ max_year_short }}
 3. How many SEPARATE medications are mentioned?
 4. Are there any "و" (and) indicating multiple concentrations for same drug?
 5. Have I kept all names in their ORIGINAL language?
-6. Are there any dates (XX/XX format) that are EXPIRY dates, not concentrations?
+6. Are there any dates (MM/YY format) that are EXPIRY dates, not concentrations?
 
 [OUTPUT FORMAT]
 {
@@ -38,6 +38,7 @@ Max valid year (2-digit): {{ max_year_short }}
       "name": "exact medication name from message",
       "concentration": "dosage or null",
       "form": "امبول/فايل/اقراص/etc or null",
+      "quantity": integer or null,
       "expiry": "MM/YY or null",
       "confidence": 0.0-1.0,
       "reason": "extraction accuracy explanation"

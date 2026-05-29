@@ -20,11 +20,12 @@ Output format: JSON object with intent, urgency, reason, and medications array
 - Each line typically = one medication
 
 [ANALYZE - Medication Structure]
-A medication entry has 4 parts:
+A medication entry has 5 parts:
 1. NAME: The drug name only (مصل تيتانوس, كونسرتا, Ozempic)
 2. CONCENTRATION: Dosage/strength (٣٦, 150, 1mg, واحد ونص) - can be null
 3. FORM: Physical form (امبول, فايل, اقراص, نقط, لاصقه, شراب) - can be null
-4. EXPIRY: Expiration date if mentioned - can be null
+4. QUANTITY: Number of units/boxes available or requested (عدد ٥, 10 boxes, ٣ علب) - can be null
+5. EXPIRY: Expiration date if mentioned - can be null
 
 [CRITICAL - EXPIRY vs CONCENTRATION]
 EXPIRY DATE patterns (NOT concentrations):
@@ -64,12 +65,14 @@ Other rules:
 - If preceded by صلاحية, exp, تاريخ → EXPIRY DATE
 
 [GOOD EXAMPLES]
-✓ "مصل تيتانوس امبول" → name: "مصل تيتانوس", concentration: null, form: "امبول", expiry: null
-✓ "كونسرتا ٣٦ و١٨" → TWO entries: {name: "كونسرتا", concentration: "36"} AND {name: "كونسرتا", concentration: "18"}
-✓ "اوزمبك 10/27" → name: "اوزمبك", concentration: null, expiry: "10/27"
-✓ "ريبلسس ١٤ صلاحية ٣/٢٦" → name: "ريبلسس", concentration: "14", expiry: "3/26"
-✓ "Ozempic 1mg exp 10/2027" → name: "Ozempic", concentration: "1mg", expiry: "10/2027"
-✓ "ديبوكسنت ٣٠٠" → name: "ديبوكسنت", concentration: "300" (Arabic ٣٠٠ converted to English 300)
+✓ "مصل تيتانوس امبول" → name: "مصل تيتانوس", concentration: null, form: "امبول", quantity: null, expiry: null
+✓ "كونسرتا ٣٦ و١٨" → TWO entries: {name: "كونسرتا", concentration: "36", quantity: null} AND {name: "كونسرتا", concentration: "18", quantity: null}
+✓ "اوزمبك 10/27" → name: "اوزمبك", concentration: null, quantity: null, expiry: "10/27"
+✓ "ريبلسس ١٤ صلاحية ٣/٢٦" → name: "ريبلسس", concentration: "14", quantity: null, expiry: "3/26"
+✓ "Ozempic 1mg exp 10/2027" → name: "Ozempic", concentration: "1mg", quantity: null, expiry: "10/2027"
+✓ "ديبوكسنت ٣٠٠" → name: "ديبوكسنت", concentration: "300", quantity: null (Arabic ٣٠٠ converted to English 300)
+✓ "اوزمبك عدد ٥" → name: "اوزمبك", concentration: null, quantity: 5, expiry: null
+✓ "كونسرتا ٣٦ عدد ١٠" → name: "كونسرتا", concentration: "36", quantity: 10, expiry: null
 
 [BAD EXAMPLES - AVOID THESE]
 ✗ "اوزمبك 10/27" with concentration: "10/27" - Why bad: 10/27 is EXPIRY DATE (Oct 2027), not concentration
@@ -80,6 +83,14 @@ Other rules:
 
 [COMMON FORMS - NOT CONCENTRATIONS]
 امبول/أمبول (ampoule), فايل (vial), اقراص/أقراص (tablets), نقط (drops), لاصقه/لاصقة (patch), شراب (syrup), لبوس (suppository), حقن (injection), طقم (kit), جل (gel)
+
+[QUANTITY PATTERNS]
+Quantity indicates the number of units/boxes available or requested:
+- Arabic: عدد ٥ (5 units), ٣ علب (3 boxes), متوفر ١٠ (10 available)
+- English: 5 boxes, 10 units, qty 3, x5
+- Context: Usually appears after medication name and concentration
+- IMPORTANT: Convert Arabic numerals to English integers (عدد ٥ → 5, ١٠ → 10)
+- If no quantity mentioned, set to null (not 0)
 
 [CONCENTRATION PATTERNS]
 - Arabic numerals: ٣٦، ١٨، ١٥٠، ٣٠٠، ٤٥٠ → CONVERT to English: 36, 18, 150, 300, 450

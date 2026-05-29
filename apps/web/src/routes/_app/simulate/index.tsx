@@ -93,7 +93,7 @@ function RouteComponent() {
           const backendSteps: PipelineStep[] = data.pipeline_steps.map(
             (step) => ({
               step: step.step,
-              status: step.status as "success" | "error" | "pending",
+              status: step.status,
               detail: step.detail,
               durationMs: step.duration_ms,
             }),

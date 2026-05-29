@@ -248,12 +248,21 @@ impl AiClient {
     where
         T: serde::Serialize + DeserializeOwned + JsonSchema,
     {
-        let messages = vec![
+        let mut messages = Vec::new();
+        if let Some(system_content) = self.system_prompt.as_deref() {
+            messages.push(
+                ChatCompletionRequestSystemMessageArgs::default()
+                    .content(system_content)
+                    .build()?
+                    .into(),
+            );
+        }
+        messages.push(
             ChatCompletionRequestUserMessageArgs::default()
                 .content(user_prompt)
                 .build()?
                 .into(),
-        ];
+        );
 
         self.generate_structured(messages, schema_name, schema_description)
             .await
