@@ -6,6 +6,8 @@ pub mod matches;
 pub mod offers;
 pub mod requests;
 pub mod review;
+pub mod simulate;
+pub mod stats;
 pub mod weights;
 
 pub use audit::*;
@@ -16,4 +18,6 @@ pub use matches::*;
 pub use offers::*;
 pub use requests::*;
 pub use review::*;
+pub use simulate::*;
+pub use stats::*;
 pub use weights::*;

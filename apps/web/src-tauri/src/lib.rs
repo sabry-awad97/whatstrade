@@ -53,6 +53,8 @@ pub async fn run() {
         ipc::commands::approve_review_item,
         ipc::commands::reject_review_item,
         ipc::commands::list_audit_log,
+        ipc::commands::get_dashboard_stats,
+        ipc::commands::simulate_message,
     ]);
 
     builder
