@@ -2,25 +2,30 @@
  * TitleBar Component
  * Window controls and application branding for desktop layout
  */
+import { APP_LOGO_TEXT, APP_NAME } from "@/config/constants";
 import {
   useCloseWindow,
+  useIsWindowMaximized,
   useMinimizeWindow,
   useToggleMaximizeWindow,
 } from "@/hooks/window";
-import { APP_LOGO_TEXT, APP_NAME } from "@/config/constants";
+import { Button } from "@workspace/ui/components/button";
+import { Copy, Minus, Square, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 export function TitleBar() {
   const handleMinimize = useMinimizeWindow();
   const handleMaximize = useToggleMaximizeWindow();
   const handleClose = useCloseWindow();
+  const isMaximized = useIsWindowMaximized();
 
   return (
     <div
       className="flex items-center h-9 px-3 bg-sidebar border-b border-border/60 shrink-0"
       data-testid="titlebar"
     >
-      {/* App Branding */}
-      <div className="flex items-center gap-2 flex-1">
+      {/* App Branding - Draggable Region */}
+      <div className="flex items-center gap-2 flex-1" data-tauri-drag-region>
         <div className="w-4 h-4 rounded-sm bg-primary/90 flex items-center justify-center shrink-0">
           <span className="text-white text-[8px] font-bold">
             {APP_LOGO_TEXT}
@@ -31,32 +36,65 @@ export function TitleBar() {
         </span>
       </div>
 
-      {/* Window Controls */}
+      {/* Window Controls - Not Draggable */}
       <div className="flex items-center gap-0.5">
-        <button
+        <Button
           onClick={handleMinimize}
-          className="w-11 h-full flex items-center justify-center hover:bg-black/6 dark:hover:bg-white/6 transition-colors"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-none hover:bg-accent p-0"
           title="Minimize"
           aria-label="Minimize window"
         >
-          <div className="w-2.5 h-px bg-foreground/70" />
-        </button>
-        <button
+          <Minus className="h-2.5 w-2.5" />
+        </Button>
+        <Button
           onClick={handleMaximize}
-          className="w-11 h-full flex items-center justify-center hover:bg-black/6 dark:hover:bg-white/6 transition-colors"
-          title="Maximize"
-          aria-label="Maximize window"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-none hover:bg-accent p-0"
+          title={isMaximized ? "Restore" : "Maximize"}
+          aria-label={isMaximized ? "Restore window" : "Maximize window"}
         >
-          <div className="w-2.5 h-2.5 border border-foreground/70 rounded-sm" />
-        </button>
-        <button
+          <AnimatePresence mode="wait" initial={false}>
+            {isMaximized ? (
+              <motion.div
+                key="copy"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <Copy className="h-2.5 w-2.5" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="square"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <Square className="h-2.5 w-2.5" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Button>
+        <Button
           onClick={handleClose}
-          className="w-11 h-full flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors rounded-none"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 rounded-none hover:bg-destructive hover:text-destructive-foreground p-0 group"
           title="Close"
           aria-label="Close window"
         >
-          <span className="text-xs font-light">✕</span>
-        </button>
+          <motion.div
+            whileHover={{ rotate: 90 }}
+            transition={{ duration: 0.2 }}
+          >
+            <X className="h-2.5 w-2.5" />
+          </motion.div>
+        </Button>
       </div>
     </div>
   );

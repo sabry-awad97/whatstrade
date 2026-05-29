@@ -7,7 +7,7 @@
 // Application Metadata
 // ============================================================================
 
-export const APP_NAME = "PharmaBroker";
+export const APP_NAME = "WhatsTrade";
 export const APP_VERSION = "1.0.0";
 export const APP_LOGO_TEXT = "Rx";
 
