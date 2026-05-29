@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::default();
     let client = AiClient::new(&config)?;
 
-    // Stream response (prints to stdout as it arrives)
+    // Stream response (prints chunks to stdout as they arrive, then returns complete ChatResponse)
     let response = client.generate_stream("Tell me a story").await?;
 
     Ok(())

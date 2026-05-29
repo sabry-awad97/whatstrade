@@ -1,6 +1,6 @@
 //! Example: Structured Output with JSON Schema
 //!
-//! This example demonstrates how to use the playground client to generate
+//! This example demonstrates how to use the ai-client to generate
 //! structured outputs that conform to a specific JSON schema.
 //!
 //! Run with:

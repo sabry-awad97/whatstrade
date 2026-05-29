@@ -1,7 +1,7 @@
 //! Configuration management for the AI Client
 
 use crate::types::Config;
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 /// Load configuration from environment variables using envy
 ///
@@ -9,13 +9,13 @@ use anyhow::Result;
 /// - AI_BASE_URL (default: http://localhost:12434/engines/v1)
 /// - AI_MODEL (default: gemma4)
 /// - AI_API_KEY (default: not-needed)
-/// - CONCURRENCY_LIMIT (default: 5)
+/// - AI_CONCURRENCY_LIMIT (default: 5)
 pub fn load_from_env() -> Result<Config> {
     // Use envy with prefix "AI_" for AI-specific vars
     // Note: envy expects uppercase env vars matching struct field names
     let config = envy::prefixed("AI_")
         .from_env::<EnvConfig>()
-        .unwrap_or_default();
+        .context("Failed to parse AI_ environment variables")?;
 
     Ok(Config {
         base_url: config.base_url,
