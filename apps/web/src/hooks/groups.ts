@@ -151,3 +151,98 @@ export function useDisableGroupMonitoring() {
     },
   });
 }
+
+/**
+ * Hook to toggle group monitoring with optimistic updates
+ *
+ * @example
+ * ```tsx
+ * const toggleMonitoring = useToggleGroupMonitoring();
+ *
+ * const handleToggle = (jid: string, enabled: boolean) => {
+ *   toggleMonitoring.mutate({ jid, enabled });
+ * };
+ * ```
+ *
+ * @returns TanStack Mutation for toggling group monitoring
+ */
+export function useToggleGroupMonitoring() {
+  const queryClient = useQueryClient();
+  const enableMonitoring = useEnableGroupMonitoring();
+  const disableMonitoring = useDisableGroupMonitoring();
+
+  return useMutation({
+    mutationFn: async (params: { jid: string; enabled: boolean }) => {
+      if (params.enabled) {
+        return enableMonitoring.mutateAsync(params.jid);
+      } else {
+        return disableMonitoring.mutateAsync(params.jid);
+      }
+    },
+    onSuccess: (data, params) => {
+      logger.info(
+        `Group monitoring ${params.enabled ? "enabled" : "disabled"}`,
+        {
+          jid: data.jid,
+        },
+      );
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: groupKeys.all });
+    },
+    onError: (error, params) => {
+      logger.error(
+        `Failed to ${params.enabled ? "enable" : "disable"} group monitoring`,
+        error,
+      );
+    },
+  });
+}
+
+/**
+ * Hook to bulk toggle monitoring for multiple groups
+ *
+ * @example
+ * ```tsx
+ * const bulkToggle = useBulkToggleGroupMonitoring();
+ *
+ * const handleMonitorAll = () => {
+ *   bulkToggle.mutate({ jids: allJids, enabled: true });
+ * };
+ * ```
+ *
+ * @returns TanStack Mutation for bulk toggling
+ */
+export function useBulkToggleGroupMonitoring() {
+  const queryClient = useQueryClient();
+  const enableMonitoring = useEnableGroupMonitoring();
+  const disableMonitoring = useDisableGroupMonitoring();
+
+  return useMutation({
+    mutationFn: async (params: { jids: string[]; enabled: boolean }) => {
+      // Execute mutations sequentially to avoid overwhelming the backend
+      const results = [];
+      for (const jid of params.jids) {
+        try {
+          const result = params.enabled
+            ? await enableMonitoring.mutateAsync(jid)
+            : await disableMonitoring.mutateAsync(jid);
+          results.push(result);
+        } catch (error) {
+          logger.error(`Failed to toggle monitoring for ${jid}`, error);
+          // Continue with other groups even if one fails
+        }
+      }
+      return results;
+    },
+    onSuccess: (data, params) => {
+      logger.info(
+        `Bulk monitoring ${params.enabled ? "enabled" : "disabled"} for ${params.jids.length} groups`,
+      );
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: groupKeys.all });
+    },
+    onError: (error) => {
+      logger.error("Bulk toggle operation failed", error);
+    },
+  });
+}

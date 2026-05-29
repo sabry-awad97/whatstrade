@@ -3,7 +3,7 @@
  * React Query hooks for dashboard statistics using Tauri IPC
  */
 import { useQuery } from "@tanstack/react-query";
-import { getDashboardStats } from "@/api/stats";
+import { getDashboardStats } from "@/api/dashboard";
 import { createLogger } from "@/lib/logger";
 
 const logger = createLogger("StatsHooks");
