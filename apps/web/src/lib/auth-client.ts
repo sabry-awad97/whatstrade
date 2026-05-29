@@ -1,31 +1,40 @@
 /**
- * Auth Client - Mock Implementation
+ * Auth Client
  *
- * This is a temporary mock implementation that allows login/signup for development.
- * Session is stored in-memory and will be lost on page refresh.
+ * Centralized authentication client that manages user sessions and tokens.
+ * Integrates with TanStack Query hooks and Tauri backend commands.
  *
- * TODO: Replace with Tauri command invocations:
- * - invokeCommand("login", loginResponseSchema, { params: { data } })
- * - invokeCommand("register", registerResponseSchema, { params: { data } })
- * - invokeCommand("validate_token", userResponseSchema, {})
- * - invokeCommand("logout", logoutResponseSchema, {})
+ * Token Storage Strategy:
+ * - Access tokens: Stored in memory (React state/context)
+ * - Refresh tokens: Stored securely (will use Tauri secure storage in production)
+ * - For now: Using sessionStorage as temporary solution until Tauri secure storage is implemented
+ *
+ * @module auth-client
  */
+
+import { useQuery } from "@tanstack/react-query";
+import type {
+  AuthResponse,
+  UserResponse,
+  LoginRequest,
+  RegisterRequest,
+} from "@/api/auth";
+import { login, register, validateToken } from "@/api/auth";
+import { authKeys } from "@/hooks/auth";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("AuthClient");
 
 // ============================================================================
 // Type Definitions
 // ============================================================================
 
-export type User = {
-  id: string;
-  email: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
+export type User = UserResponse;
 
 export type Session = {
   user: User;
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   expiresAt: string;
 };
 
@@ -34,26 +43,18 @@ export type AuthError = {
   statusText?: string;
 };
 
-export type AuthResponse<T = Session> = {
-  data: T | null;
-  error?: AuthError;
-};
-
 export type AuthCallbacks<T = Session> = {
   onSuccess?: (data: T) => void;
   onError?: (error: { error: AuthError }) => void;
 };
 
-export type SignInCredentials = {
-  email: string;
-  password: string;
+export type VoidCallbacks = {
+  onSuccess?: () => void;
+  onError?: (error: { error: AuthError }) => void;
 };
 
-export type SignUpCredentials = {
-  email: string;
-  password: string;
-  name: string;
-};
+export type SignInCredentials = LoginRequest;
+export type SignUpCredentials = RegisterRequest;
 
 export type SessionHookResult = {
   data: Session | null;
@@ -62,33 +63,102 @@ export type SessionHookResult = {
 };
 
 // ============================================================================
-// Mock Session Storage
+// Token Storage
 // ============================================================================
 
-let currentSession: Session | null = null;
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: "auth_access_token",
+  REFRESH_TOKEN: "auth_refresh_token",
+  USER: "auth_user",
+  EXPIRES_AT: "auth_expires_at",
+} as const;
 
-// Mock user database (in-memory)
-const mockUsers = new Map<
-  string,
-  { email: string; password: string; name: string; id: string }
->();
+/**
+ * Store authentication tokens and user data
+ * TODO: Replace sessionStorage with Tauri secure storage
+ */
+function storeSession(authResponse: AuthResponse): Session {
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
 
-// Helper to create a mock session
-function createMockSession(email: string, name: string): Session {
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
-
-  return {
-    user: {
-      id: crypto.randomUUID(),
-      email,
-      name,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    },
-    token: `mock_token_${crypto.randomUUID()}`,
-    expiresAt: expiresAt.toISOString(),
+  const session: Session = {
+    user: authResponse.user,
+    accessToken: authResponse.access_token,
+    refreshToken: authResponse.refresh_token,
+    expiresAt,
   };
+
+  try {
+    sessionStorage.setItem(
+      STORAGE_KEYS.ACCESS_TOKEN,
+      authResponse.access_token,
+    );
+    sessionStorage.setItem(
+      STORAGE_KEYS.REFRESH_TOKEN,
+      authResponse.refresh_token,
+    );
+    sessionStorage.setItem(
+      STORAGE_KEYS.USER,
+      JSON.stringify(authResponse.user),
+    );
+    sessionStorage.setItem(STORAGE_KEYS.EXPIRES_AT, expiresAt);
+    logger.info("Session stored successfully", {
+      userId: authResponse.user.id,
+    });
+  } catch (error) {
+    logger.error("Failed to store session", error);
+  }
+
+  return session;
+}
+
+/**
+ * Retrieve stored session
+ */
+function getStoredSession(): Session | null {
+  try {
+    const accessToken = sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+    const refreshToken = sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+    const userJson = sessionStorage.getItem(STORAGE_KEYS.USER);
+    const expiresAt = sessionStorage.getItem(STORAGE_KEYS.EXPIRES_AT);
+
+    if (!accessToken || !refreshToken || !userJson || !expiresAt) {
+      return null;
+    }
+
+    // Check if session is expired
+    if (new Date(expiresAt) < new Date()) {
+      logger.info("Session expired, clearing storage");
+      clearSession();
+      return null;
+    }
+
+    const user = JSON.parse(userJson) as User;
+
+    return {
+      user,
+      accessToken,
+      refreshToken,
+      expiresAt,
+    };
+  } catch (error) {
+    logger.error("Failed to retrieve session", error);
+    return null;
+  }
+}
+
+/**
+ * Clear stored session
+ */
+function clearSession(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    sessionStorage.removeItem(STORAGE_KEYS.USER);
+    sessionStorage.removeItem(STORAGE_KEYS.EXPIRES_AT);
+    logger.info("Session cleared");
+  } catch (error) {
+    logger.error("Failed to clear session", error);
+  }
 }
 
 // ============================================================================
@@ -96,180 +166,226 @@ function createMockSession(email: string, name: string): Session {
 // ============================================================================
 
 export const authClient = {
-  // Sign-in method
+  /**
+   * Sign in with email and password
+   */
   signIn: {
     email: async (
       data: SignInCredentials,
       callbacks?: AuthCallbacks,
-    ): Promise<AuthResponse> => {
-      console.log("� Mock Auth: signIn.email called", { email: data.email });
+    ): Promise<{ data: Session | null; error?: AuthError }> => {
+      try {
+        logger.info("Signing in user", { email: data.email });
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+        // Call login API
+        const authResponse = await login(data);
 
-      // Check if user exists
-      const user = mockUsers.get(data.email);
+        // Store session
+        const session = storeSession(authResponse);
 
-      if (!user) {
-        const response: AuthResponse = {
-          data: null,
-          error: {
-            message: "Invalid email or password",
-            statusText: "Unauthorized",
-          },
+        // Call success callback
+        callbacks?.onSuccess?.(session);
+
+        return { data: session };
+      } catch (error) {
+        logger.error("Sign in failed", error);
+
+        const authError: AuthError = {
+          message: error instanceof Error ? error.message : "Sign in failed",
+          statusText: "Unauthorized",
         };
-        callbacks?.onError?.({ error: response.error! });
-        return response;
+
+        // Call error callback
+        callbacks?.onError?.({ error: authError });
+
+        return { data: null, error: authError };
       }
-
-      // Check password
-      if (user.password !== data.password) {
-        const response: AuthResponse = {
-          data: null,
-          error: {
-            message: "Invalid email or password",
-            statusText: "Unauthorized",
-          },
-        };
-        callbacks?.onError?.({ error: response.error! });
-        return response;
-      }
-
-      // Create session
-      currentSession = createMockSession(user.email, user.name);
-
-      const response: AuthResponse = {
-        data: currentSession,
-        error: undefined,
-      };
-
-      callbacks?.onSuccess?.(currentSession);
-      return response;
     },
   },
 
-  // Sign-up method
+  /**
+   * Sign up with email, password, and name
+   */
   signUp: {
     email: async (
       data: SignUpCredentials,
       callbacks?: AuthCallbacks,
-    ): Promise<AuthResponse> => {
-      console.log("� Mock Auth: signUp.email called", {
-        email: data.email,
-        name: data.name,
-      });
+    ): Promise<{ data: Session | null; error?: AuthError }> => {
+      try {
+        logger.info("Signing up user", { email: data.email, name: data.name });
 
-      // Simulate network delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
+        // Call register API
+        const authResponse = await register(data);
 
-      // Check if user already exists
-      if (mockUsers.has(data.email)) {
-        const response: AuthResponse = {
-          data: null,
-          error: {
-            message: "User with this email already exists",
-            statusText: "Conflict",
-          },
+        // Store session
+        const session = storeSession(authResponse);
+
+        // Call success callback
+        callbacks?.onSuccess?.(session);
+
+        return { data: session };
+      } catch (error) {
+        logger.error("Sign up failed", error);
+
+        const authError: AuthError = {
+          message: error instanceof Error ? error.message : "Sign up failed",
+          statusText: "Bad Request",
         };
-        callbacks?.onError?.({ error: response.error! });
-        return response;
+
+        // Call error callback
+        callbacks?.onError?.({ error: authError });
+
+        return { data: null, error: authError };
       }
-
-      // Create new user
-      const userId = crypto.randomUUID();
-      mockUsers.set(data.email, {
-        id: userId,
-        email: data.email,
-        password: data.password,
-        name: data.name,
-      });
-
-      // Create session
-      currentSession = createMockSession(data.email, data.name);
-
-      const response: AuthResponse = {
-        data: currentSession,
-        error: undefined,
-      };
-
-      callbacks?.onSuccess?.(currentSession);
-      return response;
     },
   },
 
-  // Sign-out method
+  /**
+   * Sign out and clear session
+   */
   signOut: async (
-    callbacks?: AuthCallbacks<void>,
-  ): Promise<AuthResponse<void>> => {
-    console.log("� Mock Auth: signOut called");
+    callbacks?: VoidCallbacks,
+  ): Promise<{ data: null; error?: AuthError }> => {
+    try {
+      logger.info("Signing out user");
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
+      // Clear stored session
+      clearSession();
 
-    // Clear session
-    currentSession = null;
+      // Call success callback
+      if (callbacks?.onSuccess) {
+        callbacks.onSuccess();
+      }
 
-    const response: AuthResponse<void> = {
-      data: null,
-      error: undefined,
-    };
+      return { data: null };
+    } catch (error) {
+      logger.error("Sign out failed", error);
 
-    callbacks?.onSuccess?.(undefined as any);
-    return response;
+      const authError: AuthError = {
+        message: error instanceof Error ? error.message : "Sign out failed",
+        statusText: "Internal Server Error",
+      };
+
+      // Call error callback
+      callbacks?.onError?.({ error: authError });
+
+      return { data: null, error: authError };
+    }
   },
 
-  // Async session getter (for route guards and server-side checks)
-  getSession: async (): Promise<AuthResponse<Session>> => {
-    console.log("� Mock Auth: getSession called", {
-      hasSession: !!currentSession,
-    });
+  /**
+   * Get current session (async for route guards)
+   */
+  getSession: async (): Promise<{
+    data: Session | null;
+    error?: AuthError;
+  }> => {
+    try {
+      logger.info("Getting session");
 
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
+      // Get stored session
+      const session = getStoredSession();
 
-    if (!currentSession) {
+      if (!session) {
+        return {
+          data: null,
+          error: {
+            message: "No active session",
+            statusText: "Unauthorized",
+          },
+        };
+      }
+
+      // Validate token with backend
+      try {
+        const user = await validateToken({ access_token: session.accessToken });
+
+        // Update user data in session if it changed
+        session.user = user;
+
+        return { data: session };
+      } catch (error) {
+        // Token is invalid, clear session
+        logger.warn("Token validation failed, clearing session");
+        clearSession();
+
+        return {
+          data: null,
+          error: {
+            message: "Session expired or invalid",
+            statusText: "Unauthorized",
+          },
+        };
+      }
+    } catch (error) {
+      logger.error("Get session failed", error);
+
       return {
         data: null,
         error: {
-          message: "No active session",
-          statusText: "Unauthorized",
+          message:
+            error instanceof Error ? error.message : "Failed to get session",
+          statusText: "Internal Server Error",
         },
       };
     }
-
-    // Check if session is expired
-    const now = new Date();
-    const expiresAt = new Date(currentSession.expiresAt);
-
-    if (now > expiresAt) {
-      currentSession = null;
-      return {
-        data: null,
-        error: {
-          message: "Session expired",
-          statusText: "Unauthorized",
-        },
-      };
-    }
-
-    return {
-      data: currentSession,
-      error: undefined,
-    };
   },
 
-  // Session hook (for React components)
+  /**
+   * React hook to get current session
+   * Uses TanStack Query for caching and automatic refetching
+   */
   useSession: (): SessionHookResult => {
-    console.log("� Mock Auth: useSession called", {
-      hasSession: !!currentSession,
+    const session = getStoredSession();
+    const accessToken = session?.accessToken || "";
+
+    const {
+      data: user,
+      isPending,
+      error,
+    } = useQuery({
+      queryKey: authKeys.validate(accessToken),
+      queryFn: async () => {
+        if (!accessToken) {
+          throw new Error("No access token");
+        }
+        logger.info("Validating session token");
+        return validateToken({ access_token: accessToken });
+      },
+      enabled: !!accessToken,
+      retry: false,
+      staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+      gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     });
 
-    // In a real implementation, this would use React Query or similar
-    // For now, just return the current session synchronously
+    // If query failed, clear session
+    if (error && session) {
+      logger.warn("Session validation failed, clearing session");
+      clearSession();
+    }
+
+    // Build session result
+    // When query is disabled (no token), return isPending: false immediately
+    if (!session || !user) {
+      return {
+        data: null,
+        isPending: accessToken ? isPending : false, // Don't show pending if no token
+        error: error
+          ? {
+              message:
+                error instanceof Error ? error.message : "Session invalid",
+            }
+          : null,
+      };
+    }
+
     return {
-      data: currentSession,
-      isPending: false,
-      error: currentSession ? null : { message: "No active session" },
+      data: {
+        ...session,
+        user, // Use validated user data
+      },
+      isPending,
+      error: null,
     };
   },
 };
