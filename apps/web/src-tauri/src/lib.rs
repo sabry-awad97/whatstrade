@@ -33,6 +33,21 @@ pub async fn run() {
         ipc::commands::auth_login,
         ipc::commands::auth_refresh,
         ipc::commands::auth_validate,
+        ipc::commands::list_offers,
+        ipc::commands::get_offer,
+        ipc::commands::list_requests,
+        ipc::commands::get_request,
+        ipc::commands::get_match_stats,
+        ipc::commands::list_matches,
+        ipc::commands::get_match,
+        ipc::commands::confirm_match,
+        ipc::commands::reject_match,
+        ipc::commands::list_groups,
+        ipc::commands::list_monitored_groups,
+        ipc::commands::enable_group_monitoring,
+        ipc::commands::disable_group_monitoring,
+        ipc::commands::get_weights,
+        ipc::commands::update_weights,
     ]);
 
     builder

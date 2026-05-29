@@ -1,7 +1,7 @@
 //! Weights service for managing matching algorithm weights
 
 use crate::{
-    entities::matching_weights::{self, dto::MatchingWeightsDto},
+    entities::matching_weights::{self, dto::MatchingWeightsDto, dto::UpdateWeightsDto},
     error::{ServiceError, ServiceResult},
 };
 use rust_decimal::Decimal;
@@ -71,39 +71,12 @@ impl WeightsService {
     /// * `Err(ServiceError)` - If validation fails or update fails
     pub async fn update_weights(
         &self,
-        medication: Decimal,
-        quantity: Decimal,
-        dosage: Decimal,
-        price: Decimal,
-        recency: Decimal,
+        weights: UpdateWeightsDto,
     ) -> ServiceResult<MatchingWeightsDto> {
-        // Validate weights sum to 1.0 (with small tolerance for floating point)
-        let sum = medication + quantity + dosage + price + recency;
-        let one = Decimal::from(1);
-        let tolerance = Decimal::new(1, 2); // 0.01
-
-        if (sum - one).abs() > tolerance {
-            return Err(ServiceError::validation(format!(
-                "Weights must sum to 1.0 (got {})",
-                sum
-            )));
-        }
-
         // Validate each weight is between 0 and 1
-        for (name, value) in [
-            ("medication", medication),
-            ("quantity", quantity),
-            ("dosage", dosage),
-            ("price", price),
-            ("recency", recency),
-        ] {
-            if value < Decimal::ZERO || value > Decimal::ONE {
-                return Err(ServiceError::validation(format!(
-                    "{} must be between 0 and 1 (got {})",
-                    name, value
-                )));
-            }
-        }
+        weights
+            .validate_total()
+            .map_err(|err| ServiceError::validation(err.to_string()))?;
 
         // Get existing weights or create new
         let existing = matching_weights::Entity::find()
@@ -113,22 +86,22 @@ impl WeightsService {
         let updated = match existing {
             Some(w) => {
                 let mut active: matching_weights::ActiveModel = w.into();
-                active.medication = Set(medication);
-                active.quantity = Set(quantity);
-                active.dosage = Set(dosage);
-                active.price = Set(price);
-                active.recency = Set(recency);
+                active.medication = Set(*weights.medication());
+                active.quantity = Set(*weights.quantity());
+                active.dosage = Set(*weights.dosage());
+                active.price = Set(*weights.price());
+                active.recency = Set(*weights.recency());
                 active.updated_at = Set(chrono::Utc::now());
                 active.update(self.db.as_ref()).await?
             }
             None => {
                 let new_weights = matching_weights::ActiveModel {
                     id: Set(Id::new()),
-                    medication: Set(medication),
-                    quantity: Set(quantity),
-                    dosage: Set(dosage),
-                    price: Set(price),
-                    recency: Set(recency),
+                    medication: Set(*weights.medication()),
+                    quantity: Set(*weights.quantity()),
+                    dosage: Set(*weights.dosage()),
+                    price: Set(*weights.price()),
+                    recency: Set(*weights.recency()),
                     updated_at: Set(chrono::Utc::now()),
                 };
                 new_weights.insert(self.db.as_ref()).await?
@@ -137,11 +110,11 @@ impl WeightsService {
 
         info!(
             weights_id = %updated.id(),
-            medication = %medication,
-            quantity = %quantity,
-            dosage = %dosage,
-            price = %price,
-            recency = %recency,
+            medication = %weights.medication(),
+            quantity = %weights.quantity(),
+            dosage = %weights.dosage(),
+            price = %weights.price(),
+            recency = %weights.recency(),
             "Matching weights updated"
         );
 

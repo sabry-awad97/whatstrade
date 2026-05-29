@@ -5,14 +5,12 @@ edition = "2024"
 
 [dependencies]
 sea-orm.workspace = true
-
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
 rust_decimal.workspace = true
 uuid.workspace = true
-
 derive-getters.workspace = true
 typed-builder.workspace = true
-
 utilities.workspace = true
+validator.workspace = true

@@ -144,7 +144,7 @@ impl MatchingService {
     ///
     /// * `Ok(Vec<MatchResponseDto>)` - List of matches
     /// * `Err(ServiceError)` - If query fails
-    pub async fn list_by_offer(&self, offer_id: &str) -> ServiceResult<Vec<MatchResponseDto>> {
+    pub async fn list_by_offer(&self, offer_id: Id) -> ServiceResult<Vec<MatchResponseDto>> {
         let matches = r#match::Entity::find()
             .filter(r#match::COLUMN.offer_id.eq(offer_id))
             .order_by_desc(r#match::COLUMN.score)
@@ -167,11 +167,50 @@ impl MatchingService {
     ///
     /// * `Ok(Vec<MatchResponseDto>)` - List of matches
     /// * `Err(ServiceError)` - If query fails
-    pub async fn list_by_request(&self, request_id: &str) -> ServiceResult<Vec<MatchResponseDto>> {
+    pub async fn list_by_request(&self, request_id: Id) -> ServiceResult<Vec<MatchResponseDto>> {
         let matches = r#match::Entity::find()
             .filter(r#match::COLUMN.request_id.eq(request_id))
             .order_by_desc(r#match::COLUMN.score)
             .all(self.db.as_ref())
+            .await?;
+
+        Ok(matches
+            .into_iter()
+            .map(|m| self.model_to_response(m))
+            .collect())
+    }
+
+    /// List all matches with optional status filter and pagination
+    ///
+    /// # Arguments
+    ///
+    /// * `status` - Optional status filter
+    /// * `page` - Page number (0-indexed)
+    /// * `page_size` - Number of items per page
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(Vec<MatchResponseDto>)` - List of matches
+    /// * `Err(ServiceError)` - If query fails
+    pub async fn list(
+        &self,
+        status: Option<MatchStatus>,
+        page: u64,
+        page_size: u64,
+    ) -> ServiceResult<Vec<MatchResponseDto>> {
+        let mut query = r#match::Entity::find();
+
+        // Apply status filter if provided
+        if let Some(status_filter) = status {
+            query = query.filter(r#match::COLUMN.status.eq(status_filter));
+        }
+
+        // Apply pagination and ordering
+        let matches = query
+            .order_by_desc(r#match::COLUMN.score)
+            .order_by_desc(r#match::COLUMN.created_at)
+            .paginate(self.db.as_ref(), page_size)
+            .fetch_page(page)
             .await?;
 
         Ok(matches
@@ -246,8 +285,8 @@ impl MatchingService {
             .offer_id(*match_result.offer_id())
             .request_id(match_result.request_id())
             .score(*match_result.score())
-            .confidence_band(format!("{:?}", match_result.confidence_band()))
-            .status(format!("{:?}", match_result.status()))
+            .confidence_band(match_result.confidence_band().to_string())
+            .status(match_result.status().to_string())
             .operator_note(match_result.operator_note().clone())
             .medication_name(match_result.medication_name())
             .offer_quantity(*match_result.offer_quantity())

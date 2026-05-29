@@ -2,6 +2,8 @@
 //!
 //! Represents matches between offers and requests.
 
+use std::fmt;
+
 use derive_getters::Getters;
 use rust_decimal::Decimal;
 use sea_orm::{
@@ -27,6 +29,19 @@ pub enum ConfidenceBand {
     None,
 }
 
+impl fmt::Display for ConfidenceBand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let value = match self {
+            Self::Auto => "auto",
+            Self::Suggest => "suggest",
+            Self::Review => "review",
+            Self::None => "none",
+        };
+
+        write!(f, "{value}")
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "match_status")]
 pub enum MatchStatus {
@@ -38,6 +53,31 @@ pub enum MatchStatus {
     Rejected,
     #[sea_orm(string_value = "auto_confirmed")]
     AutoConfirmed,
+}
+
+impl std::str::FromStr for MatchStatus {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "pending" => Ok(MatchStatus::Pending),
+            "confirmed" => Ok(MatchStatus::Confirmed),
+            "rejected" => Ok(MatchStatus::Rejected),
+            "auto_confirmed" | "autoconfirmed" => Ok(MatchStatus::AutoConfirmed),
+            _ => Err(format!("Invalid match status: {}", s)),
+        }
+    }
+}
+
+impl fmt::Display for MatchStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MatchStatus::Pending => write!(f, "pending"),
+            MatchStatus::Confirmed => write!(f, "confirmed"),
+            MatchStatus::Rejected => write!(f, "rejected"),
+            MatchStatus::AutoConfirmed => write!(f, "auto_confirmed"),
+        }
+    }
 }
 
 #[sea_orm::model]
