@@ -1,9 +1,6 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useRef, useEffect } from "react";
-import { toast } from "sonner";
-import { Button } from "@workspace/ui/components/button";
+import { createFileRoute } from "@tanstack/react-router";
 import { Badge } from "@workspace/ui/components/badge";
-import { Textarea } from "@workspace/ui/components/textarea";
+import { Button } from "@workspace/ui/components/button";
 import {
   Select,
   SelectContent,
@@ -12,20 +9,23 @@ import {
   SelectValue,
 } from "@workspace/ui/components/select";
 import { Switch } from "@workspace/ui/components/switch";
+import { Textarea } from "@workspace/ui/components/textarea";
 import {
-  FlaskConical,
-  GitMerge,
-  Package,
-  ShoppingCart,
   Brain,
   Database,
+  FlaskConical,
+  GitMerge,
   Loader2,
+  Package,
   Play,
   RotateCcw,
+  ShoppingCart,
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
-import { useSimulateMessage } from "@/hooks/simulate";
 import type { SimulateResponse } from "@/api/simulate";
+import { useSimulateMessage } from "@/hooks/simulate";
 import {
   ConfidenceRing,
   MatchCard,
@@ -36,16 +36,6 @@ import {
 
 export const Route = createFileRoute("/_app/simulate/")({
   component: RouteComponent,
-  beforeLoad: async ({ context }) => {
-    const session = await context.authClient.getSession();
-    if (!session.data) {
-      redirect({
-        to: "/login",
-        throw: true,
-      });
-    }
-    return { session };
-  },
 });
 
 function RouteComponent() {

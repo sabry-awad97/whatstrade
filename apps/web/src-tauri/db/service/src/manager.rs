@@ -48,8 +48,8 @@ pub struct ServiceManagerConfig {
     #[builder(default = 600)]
     idle_timeout_secs: u64,
 
-    /// Enable SQLx logging (default: true)
-    #[builder(default = true)]
+    /// Enable SQLx logging (default: false for better performance)
+    #[builder(default = false)]
     sqlx_logging: bool,
 
     /// Go WhatsApp service URL

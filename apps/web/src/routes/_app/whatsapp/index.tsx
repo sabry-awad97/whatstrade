@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { useWhatsAppStatus, useQRCode, useQueueStats } from "@/hooks/whatsapp";
 import {
@@ -11,16 +11,6 @@ import {
 
 export const Route = createFileRoute("/_app/whatsapp/")({
   component: RouteComponent,
-    beforeLoad: async ({ context }) => {
-    const session = await context.authClient.getSession();
-    if (!session.data) {
-      redirect({
-        to: "/login",
-        throw: true,
-      });
-    }
-    return { session };
-  },
 });
 
 function RouteComponent() {

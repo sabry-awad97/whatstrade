@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { useGetDashboardStats } from "@/hooks/dashboard";
 import { useGetMatchStats, useListMatches } from "@/hooks/matches";
@@ -15,16 +15,6 @@ import {
 
 export const Route = createFileRoute("/_app/dashboard/")({
   component: RouteComponent,
-  beforeLoad: async ({ context }) => {
-    const session = await context.authClient.getSession();
-    if (!session.data) {
-      redirect({
-        to: "/login",
-        throw: true,
-      });
-    }
-    return { session };
-  },
 });
 
 function RouteComponent() {

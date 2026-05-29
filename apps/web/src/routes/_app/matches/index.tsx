@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@workspace/ui/components/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -20,16 +20,6 @@ import {
 
 export const Route = createFileRoute("/_app/matches/")({
   component: RouteComponent,
-  beforeLoad: async ({ context }) => {
-    const session = await context.authClient.getSession();
-    if (!session.data) {
-      redirect({
-        to: "/login",
-        throw: true,
-      });
-    }
-    return { session };
-  },
 });
 
 function RouteComponent() {
