@@ -1,20 +1,6 @@
-use derive_getters::Getters;
 use serde::Serialize;
-use utilities::Id;
 
 use crate::error::AppResult;
-
-/// Result of a mutation operation (create, update, delete)
-#[derive(Serialize, Clone, Debug, Getters)]
-pub struct MutationResponse {
-    id: Id,
-}
-
-impl From<Id> for MutationResponse {
-    fn from(id: Id) -> Self {
-        Self { id }
-    }
-}
 
 /// Represents an error message for IPC communication.
 #[derive(Serialize)]
