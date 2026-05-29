@@ -10,16 +10,10 @@ import {
 } from "@workspace/ui/components/empty";
 import { GitMerge } from "lucide-react";
 import { applyAlpha } from "@/utils/colors";
-
-interface Match {
-  id: string;
-  medicationName: string;
-  score: number;
-  confidenceBand: string;
-}
+import type { MatchResponse } from "@/api/matches";
 
 interface RecentMatchesListProps {
-  matches: Match[] | undefined;
+  matches: MatchResponse[] | undefined;
   isLoading: boolean;
   bandColors: Record<string, string>;
 }
@@ -55,27 +49,27 @@ export function RecentMatchesList({
             >
               <GitMerge className="w-3 h-3 text-primary shrink-0" />
               <span className="font-medium truncate flex-1">
-                {match.medicationName}
+                {match.medication_name}
               </span>
               <span className="text-muted-foreground">
-                {(match.score * 100).toFixed(0)}%
+                {(parseFloat(match.score) * 100).toFixed(0)}%
               </span>
               <Badge
                 variant="outline"
                 className="text-[9px] px-1.5 h-4"
                 style={{
                   backgroundColor: applyAlpha(
-                    bandColors[match.confidenceBand] ?? "hsl(var(--muted))",
+                    bandColors[match.confidence_band] ?? "hsl(var(--muted))",
                     0.125,
                   ),
                   borderColor:
-                    bandColors[match.confidenceBand] ?? "hsl(var(--muted))",
+                    bandColors[match.confidence_band] ?? "hsl(var(--muted))",
                   color:
-                    bandColors[match.confidenceBand] ??
+                    bandColors[match.confidence_band] ??
                     "hsl(var(--muted-foreground))",
                 }}
               >
-                {match.confidenceBand.toUpperCase()}
+                {match.confidence_band.toUpperCase()}
               </Badge>
             </div>
           ))}

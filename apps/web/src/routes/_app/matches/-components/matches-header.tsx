@@ -1,11 +1,11 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { GitMerge, ChevronLeft } from "lucide-react";
-import type { GetMatchStatsResponse } from "@workspace/schemas";
+import type { MatchStatsResponse } from "@/api/matches";
 
 interface MatchesHeaderProps {
   view: "list" | "detail";
   matchCount: number | undefined;
-  stats: GetMatchStatsResponse | undefined;
+  stats: MatchStatsResponse | undefined;
   onBackClick: () => void;
 }
 
@@ -44,15 +44,15 @@ export function MatchesHeader({
         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-green-500" />
-            {stats.bandBreakdown.auto} auto
+            {stats.auto_confirmed_matches} auto
           </span>
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-amber-500" />
-            {stats.pending} pending
+            {stats.pending_matches} pending
           </span>
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-primary" />
-            avg {(stats.avgScore * 100).toFixed(0)}%
+            avg {(stats.avg_match_score * 100).toFixed(0)}%
           </span>
         </div>
       )}

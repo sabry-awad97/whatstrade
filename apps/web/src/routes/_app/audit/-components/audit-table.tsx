@@ -24,11 +24,11 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty";
 import { FileText, ArrowUpDown } from "lucide-react";
-import type { ListAuditLogResponseItem } from "@workspace/schemas";
+import type { AuditLogResponse } from "@/api/audit";
 import { ACTION_COLORS } from "./constants";
 
 interface AuditTableProps {
-  entries: ListAuditLogResponseItem[] | undefined;
+  entries: AuditLogResponse[] | undefined;
   isLoading: boolean;
 }
 
@@ -40,7 +40,7 @@ interface AuditTableProps {
  */
 export function AuditTable({ entries, isLoading }: AuditTableProps) {
   // Define table columns
-  const columns = useMemo<ColumnDef<ListAuditLogResponseItem>[]>(
+  const columns = useMemo<ColumnDef<AuditLogResponse>[]>(
     () => [
       {
         accessorKey: "id",
@@ -72,7 +72,7 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
         },
       },
       {
-        accessorKey: "entityType",
+        accessorKey: "entity_type",
         header: "Entity",
         cell: ({ getValue }) => (
           <span className="text-muted-foreground capitalize">
@@ -81,7 +81,7 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
         ),
       },
       {
-        accessorKey: "entityId",
+        accessorKey: "entity_id",
         header: "Entity ID",
         cell: ({ getValue }) => {
           const id = getValue<string>();
@@ -97,24 +97,21 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
         },
       },
       {
-        accessorKey: "operator",
+        accessorKey: "operator_id",
         header: "Operator",
         cell: ({ row }) => {
-          const operator = row.original.operator;
-          if (!operator) {
+          const operatorId = row.original.operator_id;
+          if (!operatorId) {
             return (
               <span className="text-muted-foreground italic text-[11px]">
-                Deleted user
+                System
               </span>
             );
           }
           return (
-            <div className="flex flex-col">
-              <span className="font-medium text-[11px]">{operator.name}</span>
-              <span className="text-[10px] text-muted-foreground">
-                {operator.email}
-              </span>
-            </div>
+            <span className="font-mono text-muted-foreground text-[10px]">
+              {operatorId.slice(0, 8)}...
+            </span>
           );
         },
       },
@@ -145,7 +142,7 @@ export function AuditTable({ entries, isLoading }: AuditTableProps) {
         },
       },
       {
-        accessorKey: "createdAt",
+        accessorKey: "created_at",
         header: ({ column }) => {
           const sortDirection = column.getIsSorted();
           return (

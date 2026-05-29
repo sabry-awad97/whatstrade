@@ -206,13 +206,13 @@ export function Layout({ children }: LayoutProps) {
             className="w-7 h-6 flex items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors relative"
             title="Notifications"
             aria-label={
-              (stats?.pendingMatches ?? 0) > 0
-                ? `Notifications (${stats?.pendingMatches} pending)`
+              (stats?.pending_matches ?? 0) > 0
+                ? `Notifications (${stats?.pending_matches} pending)`
                 : "Notifications"
             }
           >
             <Bell className="w-3.5 h-3.5" />
-            {(stats?.pendingMatches ?? 0) > 0 && (
+            {(stats?.pending_matches ?? 0) > 0 && (
               <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-destructive" />
             )}
           </button>
@@ -306,17 +306,17 @@ export function Layout({ children }: LayoutProps) {
             orientation="vertical"
             className="h-3 bg-primary-foreground/30"
           />
-          <span>{stats?.totalMatches ?? 0} total matches</span>
+          <span>{stats?.total_matches ?? 0} total matches</span>
           <Separator
             orientation="vertical"
             className="h-3 bg-primary-foreground/30"
           />
-          <span>{stats?.activeGroups ?? 0} monitored groups</span>
+          <span>{stats?.active_groups ?? 0} monitored groups</span>
           <Separator
             orientation="vertical"
             className="h-3 bg-primary-foreground/30"
           />
-          <span>{stats?.todayMessages ?? 0} messages today</span>
+          <span>{stats?.today_messages ?? 0} messages today</span>
           <div className="flex-1" />
           <span className="text-primary-foreground/70">
             PharmaBroker v1.0.0

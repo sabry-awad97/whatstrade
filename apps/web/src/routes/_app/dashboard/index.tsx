@@ -31,44 +31,43 @@ export const Route = createFileRoute("/_app/dashboard/")({
 function RouteComponent() {
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: matchStats, isLoading: matchStatsLoading } = useGetMatchStats();
-  const { data: recentOffers, isLoading: offersLoading } = useListOffers({
-    limit: 5,
+  const { data: offersResponse, isLoading: offersLoading } = useListOffers({
+    pagination: { page: 0, page_size: 5 },
   });
-  const { data: recentMatches, isLoading: matchesLoading } = useListMatches({
-    limit: 5,
+  const { data: matchesResponse, isLoading: matchesLoading } = useListMatches({
+    pagination: { page: 0, page_size: 5 },
   });
 
-  // Prepare band data from real match stats
-  const bandData = matchStats
-    ? [
-        {
-          name: "Auto",
-          value: matchStats.bandBreakdown.auto,
-          color: BAND_COLORS.auto,
-        },
-        {
-          name: "Suggest",
-          value: matchStats.bandBreakdown.suggest,
-          color: BAND_COLORS.suggest,
-        },
-        {
-          name: "Review",
-          value: matchStats.bandBreakdown.review,
-          color: BAND_COLORS.review,
-        },
-        {
-          name: "None",
-          value: matchStats.bandBreakdown.none,
-          color: BAND_COLORS.none,
-        },
-      ]
-    : [];
+  // Note: bandBreakdown is not currently returned by the backend
+  // Using placeholder data until backend is updated
+  const bandData = [
+    {
+      name: "Auto",
+      value: matchStats?.auto_confirmed_matches ?? 0,
+      color: BAND_COLORS.auto,
+    },
+    {
+      name: "Suggest",
+      value: 0, // Not available in current API
+      color: BAND_COLORS.suggest,
+    },
+    {
+      name: "Review",
+      value: matchStats?.pending_matches ?? 0,
+      color: BAND_COLORS.review,
+    },
+    {
+      name: "None",
+      value: matchStats?.rejected_matches ?? 0,
+      color: BAND_COLORS.none,
+    },
+  ];
 
   // Prepare score distribution from recent matches
   const scoreDistData =
-    recentMatches?.slice(0, 8).map((match, idx) => ({
+    matchesResponse?.matches.slice(0, 8).map((match, idx) => ({
       name: `#${idx + 1}`,
-      score: Math.round(match.score * 100),
+      score: Math.round(parseFloat(match.score) * 100),
     })) ?? [];
 
   return (
@@ -87,9 +86,12 @@ function RouteComponent() {
 
         {/* Recent Activity Section */}
         <div className="grid grid-cols-2 gap-3">
-          <RecentOffersList offers={recentOffers} isLoading={offersLoading} />
+          <RecentOffersList
+            offers={offersResponse?.offers}
+            isLoading={offersLoading}
+          />
           <RecentMatchesList
-            matches={recentMatches}
+            matches={matchesResponse?.matches}
             isLoading={matchesLoading}
             bandColors={BAND_COLORS}
           />

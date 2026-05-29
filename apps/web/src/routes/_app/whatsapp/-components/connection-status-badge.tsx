@@ -1,5 +1,10 @@
 import { Badge } from "@workspace/ui/components/badge";
-import type { WhatsAppStatusEvent } from "@workspace/schemas";
+
+interface WhatsAppStatusEvent {
+  connected: boolean;
+  loggedIn: boolean;
+  timestamp: Date;
+}
 
 interface ConnectionStatusBadgeProps {
   status: WhatsAppStatusEvent;

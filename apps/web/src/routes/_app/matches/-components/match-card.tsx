@@ -1,10 +1,10 @@
 import { GitMerge, ChevronRight } from "lucide-react";
-import type { ListMatchesResponseItem } from "@workspace/schemas";
+import type { MatchResponse } from "@/api/matches";
 import { BAND_COLORS, BAND_COLORS_ALPHA } from "./constants";
 import { ConfidenceRing } from "./confidence-ring";
 
 interface MatchCardProps {
-  match: ListMatchesResponseItem;
+  match: MatchResponse;
   onSelect: () => void;
 }
 
@@ -14,17 +14,27 @@ interface MatchCardProps {
  * Displays a match in card format with key details and confidence ring.
  */
 export function MatchCard({ match, onSelect }: MatchCardProps) {
-  const color = BAND_COLORS[match.confidenceBand] ?? BAND_COLORS.none;
+  // Calculate confidence band from score
+  const score = parseFloat(match.score);
+  const confidenceBand =
+    score >= 0.85
+      ? "auto"
+      : score >= 0.7
+        ? "suggest"
+        : score >= 0.5
+          ? "review"
+          : "reject";
+  const color = BAND_COLORS[confidenceBand] ?? BAND_COLORS.none;
   const colorAlpha =
-    BAND_COLORS_ALPHA[match.confidenceBand] ?? BAND_COLORS_ALPHA.none;
+    BAND_COLORS_ALPHA[confidenceBand] ?? BAND_COLORS_ALPHA.none;
 
   return (
     <button
       onClick={onSelect}
       className={`text-left rounded-xl border-2 p-4 transition-all duration-150 hover:shadow-md hover:-translate-y-0.5 ${
-        match.confidenceBand === "auto"
+        confidenceBand === "auto"
           ? "border-green-400/50 hover:border-green-400"
-          : match.confidenceBand === "suggest"
+          : confidenceBand === "suggest"
             ? "border-amber-400/50 hover:border-amber-400"
             : "border-border/60 hover:border-primary/30"
       }`}
@@ -34,39 +44,34 @@ export function MatchCard({ match, onSelect }: MatchCardProps) {
         <div className="flex items-center gap-2">
           <GitMerge className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-semibold">
-            #{match.id} — {match.medicationName ?? "Unknown"}
+            #{match.id} — {match.medication_name ?? "Unknown"}
           </span>
         </div>
         <span
           className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase`}
           style={{ backgroundColor: colorAlpha.subtle, color }}
         >
-          {match.confidenceBand}
+          {confidenceBand}
         </span>
       </div>
       <div className="flex items-center gap-3">
         <div className="flex-1 space-y-1">
           <div className="flex justify-between text-[11px]">
             <span className="text-muted-foreground">Offer qty</span>
-            <span>{match.offerQuantity ?? 0}</span>
+            <span>{match.offer_quantity ?? 0}</span>
           </div>
           <div className="flex justify-between text-[11px]">
             <span className="text-muted-foreground">Request qty</span>
-            <span>{match.requestQuantity ?? 0}</span>
+            <span>{match.request_quantity ?? 0}</span>
           </div>
           <div className="flex justify-between text-[11px]">
             <span className="text-muted-foreground">Price</span>
             <span>
-              {match.offerPrice != null ? `EGP ${match.offerPrice}` : "—"}
+              {match.offer_price != null ? `EGP ${match.offer_price}` : "—"}
             </span>
           </div>
         </div>
-        <ConfidenceRing
-          score={match.score}
-          band={match.confidenceBand}
-          size={56}
-          compact
-        />
+        <ConfidenceRing score={score} band={confidenceBand} size={56} compact />
       </div>
       <div className="mt-3 flex items-center gap-1.5 justify-end">
         <span className="text-[10px] text-muted-foreground">

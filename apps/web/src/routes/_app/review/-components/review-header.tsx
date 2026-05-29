@@ -1,10 +1,10 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { ClipboardList } from "lucide-react";
-import type { GetReviewStatsResponse } from "@workspace/schemas";
+import type { ReviewStatsResponse } from "@/api/review";
 
 interface ReviewHeaderProps {
   queueCount: number | undefined;
-  stats: GetReviewStatsResponse | undefined;
+  stats: ReviewStatsResponse | undefined;
 }
 
 /**
@@ -29,7 +29,7 @@ export function ReviewHeader({ queueCount, stats }: ReviewHeaderProps) {
           <span>{stats.total} total</span>
           <span className="text-green-600">{stats.approved} approved</span>
           <span className="text-destructive">{stats.rejected} rejected</span>
-          <span>avg {stats.avgProcessingTime.toFixed(1)}s processing</span>
+          <span>avg {stats.avg_processing_time.toFixed(1)}s processing</span>
         </div>
       )}
     </div>

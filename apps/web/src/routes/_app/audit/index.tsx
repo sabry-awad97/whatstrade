@@ -20,12 +20,14 @@ export const Route = createFileRoute("/_app/audit/")({
 
 function RouteComponent() {
   // Fetch audit log entries
-  const { data: entries, isLoading } = useListAuditLog({ page: 1, limit: 100 });
+  const { data: response, isLoading } = useListAuditLog({
+    pagination: { page: 0, page_size: 100 },
+  });
 
   return (
     <div className="flex flex-col h-full">
-      <AuditHeader showingCount={entries?.length} />
-      <AuditTable entries={entries} isLoading={isLoading} />
+      <AuditHeader showingCount={response?.total ?? 0} />
+      <AuditTable entries={response?.logs} isLoading={isLoading} />
     </div>
   );
 }

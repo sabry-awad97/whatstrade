@@ -25,7 +25,7 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty";
 import { Package, ArrowUpDown } from "lucide-react";
-import type { ListOffersResponseItem } from "@workspace/schemas";
+import type { OfferResponse } from "@/api/offers";
 import { STATUS_COLORS } from "./constants";
 
 // Extend TanStack Table meta type
@@ -37,7 +37,7 @@ declare module "@tanstack/react-table" {
 }
 
 interface OffersTableProps {
-  offers: ListOffersResponseItem[] | undefined;
+  offers: OfferResponse[] | undefined;
   isLoading: boolean;
   selectedId: string | null;
   onSelectOffer: (id: string) => void;
@@ -56,7 +56,7 @@ export function OffersTable({
   onSelectOffer,
 }: OffersTableProps) {
   // Define table columns
-  const columns = useMemo<ColumnDef<ListOffersResponseItem>[]>(
+  const columns = useMemo<ColumnDef<OfferResponse>[]>(
     () => [
       {
         accessorKey: "id",
@@ -72,7 +72,7 @@ export function OffersTable({
         size: 80,
       },
       {
-        accessorKey: "medicationName",
+        accessorKey: "medication_name",
         header: ({ column }) => {
           return (
             <button
@@ -150,7 +150,7 @@ export function OffersTable({
         },
       },
       {
-        accessorKey: "groupName",
+        accessorKey: "group_name",
         header: "Group",
         cell: ({ getValue }) => (
           <span className="text-muted-foreground truncate max-w-[140px] block">
@@ -174,7 +174,7 @@ export function OffersTable({
         },
       },
       {
-        accessorKey: "createdAt",
+        accessorKey: "created_at",
         header: ({ column }) => {
           return (
             <button
@@ -192,7 +192,7 @@ export function OffersTable({
           const date = getValue<Date>();
           return (
             <span className="text-muted-foreground">
-              {new Date(date).toLocaleDateString()}
+              {date.toLocaleDateString()}
             </span>
           );
         },

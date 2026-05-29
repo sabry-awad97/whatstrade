@@ -23,8 +23,8 @@ export const reviewItemResponseSchema = z.object({
   sender_phone: z.string(),
   status: reviewStatusSchema,
   parsed_data: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
 
 export const reviewStatsResponseSchema = z.object({

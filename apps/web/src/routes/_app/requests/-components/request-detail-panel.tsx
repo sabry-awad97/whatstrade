@@ -1,10 +1,10 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { X } from "lucide-react";
-import type { GetRequestResponse } from "@workspace/schemas";
+import type { RequestResponse } from "@/api/requests";
 import { STATUS_COLORS } from "./constants";
 
 interface RequestDetailPanelProps {
-  request: GetRequestResponse | undefined;
+  request: RequestResponse | undefined;
   onClose: () => void;
 }
 
@@ -40,7 +40,7 @@ export function RequestDetailPanel({
             Medication
           </p>
           <p className="text-sm font-semibold mt-0.5">
-            {request.medicationName}
+            {request.medication_name}
           </p>
         </div>
         {request.dosage && (
@@ -63,7 +63,7 @@ export function RequestDetailPanel({
               Max Price
             </p>
             <p className="text-sm font-medium">
-              {request.maxPrice != null ? `EGP ${request.maxPrice}` : "—"}
+              {request.max_price != null ? `EGP ${request.max_price}` : "—"}
             </p>
           </div>
         </div>
@@ -71,13 +71,13 @@ export function RequestDetailPanel({
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Group
           </p>
-          <p className="text-sm">{request.groupName}</p>
+          <p className="text-sm">{request.group_name}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Sender
           </p>
-          <p className="text-sm font-mono">{request.senderPhone}</p>
+          <p className="text-sm font-mono">{request.sender_phone}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
@@ -90,13 +90,13 @@ export function RequestDetailPanel({
             {request.status}
           </Badge>
         </div>
-        {request.rawText && (
+        {request.raw_text && (
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
               Original Message
             </p>
             <p className="text-xs mt-1 p-2 bg-muted rounded text-right dir-rtl font-arabic">
-              {request.rawText}
+              {request.raw_text}
             </p>
           </div>
         )}
@@ -104,9 +104,7 @@ export function RequestDetailPanel({
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Created
           </p>
-          <p className="text-xs">
-            {new Date(request.createdAt).toLocaleString()}
-          </p>
+          <p className="text-xs">{request.created_at.toLocaleString()}</p>
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ export const auditLogResponseSchema = z.object({
   entity_id: z.string(),
   operator_id: z.string().nullable(),
   details: z.any().nullable(),
-  created_at: z.string(),
+  created_at: z.coerce.date(),
 });
 
 export const auditLogListResponseSchema = z.object({

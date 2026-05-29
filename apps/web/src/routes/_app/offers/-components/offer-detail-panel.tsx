@@ -1,10 +1,10 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { X } from "lucide-react";
-import type { GetOfferResponse } from "@workspace/schemas";
+import type { OfferResponse } from "@/api/offers";
 import { STATUS_COLORS } from "./constants";
 
 interface OfferDetailPanelProps {
-  offer: GetOfferResponse | undefined;
+  offer: OfferResponse | undefined;
   onClose: () => void;
 }
 
@@ -36,7 +36,9 @@ export function OfferDetailPanel({ offer, onClose }: OfferDetailPanelProps) {
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Medication
           </p>
-          <p className="text-sm font-semibold mt-0.5">{offer.medicationName}</p>
+          <p className="text-sm font-semibold mt-0.5">
+            {offer.medication_name}
+          </p>
         </div>
         {offer.dosage && (
           <div>
@@ -66,13 +68,13 @@ export function OfferDetailPanel({ offer, onClose }: OfferDetailPanelProps) {
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Group
           </p>
-          <p className="text-sm">{offer.groupName}</p>
+          <p className="text-sm">{offer.group_name}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Sender
           </p>
-          <p className="text-sm font-mono">{offer.senderPhone}</p>
+          <p className="text-sm font-mono">{offer.sender_phone}</p>
         </div>
         <div>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
@@ -85,13 +87,13 @@ export function OfferDetailPanel({ offer, onClose }: OfferDetailPanelProps) {
             {offer.status}
           </Badge>
         </div>
-        {offer.rawText && (
+        {offer.raw_text && (
           <div>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
               Original Message
             </p>
             <p className="text-xs mt-1 p-2 bg-muted rounded text-right dir-rtl font-arabic">
-              {offer.rawText}
+              {offer.raw_text}
             </p>
           </div>
         )}
@@ -99,9 +101,7 @@ export function OfferDetailPanel({ offer, onClose }: OfferDetailPanelProps) {
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
             Created
           </p>
-          <p className="text-xs">
-            {new Date(offer.createdAt).toLocaleString()}
-          </p>
+          <p className="text-xs">{offer.created_at.toLocaleString()}</p>
         </div>
       </div>
     </div>

@@ -21,8 +21,8 @@ export const matchResponseSchema = z.object({
   request_quantity: z.number(),
   offer_price: z.string().nullable(), // Decimal as string
   max_price: z.string().nullable(), // Decimal as string
-  created_at: z.string(),
-  updated_at: z.string(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
 
 export const matchListResponseSchema = z.object({

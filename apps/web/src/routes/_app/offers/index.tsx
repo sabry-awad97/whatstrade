@@ -33,10 +33,9 @@ function RouteComponent() {
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
 
   // Fetch offers list
-  const { data: offers, isLoading } = useListOffers({
-    page: 1,
-    limit: 50,
-    search: debouncedSearch || undefined,
+  const { data: offersResponse, isLoading } = useListOffers({
+    pagination: { page: 0, page_size: 50 },
+    filter: { search: debouncedSearch || undefined },
   });
 
   // Fetch selected offer details
@@ -66,8 +65,10 @@ function RouteComponent() {
   // Filter offers based on active filter
   const filteredOffers =
     activeFilter === "all"
-      ? offers
-      : offers?.filter((offer) => offer.status === activeFilter);
+      ? offersResponse?.offers
+      : offersResponse?.offers?.filter(
+          (offer) => offer.status === activeFilter,
+        );
 
   return (
     <div className="flex h-full">

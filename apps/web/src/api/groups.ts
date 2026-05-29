@@ -14,9 +14,9 @@ export const groupResponseSchema = z.object({
   name: z.string(),
   is_monitored: z.boolean(),
   member_count: z.number(),
-  last_message_at: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  last_message_at: z.coerce.date().nullable(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
 
 export type GroupResponse = z.infer<typeof groupResponseSchema>;

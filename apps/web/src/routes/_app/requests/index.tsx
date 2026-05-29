@@ -33,10 +33,9 @@ function RouteComponent() {
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
 
   // Fetch requests list
-  const { data: requests, isLoading } = useListRequests({
-    page: 1,
-    limit: 50,
-    search: debouncedSearch || undefined,
+  const { data: requestsResponse, isLoading } = useListRequests({
+    pagination: { page: 0, page_size: 50 },
+    filter: { search: debouncedSearch || undefined },
   });
 
   // Fetch selected request details
@@ -66,8 +65,10 @@ function RouteComponent() {
   // Filter requests based on active filter
   const filteredRequests =
     activeFilter === "all"
-      ? requests
-      : requests?.filter((request) => request.status === activeFilter);
+      ? requestsResponse?.requests
+      : requestsResponse?.requests?.filter(
+          (request) => request.status === activeFilter,
+        );
 
   return (
     <div className="flex h-full">

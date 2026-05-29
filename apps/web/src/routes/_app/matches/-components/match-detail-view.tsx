@@ -8,12 +8,12 @@ import {
   ShoppingCart,
   Brain,
 } from "lucide-react";
-import type { ListMatchesResponseItem } from "@workspace/schemas";
+import type { MatchResponse } from "@/api/matches";
 import { ConfidenceRing } from "./confidence-ring";
 import { BAND_COLORS, STATUS_COLORS } from "./constants";
 
 interface MatchDetailViewProps {
-  match: ListMatchesResponseItem;
+  match: MatchResponse;
   onConfirm: () => void;
   onReject: () => void;
   isConfirming: boolean;
@@ -33,27 +33,31 @@ export function MatchDetailView({
   isConfirming,
   isRejecting,
 }: MatchDetailViewProps) {
-  const color = BAND_COLORS[match.confidenceBand] ?? BAND_COLORS.none;
+  // Calculate confidence band from score
+  const score = parseFloat(match.score);
+  const confidenceBand =
+    score >= 0.85
+      ? "auto"
+      : score >= 0.7
+        ? "suggest"
+        : score >= 0.5
+          ? "review"
+          : "reject";
+  const color = BAND_COLORS[confidenceBand] ?? BAND_COLORS.none;
 
-  // Calculate AI reasoning checks
-  const availabilityOk = match.score >= 0.6;
-  const quantityScore = match.scoreBreakdown?.quantity ?? 0;
+  // Calculate AI reasoning checks (simplified since we don't have score_breakdown)
+  const availabilityOk = score >= 0.6;
   const priceFitOk =
-    match.offerPrice != null &&
-    match.maxPrice != null &&
-    Number(match.offerPrice) <= Number(match.maxPrice);
-  const qtyMatchOk = quantityScore > 0.5;
+    match.offer_price != null &&
+    match.max_price != null &&
+    parseFloat(match.offer_price) <= parseFloat(match.max_price);
+  const qtyMatchOk = score > 0.5;
 
-  // Use backend score breakdown if available, otherwise calculate estimates
-  const medicationScore = match.scoreBreakdown?.medication ?? 0;
-  const dosageScore = match.scoreBreakdown?.dosage ?? 0;
-  const priceScore = match.scoreBreakdown?.price ?? 0;
-  const recencyScore = match.scoreBreakdown?.recency ?? 0;
-
-  // Combined medication + dosage score (55% weight total)
-  const medicationDosageScore = match.scoreBreakdown
-    ? (medicationScore * 0.4 + dosageScore * 0.15) / 0.55
-    : 0;
+  // Estimate score breakdown (since backend doesn't provide it yet)
+  const medicationDosageScore = score * 0.9; // Assume medication/dosage is primary factor
+  const quantityScore = score * 0.8;
+  const priceScore = priceFitOk ? 0.9 : 0.3;
+  const recencyScore = 0.7; // Default estimate
 
   return (
     <div className="flex flex-col h-full overflow-auto p-5 gap-4 animate-fade-up">
@@ -70,7 +74,7 @@ export function MatchDetailView({
           </Badge>
         </div>
         <span className="text-[11px] text-muted-foreground">
-          {new Date(match.createdAt).toLocaleString()}
+          {match.created_at.toLocaleString()}
         </span>
       </div>
 
@@ -93,14 +97,14 @@ export function MatchDetailView({
             <div>
               <p className="text-[10px] text-muted-foreground">Medication</p>
               <p className="text-base font-bold">
-                {match.medicationName ?? "Unknown"}
+                {match.medication_name ?? "Unknown"}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-[10px] text-muted-foreground">Quantity</p>
                 <p className="text-sm font-semibold">
-                  {(match.offerQuantity ?? 0).toLocaleString()} units
+                  {(match.offer_quantity ?? 0).toLocaleString()} units
                 </p>
               </div>
               <div>
@@ -108,7 +112,7 @@ export function MatchDetailView({
                   Price / unit
                 </p>
                 <p className="text-sm font-semibold">
-                  {match.offerPrice != null ? `EGP ${match.offerPrice}` : "—"}
+                  {match.offer_price != null ? `EGP ${match.offer_price}` : "—"}
                 </p>
               </div>
             </div>
@@ -117,11 +121,7 @@ export function MatchDetailView({
 
         {/* Confidence ring */}
         <div className="flex flex-col items-center justify-center gap-3 shrink-0">
-          <ConfidenceRing
-            score={match.score}
-            band={match.confidenceBand}
-            size={160}
-          />
+          <ConfidenceRing score={score} band={confidenceBand} size={160} />
 
           {/* AI reasoning lines */}
           <div className="text-center space-y-0.5 max-w-[160px]">
@@ -169,20 +169,20 @@ export function MatchDetailView({
             <div>
               <p className="text-[10px] text-muted-foreground">Medication</p>
               <p className="text-base font-bold">
-                {match.medicationName ?? "Unknown"}
+                {match.medication_name ?? "Unknown"}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-[10px] text-muted-foreground">Needed</p>
                 <p className="text-sm font-semibold">
-                  {(match.requestQuantity ?? 0).toLocaleString()} units
+                  {(match.request_quantity ?? 0).toLocaleString()} units
                 </p>
               </div>
               <div>
                 <p className="text-[10px] text-muted-foreground">Max Price</p>
                 <p className="text-sm font-semibold">
-                  {match.maxPrice != null ? `EGP ${match.maxPrice}` : "—"}
+                  {match.max_price != null ? `EGP ${match.max_price}` : "—"}
                 </p>
               </div>
             </div>

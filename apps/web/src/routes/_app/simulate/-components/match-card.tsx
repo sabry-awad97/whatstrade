@@ -1,26 +1,6 @@
 import { Package, ShoppingCart } from "lucide-react";
+import type { Candidate } from "@/api/simulate";
 import { BAND_COLORS } from "./constants";
-
-interface ScoreBreakdown {
-  medication: number;
-  quantity: number;
-  dosage: number;
-  price: number;
-  recency: number;
-}
-
-interface Candidate {
-  id: string;
-  medicationName: string;
-  dosage?: string | null;
-  quantity: number;
-  price?: string | null;
-  groupName?: string;
-  senderPhone?: string;
-  score: number;
-  confidenceBand: string;
-  scoreBreakdown: ScoreBreakdown;
-}
 
 interface MatchCardProps {
   candidate: Candidate;
@@ -34,11 +14,20 @@ interface MatchCardProps {
  */
 export function MatchCard({ candidate, parsedType }: MatchCardProps) {
   const isOffer = parsedType === "request";
+  // Calculate confidence band from score
+  const confidenceBand =
+    candidate.score >= 0.85
+      ? "auto"
+      : candidate.score >= 0.7
+        ? "suggest"
+        : candidate.score >= 0.5
+          ? "review"
+          : "reject";
 
   return (
     <div
       className={`rounded-xl border-2 p-4 transition-all duration-200 ${
-        candidate.confidenceBand === "auto"
+        confidenceBand === "auto"
           ? "border-green-400/60 bg-green-50/50 dark:bg-green-950/10 shadow-md shadow-green-500/10"
           : "border-border/60 bg-card"
       }`}
@@ -60,7 +49,7 @@ export function MatchCard({ candidate, parsedType }: MatchCardProps) {
       <div className="space-y-1.5 mb-3">
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Medication</span>
-          <span className="font-semibold">{candidate.medicationName}</span>
+          <span className="font-semibold">{candidate.medication_name}</span>
         </div>
         {candidate.dosage && (
           <div className="flex justify-between text-xs">
@@ -78,37 +67,33 @@ export function MatchCard({ candidate, parsedType }: MatchCardProps) {
             <span>EGP {candidate.price}</span>
           </div>
         )}
-        {candidate.groupName && (
+        {candidate.group_name && (
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Group</span>
             <span className="truncate max-w-[120px] text-right">
-              {candidate.groupName}
+              {candidate.group_name}
             </span>
           </div>
         )}
       </div>
-      {/* Score breakdown mini-bars */}
-      <div className="space-y-1 border-t border-border/40 pt-2">
-        {(Object.entries(candidate.scoreBreakdown) as [string, number][]).map(
-          ([k, v]) => (
-            <div key={k} className="flex items-center gap-2 text-[10px]">
-              <span className="w-16 text-muted-foreground capitalize">{k}</span>
-              <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${v * 100}%`,
-                    backgroundColor:
-                      BAND_COLORS[candidate.confidenceBand] ?? BAND_COLORS.none,
-                  }}
-                />
-              </div>
-              <span className="w-6 text-right tabular-nums text-muted-foreground">
-                {(v * 100).toFixed(0)}
-              </span>
-            </div>
-          ),
-        )}
+      {/* Score display - no breakdown available from API yet */}
+      <div className="border-t border-border/40 pt-2">
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="w-16 text-muted-foreground">Score</span>
+          <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${candidate.score * 100}%`,
+                backgroundColor:
+                  BAND_COLORS[confidenceBand] ?? BAND_COLORS.none,
+              }}
+            />
+          </div>
+          <span className="w-6 text-right tabular-nums text-muted-foreground">
+            {(candidate.score * 100).toFixed(0)}
+          </span>
+        </div>
       </div>
     </div>
   );

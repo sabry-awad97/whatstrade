@@ -1,13 +1,13 @@
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import type { ListMatchesResponseItem } from "@workspace/schemas";
+import type { MatchResponse } from "@/api/matches";
 import { MatchCard } from "./match-card";
 import { MatchesTable } from "./matches-table";
 
 interface MatchesListProps {
-  matches: ListMatchesResponseItem[] | undefined;
+  matches: MatchResponse[] | undefined;
   isLoading: boolean;
   statusFilter: string;
-  onSelectMatch: (match: ListMatchesResponseItem) => void;
+  onSelectMatch: (match: MatchResponse) => void;
 }
 
 /**

@@ -9,15 +9,10 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty";
 import { Package } from "lucide-react";
-
-interface Offer {
-  id: string;
-  medicationName: string;
-  quantity: number;
-}
+import type { OfferResponse } from "@/api/offers";
 
 interface RecentOffersListProps {
-  offers: Offer[] | undefined;
+  offers: OfferResponse[] | undefined;
   isLoading: boolean;
 }
 
@@ -48,7 +43,7 @@ export function RecentOffersList({ offers, isLoading }: RecentOffersListProps) {
             >
               <Package className="w-3 h-3 text-primary shrink-0" />
               <span className="font-medium truncate flex-1">
-                {offer.medicationName}
+                {offer.medication_name}
               </span>
               <span className="text-muted-foreground">
                 {offer.quantity} units

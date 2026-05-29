@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import type { QRCodeEvent } from "@workspace/schemas";
+
+interface QRCodeEvent {
+  qrCode: string;
+  expiresAt: Date;
+}
 
 interface QRCodeDisplayProps {
   qr: QRCodeEvent;

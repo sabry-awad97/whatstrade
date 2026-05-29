@@ -26,7 +26,7 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty";
 import { GitMerge, ArrowUpDown } from "lucide-react";
-import type { ListMatchesResponseItem } from "@workspace/schemas";
+import type { MatchResponse } from "@/api/matches";
 import { STATUS_COLORS, BAND_COLORS, BAND_COLORS_ALPHA } from "./constants";
 
 // Extend TanStack Table meta type
@@ -38,10 +38,10 @@ declare module "@tanstack/react-table" {
 }
 
 interface MatchesTableProps {
-  matches: ListMatchesResponseItem[] | undefined;
+  matches: MatchResponse[] | undefined;
   isLoading: boolean;
   statusFilter: string;
-  onSelectMatch: (match: ListMatchesResponseItem) => void;
+  onSelectMatch: (match: MatchResponse) => void;
 }
 
 /**
@@ -57,7 +57,7 @@ export function MatchesTable({
   onSelectMatch,
 }: MatchesTableProps) {
   // Define table columns
-  const columns = useMemo<ColumnDef<ListMatchesResponseItem>[]>(
+  const columns = useMemo<ColumnDef<MatchResponse>[]>(
     () => [
       {
         accessorKey: "id",
@@ -73,7 +73,7 @@ export function MatchesTable({
         size: 80,
       },
       {
-        accessorKey: "medicationName",
+        accessorKey: "medication_name",
         header: ({ column }) => {
           return (
             <button
@@ -109,7 +109,7 @@ export function MatchesTable({
           );
         },
         cell: ({ getValue }) => {
-          const score = getValue<number>();
+          const score = parseFloat(getValue<string>());
           return (
             <div className="flex items-center gap-2 justify-end">
               <Progress value={score * 100} className="h-1.5 w-16" />
@@ -122,10 +122,18 @@ export function MatchesTable({
         },
       },
       {
-        accessorKey: "confidenceBand",
+        id: "confidence_band",
         header: "Band",
-        cell: ({ getValue }) => {
-          const band = getValue<string>();
+        cell: ({ row }) => {
+          const score = parseFloat(row.original.score);
+          const band =
+            score >= 0.85
+              ? "auto"
+              : score >= 0.7
+                ? "suggest"
+                : score >= 0.5
+                  ? "review"
+                  : "reject";
           const color = BAND_COLORS[band] ?? BAND_COLORS.none;
           const colorAlpha = BAND_COLORS_ALPHA[band] ?? BAND_COLORS_ALPHA.none;
           return (
@@ -148,18 +156,13 @@ export function MatchesTable({
               variant="outline"
               className={`text-[9px] h-4 px-1.5 ${STATUS_COLORS[status] ?? ""}`}
             >
-              <Badge
-                variant="outline"
-                className={`text-[9px] h-4 px-1.5 ${STATUS_COLORS[status] ?? ""}`}
-              >
-                {status.replaceAll("_", " ")}
-              </Badge>{" "}
+              {status.replaceAll("_", " ")}
             </Badge>
           );
         },
       },
       {
-        accessorKey: "createdAt",
+        accessorKey: "created_at",
         header: ({ column }) => {
           return (
             <button
@@ -174,10 +177,10 @@ export function MatchesTable({
           );
         },
         cell: ({ getValue }) => {
-          const date = getValue<string | Date>();
+          const date = getValue<Date>();
           return (
             <span className="text-muted-foreground">
-              {new Date(date).toLocaleDateString()}
+              {date.toLocaleDateString()}
             </span>
           );
         },

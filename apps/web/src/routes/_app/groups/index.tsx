@@ -35,28 +35,25 @@ function RouteComponent() {
   const handleToggle = (jid: string, isMonitored: boolean, name: string) => {
     const mutation = isMonitored ? disableMutation : enableMutation;
 
-    mutation.mutate(
-      { jid },
-      {
-        onSuccess: () => {
-          toast.success(
-            isMonitored ? "Monitoring disabled" : "Monitoring enabled",
-            {
-              description: `${name} is now ${isMonitored ? "unmonitored" : "monitored"}.`,
-            },
-          );
-        },
-        onError: (error) => {
-          toast.error("Failed to update monitoring", {
-            description: error.message,
-          });
-        },
+    mutation.mutate(jid, {
+      onSuccess: () => {
+        toast.success(
+          isMonitored ? "Monitoring disabled" : "Monitoring enabled",
+          {
+            description: `${name} is now ${isMonitored ? "unmonitored" : "monitored"}.`,
+          },
+        );
       },
-    );
+      onError: (error) => {
+        toast.error("Failed to update monitoring", {
+          description: error.message,
+        });
+      },
+    });
   };
 
   // Calculate monitored count
-  const monitoredCount = groups?.filter((g) => g.isMonitored).length ?? 0;
+  const monitoredCount = groups?.filter((g) => g.is_monitored).length ?? 0;
 
   return (
     <div className="flex flex-col h-full">

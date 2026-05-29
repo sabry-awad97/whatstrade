@@ -26,8 +26,7 @@ import {
 
 import { authClient } from "@/lib/auth-client";
 import { useSimulateMessage } from "@/hooks/simulate";
-import type { SimulateMessageResponse, MessageType } from "@workspace/schemas";
-import { MATCH_SCORE_THRESHOLD } from "@workspace/schemas";
+import type { SimulateResponse } from "@/api/simulate";
 import {
   ConfidenceRing,
   MatchCard,
@@ -52,9 +51,9 @@ export const Route = createFileRoute("/_app/simulate/")({
 
 function RouteComponent() {
   const [rawText, setRawText] = useState("");
-  const [messageType, setMessageType] = useState<MessageType>("auto");
+  const [messageType, setMessageType] = useState<string>("auto");
   const [insertIntoSystem, setInsertIntoSystem] = useState(false);
-  const [result, setResult] = useState<SimulateMessageResponse | null>(null);
+  const [result, setResult] = useState<SimulateResponse | null>(null);
   const [selectedCandidateIdx, setSelectedCandidateIdx] = useState(0);
   const [streamingSteps, setStreamingSteps] = useState<PipelineStep[]>([]);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -100,21 +99,28 @@ function RouteComponent() {
         onSuccess: async (data) => {
           // Animate steps appearing with mount check
           setStreamingSteps([]);
-          for (let i = 0; i < data.pipelineSteps.length; i++) {
-            if (!isMountedRef.current) return; // Exit early if unmounted
-            await new Promise((r) => setTimeout(r, 180));
-            if (!isMountedRef.current) return; // Check again after timeout
-            setStreamingSteps((prev) => [...prev, data.pipelineSteps[i]]);
-          }
+          // Note: pipeline_steps would come from backend if implemented
+          // For now, we'll create a simple completion step
+          const completionStep: PipelineStep = {
+            step: "Analysis Complete",
+            status: "success",
+            detail: `Parsed as ${data.parsed_type}, found ${data.candidates.length} matches`,
+            durationMs: data.duration_ms,
+          };
 
-          if (!isMountedRef.current) return; // Final check before setting result
+          if (!isMountedRef.current) return;
+          await new Promise((r) => setTimeout(r, 180));
+          if (!isMountedRef.current) return;
+          setStreamingSteps([completionStep]);
+
+          if (!isMountedRef.current) return;
 
           setResult(data);
           setSelectedCandidateIdx(0);
 
-          if (data.insertedId) {
+          if (data.inserted_id) {
             toast.success("Inserted into system", {
-              description: `${data.parsedType} #${data.insertedId} created with ${data.candidates.filter((c) => c.confidenceBand === "auto" || c.confidenceBand === "suggest").length} matches.`,
+              description: `${data.parsed_type} #${data.inserted_id} created with ${data.candidates.length} matches.`,
             });
           }
         },
@@ -188,7 +194,7 @@ function RouteComponent() {
             </label>
             <Select
               value={messageType}
-              onValueChange={(value) => setMessageType(value as MessageType)}
+              onValueChange={(value) => setMessageType(value)}
             >
               <SelectTrigger
                 className="h-8 text-xs"
@@ -295,16 +301,16 @@ function RouteComponent() {
                   <Badge
                     variant="outline"
                     className={`text-[9px] h-4 px-1.5 ml-2 ${
-                      result.parsedType === "offer"
+                      result.parsed_type === "offer"
                         ? "text-green-600 border-green-300 bg-green-50 dark:bg-green-950/30"
                         : "text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30"
                     }`}
                   >
-                    {result.parsedType.toUpperCase()}
+                    {result.parsed_type.toUpperCase()}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-4 gap-3 mb-3">
-                  {result.parsedFields.map((field) => (
+                  {result.parsed_fields.map((field) => (
                     <div
                       key={field.field}
                       className="p-2.5 rounded-lg bg-background border border-border/50"
@@ -330,7 +336,7 @@ function RouteComponent() {
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground italic border-t border-border/40 pt-2">
-                  {result.aiReasoning}
+                  {result.ai_reasoning}
                 </p>
               </div>
 
@@ -370,21 +376,21 @@ function RouteComponent() {
                         {/* Parsed message card */}
                         <div className="flex-1 p-4 rounded-xl border-2 border-primary/30 bg-primary/5">
                           <div className="flex items-center gap-2 mb-3">
-                            {result.parsedType === "offer" ? (
+                            {result.parsed_type === "offer" ? (
                               <Package className="w-4 h-4 text-primary" />
                             ) : (
                               <ShoppingCart className="w-4 h-4 text-amber-500" />
                             )}
                             <span className="text-xs font-semibold">
                               Your Message (
-                              {result.parsedType === "offer"
+                              {result.parsed_type === "offer"
                                 ? "Offer"
                                 : "Request"}
                               )
                             </span>
                           </div>
                           <div className="space-y-1.5">
-                            {result.parsedFields.map((f) => (
+                            {result.parsed_fields.map((f) => (
                               <div
                                 key={f.field}
                                 className="flex justify-between text-xs"
@@ -402,14 +408,22 @@ function RouteComponent() {
                         <div className="shrink-0 flex flex-col items-center gap-2">
                           <ConfidenceRing
                             score={topCandidate.score}
-                            band={topCandidate.confidenceBand}
+                            band={
+                              topCandidate.score >= 0.85
+                                ? "auto"
+                                : topCandidate.score >= 0.7
+                                  ? "suggest"
+                                  : topCandidate.score >= 0.5
+                                    ? "review"
+                                    : "reject"
+                            }
                           />
                           <p className="text-[10px] text-muted-foreground text-center">
-                            {topCandidate.confidenceBand === "auto"
+                            {topCandidate.score >= 0.85
                               ? "Auto-confirm eligible"
-                              : topCandidate.confidenceBand === "suggest"
+                              : topCandidate.score >= 0.7
                                 ? "Suggested — review"
-                                : topCandidate.confidenceBand === "review"
+                                : topCandidate.score >= 0.5
                                   ? "Low confidence"
                                   : "Poor match"}
                           </p>
@@ -419,7 +433,7 @@ function RouteComponent() {
                         <div className="flex-1">
                           <MatchCard
                             candidate={topCandidate}
-                            parsedType={result.parsedType}
+                            parsedType={result.parsed_type}
                           />
                         </div>
                       </div>
@@ -429,9 +443,9 @@ function RouteComponent() {
                         <Brain className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                         <p className="text-[11px] text-muted-foreground italic">
                           AI Analysis:
-                          {topCandidate.confidenceBand === "auto"
+                          {topCandidate.score >= 0.85
                             ? "Optimal match — medication name, dosage, and quantity align well. Price within range."
-                            : topCandidate.confidenceBand === "suggest"
+                            : topCandidate.score >= 0.7
                               ? "Good candidate — medication matches but minor discrepancies in quantity or price."
                               : "Partial match — review recommended before confirming."}
                         </p>
@@ -450,7 +464,7 @@ function RouteComponent() {
                         >
                           <MatchCard
                             candidate={c}
-                            parsedType={result.parsedType}
+                            parsedType={result.parsed_type}
                           />
                         </button>
                       ))}
@@ -466,9 +480,8 @@ function RouteComponent() {
                     No matching candidates found
                   </p>
                   <p className="text-xs mt-1 opacity-70">
-                    Score threshold is {MATCH_SCORE_THRESHOLD * 100}% — no
-                    existing
-                    {result.parsedType === "offer"
+                    Score threshold is 50% — no existing
+                    {result.parsed_type === "offer"
                       ? " requests"
                       : " offers"}{" "}
                     are close enough
@@ -476,12 +489,12 @@ function RouteComponent() {
                 </div>
               )}
 
-              {result.insertedId && (
+              {result.inserted_id && (
                 <div className="flex items-center gap-2 p-3 rounded-lg border border-green-300/60 bg-green-50/50 dark:bg-green-950/20 dark:border-green-800/60 text-sm">
                   <Database className="w-4 h-4 text-green-600 shrink-0" />
                   <span className="text-green-700 dark:text-green-400">
-                    Successfully inserted into system — {result.parsedType} #
-                    {result.insertedId}
+                    Successfully inserted into system — {result.parsed_type} #
+                    {result.inserted_id}
                   </span>
                 </div>
               )}

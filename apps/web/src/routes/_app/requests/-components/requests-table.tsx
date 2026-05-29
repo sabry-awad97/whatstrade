@@ -25,7 +25,7 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty";
 import { ShoppingCart, ArrowUpDown } from "lucide-react";
-import type { ListRequestsResponseItem } from "@workspace/schemas";
+import type { RequestResponse } from "@/api/requests";
 import { STATUS_COLORS } from "./constants";
 
 // Extend TanStack Table meta type
@@ -37,7 +37,7 @@ declare module "@tanstack/react-table" {
 }
 
 interface RequestsTableProps {
-  requests: ListRequestsResponseItem[] | undefined;
+  requests: RequestResponse[] | undefined;
   isLoading: boolean;
   selectedId: string | null;
   onSelectRequest: (id: string) => void;
@@ -56,7 +56,7 @@ export function RequestsTable({
   onSelectRequest,
 }: RequestsTableProps) {
   // Define table columns
-  const columns = useMemo<ColumnDef<ListRequestsResponseItem>[]>(
+  const columns = useMemo<ColumnDef<RequestResponse>[]>(
     () => [
       {
         accessorKey: "id",
@@ -72,7 +72,7 @@ export function RequestsTable({
         size: 80,
       },
       {
-        accessorKey: "medicationName",
+        accessorKey: "medication_name",
         header: ({ column }) => {
           return (
             <button
@@ -123,7 +123,7 @@ export function RequestsTable({
         },
       },
       {
-        accessorKey: "maxPrice",
+        accessorKey: "max_price",
         header: ({ column }) => {
           return (
             <button
@@ -150,7 +150,7 @@ export function RequestsTable({
         },
       },
       {
-        accessorKey: "groupName",
+        accessorKey: "group_name",
         header: "Group",
         cell: ({ getValue }) => (
           <span className="text-muted-foreground truncate max-w-[140px] block">
@@ -174,7 +174,7 @@ export function RequestsTable({
         },
       },
       {
-        accessorKey: "createdAt",
+        accessorKey: "created_at",
         header: ({ column }) => {
           return (
             <button
@@ -192,7 +192,7 @@ export function RequestsTable({
           const date = getValue<Date>();
           return (
             <span className="text-muted-foreground">
-              {new Date(date).toLocaleDateString()}
+              {date.toLocaleDateString()}
             </span>
           );
         },

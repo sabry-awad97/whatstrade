@@ -20,8 +20,8 @@ export const offerResponseSchema = z.object({
   raw_text: z.string().nullable(),
   whatsapp_message_queue_id: z.string().nullable(),
   whatsapp_group_id: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date(),
 });
 
 export const offerListResponseSchema = z.object({

@@ -154,7 +154,7 @@ export function GroupListTable() {
                     {group.jid}
                   </TableCell>
                   <TableCell>
-                    {group.isMonitored ? (
+                    {group.is_monitored ? (
                       <Badge className="bg-green-600 hover:bg-green-700">
                         Monitored
                       </Badge>
@@ -163,23 +163,23 @@ export function GroupListTable() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {group.memberCount}
+                    {group.member_count}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     {(() => {
-                      if (!group.lastMessageAt) return "Never";
-                      const date = new Date(group.lastMessageAt);
-                      if (isNaN(date.getTime())) return "Invalid date";
-                      return formatDistanceToNow(date, { addSuffix: true });
+                      if (!group.last_message_at) return "Never";
+                      return formatDistanceToNow(group.last_message_at, {
+                        addSuffix: true,
+                      });
                     })()}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <span className="text-sm text-muted-foreground">
-                        {group.isMonitored ? "Monitoring" : "Ignored"}
+                        {group.is_monitored ? "Monitoring" : "Ignored"}
                       </span>
                       <Switch
-                        checked={group.isMonitored}
+                        checked={group.is_monitored}
                         onCheckedChange={(enabled) =>
                           handleToggle(group.jid, enabled)
                         }

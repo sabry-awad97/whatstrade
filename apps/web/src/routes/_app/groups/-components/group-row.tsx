@@ -1,8 +1,8 @@
 import { Switch } from "@workspace/ui/components/switch";
-import type { ListGroupsResponseItem } from "@workspace/schemas";
+import type { GroupResponse } from "@/api/groups";
 
 interface GroupRowProps {
-  group: ListGroupsResponseItem;
+  group: GroupResponse;
   onToggle: (jid: string, isMonitored: boolean, name: string) => void;
   isPending: boolean;
 }
@@ -17,12 +17,12 @@ export function GroupRow({ group, onToggle, isPending }: GroupRowProps) {
   return (
     <div
       className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-150
-        ${group.isMonitored ? "border-primary/30 bg-primary/5" : "border-border/60 bg-card hover:bg-accent/20"}`}
+        ${group.is_monitored ? "border-primary/30 bg-primary/5" : "border-border/60 bg-card hover:bg-accent/20"}`}
       data-testid={`group-${group.id}`}
     >
       <div
         className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0
-        ${group.isMonitored ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+        ${group.is_monitored ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
       >
         {group.name.trim().slice(0, 2).toUpperCase() || "??"}
       </div>
@@ -33,26 +33,26 @@ export function GroupRow({ group, onToggle, isPending }: GroupRowProps) {
         </p>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-xs font-medium">{group.memberCount}</p>
+        <p className="text-xs font-medium">{group.member_count}</p>
         <p className="text-[10px] text-muted-foreground">members</p>
       </div>
-      {group.lastMessageAt && (
+      {group.last_message_at && (
         <div className="text-right shrink-0 hidden md:block">
           <p className="text-[10px] text-muted-foreground">
-            {new Date(group.lastMessageAt).toLocaleTimeString([], {
+            {group.last_message_at.toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             })}
           </p>
           <p className="text-[10px] text-muted-foreground">
-            {new Date(group.lastMessageAt).toLocaleDateString()}
+            {group.last_message_at.toLocaleDateString()}
           </p>
         </div>
       )}
       <Switch
-        checked={group.isMonitored}
+        checked={group.is_monitored}
         onCheckedChange={() =>
-          onToggle(group.jid, group.isMonitored, group.name)
+          onToggle(group.jid, group.is_monitored, group.name)
         }
         disabled={isPending}
         data-testid={`switch-monitor-${group.id}`}

@@ -61,12 +61,6 @@ export function useGetFailedMessages(params?: GetFailedMessagesParams) {
   });
 }
 
-/**
- * Alias for useGetFailedMessages for backward compatibility
- * @deprecated Use useGetFailedMessages instead
- */
-export const useFailedMessages = useGetFailedMessages;
-
 // ============================================================================
 // Mutation Hooks
 // ============================================================================

@@ -7,11 +7,11 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty";
 import { Users } from "lucide-react";
-import type { ListGroupsResponseItem } from "@workspace/schemas";
+import type { GroupResponse } from "@/api/groups";
 import { GroupRow } from "./group-row";
 
 interface GroupsListProps {
-  groups: ListGroupsResponseItem[] | undefined;
+  groups: GroupResponse[] | undefined;
   isLoading: boolean;
   onToggle: (jid: string, isMonitored: boolean, name: string) => void;
   isPending: boolean;
@@ -57,8 +57,8 @@ export function GroupsList({
     );
   }
 
-  const monitored = groups.filter((g) => g.isMonitored);
-  const unmonitored = groups.filter((g) => !g.isMonitored);
+  const monitored = groups.filter((g) => g.is_monitored);
+  const unmonitored = groups.filter((g) => !g.is_monitored);
 
   return (
     <div className="space-y-4">

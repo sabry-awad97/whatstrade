@@ -7,11 +7,11 @@ import {
   EmptyDescription,
 } from "@workspace/ui/components/empty";
 import { CheckCircle } from "lucide-react";
-import type { GetReviewQueueResponseItem } from "@workspace/schemas";
+import type { ReviewItemResponse } from "@/api/review";
 import { ReviewItemCard } from "./review-item-card";
 
 interface ReviewQueueListProps {
-  queue: GetReviewQueueResponseItem[] | undefined;
+  queue: ReviewItemResponse[] | undefined;
   isLoading: boolean;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;

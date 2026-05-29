@@ -1,10 +1,10 @@
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
-import type { GetReviewQueueResponseItem } from "@workspace/schemas";
+import type { ReviewItemResponse } from "@/api/review";
 
 interface ReviewItemCardProps {
-  item: GetReviewQueueResponseItem;
+  item: ReviewItemResponse;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
   isPending: boolean;
@@ -31,9 +31,10 @@ export function ReviewItemCard({
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
           <div>
-            <p className="text-sm font-semibold">{item.medicationName}</p>
+            <p className="text-sm font-semibold">{item.medication_name}</p>
             <p className="text-[10px] text-muted-foreground">
-              {item.type.toUpperCase()} — {item.groupName} — {item.senderPhone}
+              {item.type.toUpperCase()} — {item.group_name} —{" "}
+              {item.sender_phone}
             </p>
           </div>
         </div>
@@ -45,13 +46,13 @@ export function ReviewItemCard({
         </Badge>
       </div>
 
-      {item.rawText && (
+      {item.raw_text && (
         <div className="p-2 bg-background/80 rounded border border-border/60">
           <p className="text-[10px] text-muted-foreground mb-1">
             Original Arabic message:
           </p>
           <p className="text-xs text-right font-mono dir-rtl font-arabic">
-            {item.rawText}
+            {item.raw_text}
           </p>
         </div>
       )}
@@ -67,14 +68,7 @@ export function ReviewItemCard({
             Qty: <strong>{item.quantity}</strong>
           </span>
         )}
-        <span>
-          {(() => {
-            const date = new Date(item.createdAt);
-            return isNaN(date.getTime())
-              ? "Unknown date"
-              : date.toLocaleString();
-          })()}
-        </span>
+        <span>{item.created_at.toLocaleString()}</span>
       </div>
 
       <div className="flex items-center gap-2 pt-1">

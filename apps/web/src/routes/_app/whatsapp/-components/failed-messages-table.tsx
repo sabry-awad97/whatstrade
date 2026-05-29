@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useFailedMessages, useRetryMessage } from "@/hooks/whatsapp";
+import { useGetFailedMessages, useRetryMessage } from "@/hooks/whatsapp";
 import {
   Table,
   TableBody,
@@ -20,14 +20,13 @@ import { RefreshCw, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export function FailedMessagesTable() {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(0);
   const [groupFilter, setGroupFilter] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-  const { data, isLoading } = useFailedMessages({
-    page,
-    limit: 20,
-    groupName: groupFilter || undefined,
+  const { data, isLoading } = useGetFailedMessages({
+    filter: { group_name: groupFilter || undefined },
+    pagination: { page, page_size: 20 },
   });
   const retryMessage = useRetryMessage();
 
@@ -44,7 +43,7 @@ export function FailedMessagesTable() {
   };
 
   const handleRetry = (id: string) => {
-    retryMessage.mutate({ id });
+    retryMessage.mutate(id);
   };
 
   if (isLoading) {
@@ -69,7 +68,7 @@ export function FailedMessagesTable() {
             value={groupFilter}
             onChange={(e) => {
               setGroupFilter(e.target.value);
-              setPage(1); // Reset to first page on filter
+              setPage(0); // Reset to first page on filter
             }}
             className="pl-9"
           />
@@ -125,30 +124,30 @@ export function FailedMessagesTable() {
                       </CollapsibleTrigger>
                     </TableCell>
                     <TableCell className="font-medium">
-                      {message.groupName}
+                      {message.group_name}
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div>{message.senderName || "Unknown"}</div>
+                        <div>{message.sender_name || "Unknown"}</div>
                         <div className="text-xs text-muted-foreground font-mono">
-                          {message.senderPhone}
+                          {message.sender_phone}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-red-600">
-                      {message.lastError || "Unknown error"}
+                      {message.last_error || "Unknown error"}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {message.retryCount} / {message.maxRetries}
+                        {message.retry_count} / {message.max_retries}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {(() => {
-                        if (!message.lastErrorAt) return "Unknown";
-                        const date = new Date(message.lastErrorAt);
-                        if (isNaN(date.getTime())) return "Invalid date";
-                        return formatDistanceToNow(date, { addSuffix: true });
+                        if (!message.last_error_at) return "Unknown";
+                        return formatDistanceToNow(message.last_error_at, {
+                          addSuffix: true,
+                        });
                       })()}
                     </TableCell>
                     <TableCell className="text-right">
@@ -174,7 +173,7 @@ export function FailedMessagesTable() {
                               Full Error Message:
                             </h4>
                             <p className="text-sm text-red-600 font-mono">
-                              {message.lastError ||
+                              {message.last_error ||
                                 "No error message available"}
                             </p>
                           </div>
@@ -183,24 +182,21 @@ export function FailedMessagesTable() {
                               Raw Message Text:
                             </h4>
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {message.rawText}
+                              {message.raw_text}
                             </p>
                           </div>
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                               <span className="font-semibold">Message ID:</span>{" "}
                               <span className="font-mono text-xs">
-                                {message.whatsappMessageId}
+                                {message.whatsapp_message_id}
                               </span>
                             </div>
                             <div>
                               <span className="font-semibold">Created:</span>{" "}
                               {(() => {
-                                if (!message.createdAt) return "Unknown";
-                                const date = new Date(message.createdAt);
-                                if (isNaN(date.getTime()))
-                                  return "Invalid date";
-                                return formatDistanceToNow(date, {
+                                if (!message.created_at) return "Unknown";
+                                return formatDistanceToNow(message.created_at, {
                                   addSuffix: true,
                                 });
                               })()}
@@ -221,13 +217,13 @@ export function FailedMessagesTable() {
       {total > 20 && (
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">
-            Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, total)} of{" "}
+            Showing {page * 20 + 1} to {Math.min((page + 1) * 20, total)} of{" "}
             {total} messages
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+              disabled={page === 0}
               variant="outline"
               size="sm"
             >
@@ -235,7 +231,7 @@ export function FailedMessagesTable() {
             </Button>
             <Button
               onClick={() => setPage((p) => p + 1)}
-              disabled={page * 20 >= total}
+              disabled={(page + 1) * 20 >= total}
               variant="outline"
               size="sm"
             >
