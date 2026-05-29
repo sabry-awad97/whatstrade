@@ -27,7 +27,13 @@ pub async fn run() {
         Ok(())
     });
 
-    let builder = builder.invoke_handler(tauri::generate_handler![ipc::commands::health]);
+    let builder = builder.invoke_handler(tauri::generate_handler![
+        ipc::commands::health,
+        ipc::commands::auth_register,
+        ipc::commands::auth_login,
+        ipc::commands::auth_refresh,
+        ipc::commands::auth_validate,
+    ]);
 
     builder
         .run(tauri::generate_context!())
