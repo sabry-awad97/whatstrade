@@ -11,6 +11,7 @@ import {
 import type { MatchResponse } from "@/api/matches";
 import { ConfidenceRing } from "./confidence-ring";
 import { BAND_COLORS, STATUS_COLORS } from "./constants";
+import { getConfidenceBand } from "./utils";
 
 interface MatchDetailViewProps {
   match: MatchResponse;
@@ -33,16 +34,8 @@ export function MatchDetailView({
   isConfirming,
   isRejecting,
 }: MatchDetailViewProps) {
-  // Calculate confidence band from score
   const score = parseFloat(match.score);
-  const confidenceBand =
-    score >= 0.85
-      ? "auto"
-      : score >= 0.7
-        ? "suggest"
-        : score >= 0.5
-          ? "review"
-          : "reject";
+  const confidenceBand = getConfidenceBand(score);
   const color = BAND_COLORS[confidenceBand] ?? BAND_COLORS.none;
 
   // Calculate AI reasoning checks (simplified since we don't have score_breakdown)
@@ -193,7 +186,10 @@ export function MatchDetailView({
       {/* Score breakdown bars */}
       <div className="border border-border/60 rounded-xl p-4 bg-card">
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Score Breakdown
+          Score Breakdown{" "}
+          <span className="text-[10px] font-normal text-muted-foreground/60">
+            (estimated)
+          </span>
         </p>
         <div className="space-y-2.5">
           {[

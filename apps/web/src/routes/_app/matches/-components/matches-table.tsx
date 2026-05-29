@@ -28,6 +28,7 @@ import {
 import { GitMerge, ArrowUpDown } from "lucide-react";
 import type { MatchResponse } from "@/api/matches";
 import { STATUS_COLORS, BAND_COLORS, BAND_COLORS_ALPHA } from "./constants";
+import { getConfidenceBand } from "./utils";
 
 // Extend TanStack Table meta type
 declare module "@tanstack/react-table" {
@@ -126,14 +127,7 @@ export function MatchesTable({
         header: "Band",
         cell: ({ row }) => {
           const score = parseFloat(row.original.score);
-          const band =
-            score >= 0.85
-              ? "auto"
-              : score >= 0.7
-                ? "suggest"
-                : score >= 0.5
-                  ? "review"
-                  : "reject";
+          const band = getConfidenceBand(score);
           const color = BAND_COLORS[band] ?? BAND_COLORS.none;
           const colorAlpha = BAND_COLORS_ALPHA[band] ?? BAND_COLORS_ALPHA.none;
           return (

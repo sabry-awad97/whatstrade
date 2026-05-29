@@ -2,6 +2,7 @@ import { GitMerge, ChevronRight } from "lucide-react";
 import type { MatchResponse } from "@/api/matches";
 import { BAND_COLORS, BAND_COLORS_ALPHA } from "./constants";
 import { ConfidenceRing } from "./confidence-ring";
+import { getConfidenceBand } from "./utils";
 
 interface MatchCardProps {
   match: MatchResponse;
@@ -14,16 +15,8 @@ interface MatchCardProps {
  * Displays a match in card format with key details and confidence ring.
  */
 export function MatchCard({ match, onSelect }: MatchCardProps) {
-  // Calculate confidence band from score
   const score = parseFloat(match.score);
-  const confidenceBand =
-    score >= 0.85
-      ? "auto"
-      : score >= 0.7
-        ? "suggest"
-        : score >= 0.5
-          ? "review"
-          : "reject";
+  const confidenceBand = getConfidenceBand(score);
   const color = BAND_COLORS[confidenceBand] ?? BAND_COLORS.none;
   const colorAlpha =
     BAND_COLORS_ALPHA[confidenceBand] ?? BAND_COLORS_ALPHA.none;
