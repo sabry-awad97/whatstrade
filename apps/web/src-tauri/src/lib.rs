@@ -55,6 +55,9 @@ pub async fn run() {
         ipc::commands::list_audit_log,
         ipc::commands::get_dashboard_stats,
         ipc::commands::simulate_message,
+        ipc::commands::sync_groups,
+        ipc::commands::get_failed_messages,
+        ipc::commands::retry_message,
     ]);
 
     builder

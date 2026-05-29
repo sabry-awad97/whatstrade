@@ -9,6 +9,7 @@ pub mod review;
 pub mod simulate;
 pub mod stats;
 pub mod weights;
+pub mod whatsapp;
 
 pub use audit::*;
 pub use auth::*;
@@ -21,3 +22,4 @@ pub use review::*;
 pub use simulate::*;
 pub use stats::*;
 pub use weights::*;
+pub use whatsapp::*;
