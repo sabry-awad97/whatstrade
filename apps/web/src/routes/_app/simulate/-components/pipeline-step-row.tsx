@@ -1,11 +1,5 @@
-import { CheckCircle, XCircle, Info, Loader2 } from "lucide-react";
-
-export interface PipelineStep {
-  step: string;
-  status: string;
-  detail: string;
-  durationMs: number;
-}
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import type { PipelineStep } from "@/api/simulate";
 
 interface PipelineStepRowProps {
   step: PipelineStep;
@@ -24,18 +18,14 @@ export function PipelineStepRow({ step, index, active }: PipelineStepRowProps) {
       ? CheckCircle
       : step.status === "error"
         ? XCircle
-        : step.status === "skipped"
-          ? Info
-          : Loader2;
+        : Loader2;
 
   const color =
     step.status === "success"
       ? "text-green-500"
       : step.status === "error"
         ? "text-destructive"
-        : step.status === "skipped"
-          ? "text-muted-foreground"
-          : "text-primary";
+        : "text-primary";
 
   return (
     <div
@@ -54,9 +44,9 @@ export function PipelineStepRow({ step, index, active }: PipelineStepRowProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-medium">{step.step}</span>
-          {step.durationMs > 0 && (
+          {step.duration_ms > 0 && (
             <span className="text-[10px] text-muted-foreground tabular-nums">
-              {step.durationMs}ms
+              {step.duration_ms}ms
             </span>
           )}
         </div>

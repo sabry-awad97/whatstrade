@@ -18,6 +18,19 @@ use tera::{Context, Tera};
 use tracing::info;
 use utilities::Id;
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/// Minimum score threshold for match candidates (0.0 - 1.0)
+const SCORE_THRESHOLD: f64 = 0.5;
+
+/// Maximum number of candidates to fetch from database
+const MAX_CANDIDATES: u64 = 50;
+
+/// Maximum message length in characters
+const MAX_MESSAGE_LENGTH: usize = 1000;
+
 /// Service for message simulation
 pub struct SimulateService {
     db: Arc<DatabaseConnection>,
@@ -90,10 +103,11 @@ impl SimulateService {
             return Err(ServiceError::validation("Raw text cannot be empty"));
         }
 
-        if raw_text.len() > 1000 {
+        if raw_text.len() > MAX_MESSAGE_LENGTH {
             return Err(ServiceError::validation(format!(
-                "Raw text too long ({} chars, max 1000)",
-                raw_text.len()
+                "Raw text too long ({} chars, max {})",
+                raw_text.len(),
+                MAX_MESSAGE_LENGTH
             )));
         }
         pipeline_steps.push(PipelineStepDto {
@@ -396,7 +410,7 @@ impl SimulateService {
             // Score against requests
             let requests = request::Entity::find()
                 .filter(request::Column::Status.eq(request::RequestStatus::Active))
-                .limit(50)
+                .limit(MAX_CANDIDATES)
                 .all(self.db.as_ref())
                 .await?;
 
@@ -404,8 +418,7 @@ impl SimulateService {
                 let req_params = MatchParams::from_request(&req);
                 let score = self.calculate_score(&extracted_params, &req_params, weights);
 
-                if score > 0.5 {
-                    // Threshold
+                if score > SCORE_THRESHOLD {
                     candidates.push(CandidateDto {
                         id: req.id().to_string(),
                         medication_name: req.medication_name().clone(),
@@ -421,7 +434,7 @@ impl SimulateService {
             // Score against offers
             let offers = offer::Entity::find()
                 .filter(offer::Column::Status.eq(offer::OfferStatus::Active))
-                .limit(50)
+                .limit(MAX_CANDIDATES)
                 .all(self.db.as_ref())
                 .await?;
 
@@ -429,7 +442,7 @@ impl SimulateService {
                 let off_params = MatchParams::from_offer(&off);
                 let score = self.calculate_score(&extracted_params, &off_params, weights);
 
-                if score > 0.5 {
+                if score > SCORE_THRESHOLD {
                     candidates.push(CandidateDto {
                         id: off.id().to_string(),
                         medication_name: off.medication_name().clone(),
@@ -600,7 +613,7 @@ impl<'a> MatchParams<'a> {
             price: offer
                 .price()
                 .as_ref()
-                .map(|d| d.to_string().parse::<f64>().unwrap_or(0.0)),
+                .and_then(|d| d.to_string().parse::<f64>().ok()),
             created_at: offer.created_at(),
         }
     }
@@ -613,7 +626,7 @@ impl<'a> MatchParams<'a> {
             price: request
                 .max_price()
                 .as_ref()
-                .map(|d| d.to_string().parse::<f64>().unwrap_or(0.0)),
+                .and_then(|d| d.to_string().parse::<f64>().ok()),
             created_at: request.created_at(),
         }
     }

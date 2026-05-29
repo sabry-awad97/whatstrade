@@ -27,18 +27,23 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import type {
-  SimulateResponse,
-  PipelineStep as ApiPipelineStep,
-} from "@/api/simulate";
+import type { SimulateResponse, PipelineStep } from "@/api/simulate";
 import { useSimulateMessage } from "@/hooks/simulate";
 import {
   ConfidenceRing,
   MatchCard,
   PipelineStepRow,
   SAMPLE_MESSAGES,
-  type PipelineStep,
+  viewStrategies,
+  groupMedicationsByIndex,
+  type ViewMode,
 } from "./-components";
+
+// Constants
+const ANIMATION_DELAY_MS = 180;
+const SCORE_THRESHOLD = 0.5;
+const MAX_CANDIDATES = 50;
+const MAX_MESSAGE_LENGTH = 1000;
 
 export const Route = createFileRoute("/_app/simulate/")({
   component: RouteComponent,
@@ -48,22 +53,30 @@ function RouteComponent() {
   const [rawText, setRawText] = useState("");
   const [messageType, setMessageType] = useState<string>("auto");
   const [insertIntoSystem, setInsertIntoSystem] = useState(false);
-  const [result, setResult] = useState<SimulateResponse | null>(null);
-  const [selectedCandidateIdx, setSelectedCandidateIdx] = useState(0);
-  const [streamingSteps, setStreamingSteps] = useState<PipelineStep[]>([]);
-  const [viewMode, setViewMode] = useState<"grid" | "table" | "list">("table");
+  const [simulationState, setSimulationState] = useState<{
+    result: SimulateResponse | null;
+    streamingSteps: PipelineStep[];
+    selectedCandidateIdx: number;
+  }>({
+    result: null,
+    streamingSteps: [],
+    selectedCandidateIdx: 0,
+  });
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const resultRef = useRef<HTMLDivElement>(null);
-  const isMountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const simulateMutation = useSimulateMessage();
 
+  const { result, streamingSteps, selectedCandidateIdx } = simulationState;
   const topCandidate = result?.candidates[selectedCandidateIdx] ?? null;
 
-  // Track mount status for cleanup
+  // Cleanup abort controller on unmount
   useEffect(() => {
-    isMountedRef.current = true;
     return () => {
-      isMountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
@@ -75,15 +88,30 @@ function RouteComponent() {
       return;
     }
 
-    setResult(null);
-    setStreamingSteps([
-      {
-        step: "Sending to AI…",
-        status: "pending",
-        detail: "Parsing Arabic message",
-        durationMs: 0,
-      },
-    ]);
+    if (rawText.length > MAX_MESSAGE_LENGTH) {
+      toast.error("Message too long", {
+        description: `Maximum ${MAX_MESSAGE_LENGTH} characters allowed.`,
+      });
+      return;
+    }
+
+    // Cancel any ongoing animation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    setSimulationState({
+      result: null,
+      streamingSteps: [
+        {
+          step: "Sending to AI…",
+          status: "pending",
+          detail: "Parsing Arabic message",
+          duration_ms: 0,
+        },
+      ],
+      selectedCandidateIdx: 0,
+    });
 
     simulateMutation.mutate(
       {
@@ -93,41 +121,59 @@ function RouteComponent() {
       },
       {
         onSuccess: async (data) => {
-          // Use real pipeline steps from backend
-          const backendSteps: PipelineStep[] = data.pipeline_steps.map(
-            (step) => ({
-              step: step.step,
-              status: step.status,
-              detail: step.detail,
-              durationMs: step.duration_ms,
-            }),
-          );
+          // Create new abort controller for this animation
+          const abortController = new AbortController();
+          abortControllerRef.current = abortController;
 
-          // Animate steps appearing with mount check
-          setStreamingSteps([]);
-          for (let i = 0; i < backendSteps.length; i++) {
-            if (!isMountedRef.current) return;
-            await new Promise((r) => setTimeout(r, 180));
-            if (!isMountedRef.current) return;
-            setStreamingSteps((prev) => [...prev, backendSteps[i]]);
-          }
+          const backendSteps = data.pipeline_steps;
 
-          if (!isMountedRef.current) return;
+          try {
+            // Animate steps appearing with abort check
+            setSimulationState((prev) => ({
+              ...prev,
+              streamingSteps: [],
+            }));
 
-          setResult(data);
-          setSelectedCandidateIdx(0);
+            for (let i = 0; i < backendSteps.length; i++) {
+              if (abortController.signal.aborted) return;
+              await new Promise((r) => setTimeout(r, ANIMATION_DELAY_MS));
+              if (abortController.signal.aborted) return;
 
-          if (data.inserted_id) {
-            toast.success("Inserted into system", {
-              description: `${data.parsed_type} #${data.inserted_id} created with ${data.candidates.length} matches.`,
+              setSimulationState((prev) => ({
+                ...prev,
+                streamingSteps: [...prev.streamingSteps, backendSteps[i]],
+              }));
+            }
+
+            if (abortController.signal.aborted) return;
+
+            // Batch final state update
+            setSimulationState({
+              result: data,
+              streamingSteps: backendSteps,
+              selectedCandidateIdx: 0,
             });
+
+            if (data.inserted_id) {
+              toast.success("Inserted into system", {
+                description: `${data.parsed_type} #${data.inserted_id} created with ${data.candidates.length} matches.`,
+              });
+            }
+          } finally {
+            // Cleanup
+            if (abortControllerRef.current === abortController) {
+              abortControllerRef.current = null;
+            }
           }
         },
         onError: (error) => {
           toast.error("Simulation failed", {
             description: error.message,
           });
-          setStreamingSteps([]);
+          setSimulationState((prev) => ({
+            ...prev,
+            streamingSteps: [],
+          }));
         },
       },
     );
@@ -339,197 +385,10 @@ function RouteComponent() {
                   </div>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto pr-4">
-                  {/* Group fields by medication */}
-                  {(() => {
-                    // Group fields by medication index
-                    const medicationGroups: Record<
-                      string,
-                      typeof result.parsed_fields
-                    > = {};
-                    result.parsed_fields.forEach((field) => {
-                      const match = field.field.match(/^medication\[(\d+)\]\./);
-                      const groupKey = match ? `med_${match[1]}` : "med_0";
-                      if (!medicationGroups[groupKey]) {
-                        medicationGroups[groupKey] = [];
-                      }
-                      medicationGroups[groupKey].push(field);
-                    });
-
-                    // Grid View
-                    if (viewMode === "grid") {
-                      return Object.entries(medicationGroups).map(
-                        ([groupKey, fields]) => (
-                          <div key={groupKey} className="mb-4 last:mb-0">
-                            {Object.keys(medicationGroups).length > 1 && (
-                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                                Medication{" "}
-                                {parseInt(groupKey.replace("med_", "")) + 1}
-                              </p>
-                            )}
-                            <div className="grid grid-cols-5 gap-3">
-                              {fields.map((field) => (
-                                <div
-                                  key={field.field}
-                                  className="p-2.5 rounded-lg bg-background border border-border/50"
-                                >
-                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                                    {field.field
-                                      .replace(/^medication\[\d+\]\./, "")
-                                      .replace(/([A-Z])/g, " $1")}
-                                  </p>
-                                  <p className="text-sm font-semibold mt-0.5">
-                                    {field.value || "—"}
-                                  </p>
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                                      <div
-                                        className="h-full rounded-full bg-primary"
-                                        style={{
-                                          width: `${field.confidence * 100}%`,
-                                        }}
-                                      />
-                                    </div>
-                                    <span className="text-[9px] tabular-nums text-muted-foreground">
-                                      {(field.confidence * 100).toFixed(0)}%
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ),
-                      );
-                    }
-
-                    // Table View
-                    if (viewMode === "table") {
-                      return (
-                        <div className="border border-border/50 rounded-lg overflow-hidden">
-                          <table className="w-full text-xs">
-                            <thead className="bg-muted/50">
-                              <tr>
-                                <th className="text-left p-2 font-semibold">
-                                  #
-                                </th>
-                                <th className="text-left p-2 font-semibold">
-                                  Name
-                                </th>
-                                <th className="text-left p-2 font-semibold">
-                                  Concentration
-                                </th>
-                                <th className="text-left p-2 font-semibold">
-                                  Form
-                                </th>
-                                <th className="text-left p-2 font-semibold">
-                                  Quantity
-                                </th>
-                                <th className="text-left p-2 font-semibold">
-                                  Expiry
-                                </th>
-                                <th className="text-left p-2 font-semibold">
-                                  Confidence
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {Object.entries(medicationGroups).map(
-                                ([groupKey, fields]) => {
-                                  const medNum =
-                                    parseInt(groupKey.replace("med_", "")) + 1;
-                                  const fieldMap = Object.fromEntries(
-                                    fields.map((f) => [
-                                      f.field.replace(
-                                        /^medication\[\d+\]\./,
-                                        "",
-                                      ),
-                                      f,
-                                    ]),
-                                  );
-                                  return (
-                                    <tr
-                                      key={groupKey}
-                                      className="border-t border-border/50 hover:bg-muted/30"
-                                    >
-                                      <td className="p-2 font-medium">
-                                        {medNum}
-                                      </td>
-                                      <td className="p-2">
-                                        {fieldMap.medicationName?.value || "—"}
-                                      </td>
-                                      <td className="p-2">
-                                        {fieldMap.concentration?.value || "—"}
-                                      </td>
-                                      <td className="p-2">
-                                        {fieldMap.form?.value || "—"}
-                                      </td>
-                                      <td className="p-2">
-                                        {fieldMap.quantity?.value || "—"}
-                                      </td>
-                                      <td className="p-2">
-                                        {fieldMap.expiry?.value || "—"}
-                                      </td>
-                                      <td className="p-2">
-                                        <span className="text-[10px] tabular-nums">
-                                          {(
-                                            (fieldMap.medicationName
-                                              ?.confidence || 0) * 100
-                                          ).toFixed(0)}
-                                          %
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  );
-                                },
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      );
-                    }
-
-                    // List View
-                    return Object.entries(medicationGroups).map(
-                      ([groupKey, fields]) => {
-                        const medNum =
-                          parseInt(groupKey.replace("med_", "")) + 1;
-                        return (
-                          <div
-                            key={groupKey}
-                            className="mb-3 last:mb-0 p-3 rounded-lg border border-border/50 bg-background"
-                          >
-                            {Object.keys(medicationGroups).length > 1 && (
-                              <p className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-2">
-                                Medication {medNum}
-                              </p>
-                            )}
-                            <div className="space-y-1.5">
-                              {fields.map((field) => (
-                                <div
-                                  key={field.field}
-                                  className="flex items-center justify-between text-xs"
-                                >
-                                  <span className="text-muted-foreground capitalize">
-                                    {field.field
-                                      .replace(/^medication\[\d+\]\./, "")
-                                      .replace(/([A-Z])/g, " $1")}
-                                    :
-                                  </span>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">
-                                      {field.value || "—"}
-                                    </span>
-                                    <span className="text-[10px] tabular-nums text-muted-foreground">
-                                      ({(field.confidence * 100).toFixed(0)}%)
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      },
-                    );
-                  })()}
+                  {/* Render using Strategy Pattern */}
+                  {viewStrategies
+                    .get(viewMode)
+                    ?.render(groupMedicationsByIndex(result.parsed_fields))}
                 </div>
                 <p className="text-xs text-muted-foreground italic border-t border-border/40 pt-2 mt-3">
                   {result.ai_reasoning}
@@ -552,7 +411,12 @@ function RouteComponent() {
                       {result.candidates.map((_, i) => (
                         <button
                           key={i}
-                          onClick={() => setSelectedCandidateIdx(i)}
+                          onClick={() =>
+                            setSimulationState((prev) => ({
+                              ...prev,
+                              selectedCandidateIdx: i,
+                            }))
+                          }
                           className={`w-5 h-5 rounded text-[9px] font-bold border transition-colors ${
                             selectedCandidateIdx === i
                               ? "bg-primary text-primary-foreground border-primary"
@@ -655,7 +519,12 @@ function RouteComponent() {
                       {result.candidates.slice(1).map((c, i) => (
                         <button
                           key={c.id}
-                          onClick={() => setSelectedCandidateIdx(i + 1)}
+                          onClick={() =>
+                            setSimulationState((prev) => ({
+                              ...prev,
+                              selectedCandidateIdx: i + 1,
+                            }))
+                          }
                           className="text-left"
                         >
                           <MatchCard
@@ -676,7 +545,7 @@ function RouteComponent() {
                     No matching candidates found
                   </p>
                   <p className="text-xs mt-1 opacity-70">
-                    Score threshold is 50% — no existing
+                    Score threshold is {SCORE_THRESHOLD * 100}% — no existing
                     {result.parsed_type === "offer"
                       ? " requests"
                       : " offers"}{" "}

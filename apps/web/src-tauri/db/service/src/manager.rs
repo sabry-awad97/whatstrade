@@ -234,10 +234,15 @@ impl ServiceManager {
                 tracing::info!("Migrations completed successfully");
             }
             Err(e) => {
-                tracing::warn!(
-                    "Migration error (this might be expected if table already exists): {:?}",
-                    e
-                );
+                // Check if this is a "table already exists" error (expected in some cases)
+                let error_msg = e.to_string();
+                if error_msg.contains("already exists") || error_msg.contains("duplicate") {
+                    tracing::debug!("Migrations already applied, skipping");
+                } else {
+                    // Real migration error - this is critical
+                    tracing::error!("Migration failed: {:?}", e);
+                    return Err(InitializationError::Database(e));
+                }
             }
         }
 
@@ -272,9 +277,10 @@ impl ServiceManager {
             .ok_or_else(|| InitializationError::MissingAiConfig)?;
 
         // Validate AI config has required fields
-        if ai_config.api_key.is_empty() || ai_config.api_key == "not-needed" {
+        // Accept "not-needed" for local development (Ollama/LM Studio)
+        if ai_config.api_key.is_empty() {
             return Err(InitializationError::InvalidAiConfig(
-                "AI API key is required and cannot be 'not-needed'".to_string(),
+                "AI API key cannot be empty".to_string(),
             ));
         }
 
