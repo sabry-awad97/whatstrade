@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Button } from "@workspace/ui/components/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { authClient } from "@/lib/auth-client";
 import type { MatchResponse } from "@/api/matches";
 import {
   useGetMatchStats,
@@ -21,8 +20,8 @@ import {
 
 export const Route = createFileRoute("/_app/matches/")({
   component: RouteComponent,
-  beforeLoad: async () => {
-    const session = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const session = await context.authClient.getSession();
     if (!session.data) {
       redirect({
         to: "/login",

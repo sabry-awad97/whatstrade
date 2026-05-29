@@ -26,7 +26,6 @@
     "@tanstack/react-table": "^8.21.3",
     "@tauri-apps/api": "^2.11.0",
     "@workspace/env": "workspace:*",
-    "@workspace/schemas": "workspace:*",
     "@workspace/ui": "workspace:*",
     "better-auth": "catalog:",
     "date-fns": "^4.2.1",

@@ -1,6 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { authClient } from "@/lib/auth-client";
 import { useGetDashboardStats } from "@/hooks/dashboard";
 import { useGetMatchStats, useListMatches } from "@/hooks/matches";
 import { useListOffers } from "@/hooks/offers";
@@ -16,8 +15,8 @@ import {
 
 export const Route = createFileRoute("/_app/dashboard/")({
   component: RouteComponent,
-  beforeLoad: async () => {
-    const session = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const session = await context.authClient.getSession();
     if (!session.data) {
       redirect({
         to: "/login",

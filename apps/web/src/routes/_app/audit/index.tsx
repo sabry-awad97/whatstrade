@@ -1,13 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { authClient } from "@/lib/auth-client";
 import { useListAuditLog } from "@/hooks/audit";
 import { AuditHeader, AuditTable } from "./-components";
 
 export const Route = createFileRoute("/_app/audit/")({
   component: RouteComponent,
-  beforeLoad: async () => {
-    const session = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const session = await context.authClient.getSession();
     if (!session.data) {
       redirect({
         to: "/login",

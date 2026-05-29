@@ -24,7 +24,6 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-import { authClient } from "@/lib/auth-client";
 import { useSimulateMessage } from "@/hooks/simulate";
 import type { SimulateResponse } from "@/api/simulate";
 import {
@@ -37,8 +36,8 @@ import {
 
 export const Route = createFileRoute("/_app/simulate/")({
   component: RouteComponent,
-  beforeLoad: async () => {
-    const session = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const session = await context.authClient.getSession();
     if (!session.data) {
       redirect({
         to: "/login",

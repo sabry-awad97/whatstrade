@@ -1,22 +1,21 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
-import { authClient } from "@/lib/auth-client";
 import { useGetWeights, useUpdateWeights } from "@/hooks/weights";
 import {
+  DEFAULT_WEIGHTS,
+  WeightsChart,
   WeightsHeader,
   WeightsSliders,
-  WeightsChart,
-  DEFAULT_WEIGHTS,
   type WeightKey,
 } from "./-components";
 
 export const Route = createFileRoute("/_app/weights/")({
   component: RouteComponent,
-  beforeLoad: async () => {
-    const session = await authClient.getSession();
+  beforeLoad: async ({ context }) => {
+    const session = await context.authClient.getSession();
     if (!session.data) {
       redirect({
         to: "/login",

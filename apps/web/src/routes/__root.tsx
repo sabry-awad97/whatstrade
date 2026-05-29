@@ -11,11 +11,13 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Toaster } from "@workspace/ui/components/sonner";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import type { AuthClient } from "@/lib/auth-client";
 
 import "../index.css";
 
 export interface RouterAppContext {
   queryClient: QueryClient;
+  authClient: AuthClient;
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
