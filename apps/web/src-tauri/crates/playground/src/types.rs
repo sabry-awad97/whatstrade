@@ -1,88 +1,13 @@
-//! Core types for the AI Playground
+//! CLI-specific types for the AI Playground
 
-use serde::{Deserialize, Serialize};
+use ai_client::ChatResponse;
 use std::time::Duration;
 
-/// Configuration for the AI playground
-#[derive(Debug, Clone, Deserialize)]
-pub struct Config {
-    /// Base URL for the OpenAI-compatible API
-    #[serde(default = "default_base_url")]
-    pub base_url: String,
+// Re-export from ai-client
+pub use ai_client::{ChatMessage, Config};
 
-    /// Model name to use
-    #[serde(default = "default_model")]
-    pub model: String,
-
-    /// API key for authentication
-    #[serde(default = "default_api_key")]
-    pub api_key: String,
-
-    /// Maximum number of concurrent requests
-    #[serde(default = "default_concurrency_limit")]
-    pub concurrency_limit: usize,
-}
-
-fn default_base_url() -> String {
-    "http://localhost:12434/engines/v1".to_string()
-}
-
-fn default_model() -> String {
-    "gemma4".to_string()
-}
-
-fn default_api_key() -> String {
-    "not-needed".to_string()
-}
-
-fn default_concurrency_limit() -> usize {
-    5
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            base_url: "http://localhost:12434/engines/v1".to_string(),
-            model: "gemma4".to_string(),
-            api_key: "not-needed".to_string(),
-            concurrency_limit: 5,
-        }
-    }
-}
-
-/// Result of executing a single prompt
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PromptResult {
-    /// The original prompt
-    pub prompt: String,
-    /// The generated response
-    pub response: String,
-    /// Number of input tokens used
-    pub input_tokens: u32,
-    /// Number of output tokens generated
-    pub output_tokens: u32,
-    /// Total tokens (input + output)
-    pub total_tokens: u32,
-    /// Time taken to generate the response
-    #[serde(with = "duration_serde")]
-    pub duration: Duration,
-    /// Reason for completion (e.g., "stop", "length")
-    pub finish_reason: String,
-    /// Tokens per second (output tokens / duration in seconds)
-    pub tokens_per_sec: f64,
-}
-
-impl PromptResult {
-    /// Calculate tokens per second
-    pub fn calculate_tokens_per_sec(&mut self) {
-        let duration_secs = self.duration.as_secs_f64();
-        self.tokens_per_sec = if duration_secs > 0.0 {
-            self.output_tokens as f64 / duration_secs
-        } else {
-            0.0
-        };
-    }
-}
+/// Result of executing a single prompt (alias for ChatResponse)
+pub type PromptResult = ChatResponse;
 
 /// Summary of execution results
 #[derive(Debug, Clone)]
@@ -153,26 +78,5 @@ impl BenchmarkResult {
             concurrent,
             speedup,
         }
-    }
-}
-
-/// Custom serde module for Duration
-mod duration_serde {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use std::time::Duration;
-
-    pub fn serialize<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        duration.as_millis().serialize(serializer)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let millis = u64::deserialize(deserializer)?;
-        Ok(Duration::from_millis(millis))
     }
 }

@@ -2,12 +2,11 @@
 //!
 //! Test OpenAI-compatible models with concurrent execution and benchmarking
 
+use ai_client::{load_dotenv, load_from_env, AiClient};
 use anyhow::{Context, Result};
 use clap::Parser;
 use colored::*;
 use playground::{
-    client::PlaygroundClient,
-    config::{load_dotenv, load_from_env},
     display::{display_benchmark, display_config, display_single_result, display_summary},
     executor::{execute_concurrent, execute_sequential, execute_single},
     types::BenchmarkResult,
@@ -92,7 +91,7 @@ async fn main() -> Result<()> {
     };
 
     // Create client
-    let client = PlaygroundClient::new(&config).context("Failed to create client")?;
+    let client = AiClient::new(&config).context("Failed to create client")?;
 
     // Execute based on mode
     if args.benchmark && prompts.len() > 1 {
@@ -114,7 +113,7 @@ async fn main() -> Result<()> {
 }
 
 /// Run a single prompt
-async fn run_single(client: &PlaygroundClient, prompt: &str, no_stream: bool) -> Result<()> {
+async fn run_single(client: &AiClient, prompt: &str, no_stream: bool) -> Result<()> {
     let result = execute_single(client, prompt, false).await?;
     display_single_result(&result);
 
@@ -138,7 +137,7 @@ async fn run_single(client: &PlaygroundClient, prompt: &str, no_stream: bool) ->
 }
 
 /// Run sequential execution
-async fn run_sequential(client: &PlaygroundClient, prompts: &[String]) -> Result<()> {
+async fn run_sequential(client: &AiClient, prompts: &[String]) -> Result<()> {
     println!(
         "{}",
         format!("\n📋 Running {} prompts sequentially...\n", prompts.len())
@@ -153,7 +152,7 @@ async fn run_sequential(client: &PlaygroundClient, prompts: &[String]) -> Result
 }
 
 /// Run concurrent execution
-async fn run_concurrent(client: &PlaygroundClient, prompts: &[String], limit: usize) -> Result<()> {
+async fn run_concurrent(client: &AiClient, prompts: &[String], limit: usize) -> Result<()> {
     println!(
         "{}",
         format!(
@@ -172,7 +171,7 @@ async fn run_concurrent(client: &PlaygroundClient, prompts: &[String], limit: us
 }
 
 /// Run benchmark comparing sequential vs concurrent
-async fn run_benchmark(client: &PlaygroundClient, prompts: &[String], limit: usize) -> Result<()> {
+async fn run_benchmark(client: &AiClient, prompts: &[String], limit: usize) -> Result<()> {
     println!(
         "{}",
         format!(

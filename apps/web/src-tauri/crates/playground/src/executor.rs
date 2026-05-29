@@ -1,17 +1,13 @@
 //! Execution strategies for prompts
 
-use crate::client::PlaygroundClient;
 use crate::types::{ExecutionSummary, PromptResult};
+use ai_client::AiClient;
 use anyhow::Result;
 use futures::stream::{self, StreamExt};
 use std::time::Instant;
 
 /// Execute a single prompt
-pub async fn execute_single(
-    client: &PlaygroundClient,
-    prompt: &str,
-    stream: bool,
-) -> Result<PromptResult> {
+pub async fn execute_single(client: &AiClient, prompt: &str, stream: bool) -> Result<PromptResult> {
     if stream {
         client.generate_stream(prompt).await
     } else {
@@ -20,10 +16,7 @@ pub async fn execute_single(
 }
 
 /// Execute multiple prompts sequentially
-pub async fn execute_sequential(
-    client: &PlaygroundClient,
-    prompts: &[String],
-) -> Result<ExecutionSummary> {
+pub async fn execute_sequential(client: &AiClient, prompts: &[String]) -> Result<ExecutionSummary> {
     let start = Instant::now();
     let mut results = Vec::with_capacity(prompts.len());
 
@@ -45,7 +38,7 @@ pub async fn execute_sequential(
 
 /// Execute multiple prompts concurrently with a limit
 pub async fn execute_concurrent(
-    client: &PlaygroundClient,
+    client: &AiClient,
     prompts: &[String],
     limit: usize,
 ) -> Result<ExecutionSummary> {

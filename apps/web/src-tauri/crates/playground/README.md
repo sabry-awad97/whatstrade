@@ -7,6 +7,7 @@ A high-performance Rust CLI tool for testing OpenAI-compatible AI models with su
 - ✅ **Single & Batch Execution**: Test one prompt or many
 - ✅ **Concurrent Processing**: Execute multiple prompts in parallel with configurable limits
 - ✅ **Streaming Support**: Real-time response streaming
+- ✅ **Structured Outputs**: Generate JSON responses with schema validation
 - ✅ **Performance Benchmarking**: Compare sequential vs concurrent execution
 - ✅ **Token Tracking**: Monitor input/output/total token usage
 - ✅ **Beautiful CLI**: Colored output with formatted tables
@@ -189,6 +190,13 @@ cargo build
 
 ```bash
 cargo run -- "Your prompt here"
+```
+
+### Run Examples
+
+```bash
+# Structured output example
+cargo run --example structured_output
 ```
 
 ### Test

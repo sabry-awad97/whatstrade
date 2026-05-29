@@ -1,27 +1,21 @@
 [package]
 name = "playground"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 authors = ["WhatsTrade Team"]
-description = "AI Playground - Test OpenAI-compatible models with concurrent execution and benchmarking"
+description = "AI Playground CLI - Test OpenAI-compatible models with concurrent execution and benchmarking"
 license = "MIT"
-
-[[bin]]
-name = "playground"
-path = "src/main.rs"
 
 [lib]
 name = "playground"
 path = "src/lib.rs"
 
 [dependencies]
+ai-client = { path = "../ai-client" }
 anyhow = "1.0.102"
-async-openai = { version = "0.40.2", features = ["chat-completion"] }
 clap = { version = "4.6.1", features = ["derive"] }
 colored = "3.1.1"
 comfy-table = "7.2.2"
-dotenvy.workspace = true
-envy = "0.4.2"
 futures = "0.3.32"
 humantime = "2.3.0"
 serde = { workspace = true, features = ["derive"] }

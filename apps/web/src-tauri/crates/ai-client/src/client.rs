@@ -1,27 +1,31 @@
-//! OpenAI client wrapper for the AI Playground
+//! OpenAI-compatible AI client
 
-use crate::types::{Config, PromptResult};
+use crate::types::{ChatResponse, Config};
 use anyhow::{Context, Result};
 use async_openai::{
     Client,
     config::OpenAIConfig,
     types::chat::{
-        ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
-        CreateChatCompletionRequestArgs,
+        ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
+        ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs, ResponseFormat,
+        ResponseFormatJsonSchema,
     },
 };
 use futures::StreamExt;
+use schemars::{JsonSchema, schema_for};
+use serde::de::DeserializeOwned;
 use std::io::{Write, stdout};
 use std::time::Instant;
 
-/// Wrapper around the async-openai client
-pub struct PlaygroundClient {
+/// AI client for OpenAI-compatible APIs
+pub struct AiClient {
     client: Client<OpenAIConfig>,
     model: String,
+    system_prompt: Option<String>,
 }
 
-impl PlaygroundClient {
-    /// Create a new playground client from configuration
+impl AiClient {
+    /// Create a new AI client from configuration
     pub fn new(config: &Config) -> Result<Self> {
         let openai_config = OpenAIConfig::new()
             .with_api_key(&config.api_key)
@@ -32,18 +36,37 @@ impl PlaygroundClient {
         Ok(Self {
             client,
             model: config.model.clone(),
+            system_prompt: None,
         })
     }
 
+    /// Set a default system prompt for all requests
+    pub fn with_system_prompt(mut self, prompt: impl Into<String>) -> Self {
+        self.system_prompt = Some(prompt.into());
+        self
+    }
+
+    /// Get the current system prompt
+    pub fn system_prompt(&self) -> Option<&str> {
+        self.system_prompt.as_deref()
+    }
+
     /// Generate a response for a single prompt
-    pub async fn generate(&self, prompt: &str) -> Result<PromptResult> {
+    ///
+    /// Uses the default system prompt if set, otherwise uses a generic assistant prompt
+    pub async fn generate(&self, prompt: &str) -> Result<ChatResponse> {
         let start = Instant::now();
+
+        let system_content = self
+            .system_prompt
+            .as_deref()
+            .unwrap_or("You are a helpful AI assistant.");
 
         let request = CreateChatCompletionRequestArgs::default()
             .model(&self.model)
             .messages([
                 ChatCompletionRequestSystemMessageArgs::default()
-                    .content("You are a helpful AI assistant.")
+                    .content(system_content)
                     .build()?
                     .into(),
                 ChatCompletionRequestUserMessageArgs::default()
@@ -84,7 +107,7 @@ impl PlaygroundClient {
         let output_tokens = usage.completion_tokens;
         let total_tokens = usage.total_tokens;
 
-        let mut result = PromptResult {
+        let mut result = ChatResponse {
             prompt: prompt.to_string(),
             response: response_text,
             input_tokens,
@@ -101,14 +124,21 @@ impl PlaygroundClient {
     }
 
     /// Stream a response for a single prompt (returns final result)
-    pub async fn generate_stream(&self, prompt: &str) -> Result<PromptResult> {
+    ///
+    /// Uses the default system prompt if set, otherwise uses a generic assistant prompt
+    pub async fn generate_stream(&self, prompt: &str) -> Result<ChatResponse> {
         let start = Instant::now();
+
+        let system_content = self
+            .system_prompt
+            .as_deref()
+            .unwrap_or("You are a helpful AI assistant.");
 
         let request = CreateChatCompletionRequestArgs::default()
             .model(&self.model)
             .messages([
                 ChatCompletionRequestSystemMessageArgs::default()
-                    .content("You are a helpful AI assistant.")
+                    .content(system_content)
                     .build()?
                     .into(),
                 ChatCompletionRequestUserMessageArgs::default()
@@ -166,7 +196,7 @@ impl PlaygroundClient {
         let duration = start.elapsed();
         let total_tokens = input_tokens + output_tokens;
 
-        let mut result = PromptResult {
+        let mut result = ChatResponse {
             prompt: prompt.to_string(),
             response: response_text,
             input_tokens,
@@ -181,16 +211,82 @@ impl PlaygroundClient {
 
         Ok(result)
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    /// Generate structured output with JSON schema validation
+    ///
+    /// # Type Parameters
+    /// * `T` - The type to deserialize the response into. Must implement `Serialize`, `DeserializeOwned`, and `JsonSchema`
+    ///
+    /// # Arguments
+    /// * `messages` - Custom messages for the chat completion
+    /// * `schema_name` - Name for the JSON schema (e.g., "math_reasoning")
+    /// * `schema_description` - Optional description for the schema
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// use schemars::JsonSchema;
+    /// use serde::{Deserialize, Serialize};
+    ///
+    /// #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+    /// #[serde(deny_unknown_fields)]
+    /// struct MathResponse {
+    ///     final_answer: String,
+    ///     steps: Vec<String>,
+    /// }
+    ///
+    /// let messages = vec![
+    ///     ChatCompletionRequestSystemMessage::from("You are a math tutor.").into(),
+    ///     ChatCompletionRequestUserMessage::from("Solve 2x + 5 = 15").into(),
+    /// ];
+    ///
+    /// let response: Option<MathResponse> = client
+    ///     .generate_structured(messages, "math_response", None)
+    ///     .await?;
+    /// ```
+    pub async fn generate_structured<T>(
+        &self,
+        messages: Vec<ChatCompletionRequestMessage>,
+        schema_name: &str,
+        schema_description: Option<String>,
+    ) -> Result<Option<T>>
+    where
+        T: serde::Serialize + DeserializeOwned + JsonSchema,
+    {
+        let schema = schema_for!(T);
+        let schema_value =
+            serde_json::to_value(&schema).context("Failed to serialize JSON schema")?;
 
-    #[test]
-    fn test_client_creation() {
-        let config = Config::default();
-        let result = PlaygroundClient::new(&config);
-        assert!(result.is_ok());
+        let response_format = ResponseFormat::JsonSchema {
+            json_schema: ResponseFormatJsonSchema {
+                description: schema_description,
+                name: schema_name.to_string(),
+                schema: schema_value,
+                strict: Some(true),
+            },
+        };
+
+        let request = CreateChatCompletionRequestArgs::default()
+            .model(&self.model)
+            .messages(messages)
+            .response_format(response_format)
+            .build()
+            .context("Failed to build structured output request")?;
+
+        let response = self
+            .client
+            .chat()
+            .create(request)
+            .await
+            .context("Failed to create structured chat completion")?;
+
+        for choice in response.choices {
+            if let Some(content) = choice.message.content {
+                let parsed: T = serde_json::from_str(&content)
+                    .context("Failed to parse structured response")?;
+                return Ok(Some(parsed));
+            }
+        }
+
+        Ok(None)
     }
 }
