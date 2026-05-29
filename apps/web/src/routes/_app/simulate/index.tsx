@@ -15,11 +15,14 @@ import {
   Database,
   FlaskConical,
   GitMerge,
+  Grid3x3,
+  List,
   Loader2,
   Package,
   Play,
   RotateCcw,
   ShoppingCart,
+  Table,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -48,6 +51,7 @@ function RouteComponent() {
   const [result, setResult] = useState<SimulateResponse | null>(null);
   const [selectedCandidateIdx, setSelectedCandidateIdx] = useState(0);
   const [streamingSteps, setStreamingSteps] = useState<PipelineStep[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "table" | "list">("table");
   const resultRef = useRef<HTMLDivElement>(null);
   const isMountedRef = useRef(true);
 
@@ -166,7 +170,7 @@ function RouteComponent() {
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               placeholder="الصق رسالة واتساب هنا…"
-              className="text-sm text-right min-h-[100px] font-arabic leading-relaxed resize-none"
+              className="text-sm text-right min-h-[100px] max-h-[300px] font-arabic leading-relaxed resize-none overflow-y-auto"
               dir="rtl"
               data-testid="textarea-simulate-input"
             />
@@ -290,19 +294,49 @@ function RouteComponent() {
             <div className="space-y-4 animate-fade-up max-w-4xl">
               {/* Parsed fields */}
               <div className="border border-border/60 rounded-xl p-4 bg-card">
-                <div className="flex items-center gap-2 mb-3">
-                  <Brain className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-semibold">AI Extraction</span>
-                  <Badge
-                    variant="outline"
-                    className={`text-[9px] h-4 px-1.5 ml-2 ${
-                      result.parsed_type === "offer"
-                        ? "text-green-600 border-green-300 bg-green-50 dark:bg-green-950/30"
-                        : "text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30"
-                    }`}
-                  >
-                    {result.parsed_type.toUpperCase()}
-                  </Badge>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Brain className="w-4 h-4 text-primary" />
+                    <span className="text-xs font-semibold">AI Extraction</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[9px] h-4 px-1.5 ml-2 ${
+                        result.parsed_type === "offer"
+                          ? "text-green-600 border-green-300 bg-green-50 dark:bg-green-950/30"
+                          : "text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30"
+                      }`}
+                    >
+                      {result.parsed_type.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant={viewMode === "table" ? "default" : "ghost"}
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => setViewMode("table")}
+                    >
+                      <Table className="w-3 h-3" />
+                    </Button>
+
+                    <Button
+                      variant={viewMode === "grid" ? "default" : "ghost"}
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => setViewMode("grid")}
+                    >
+                      <Grid3x3 className="w-3 h-3" />
+                    </Button>
+
+                    <Button
+                      variant={viewMode === "list" ? "default" : "ghost"}
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => setViewMode("list")}
+                    >
+                      <List className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto pr-4">
                   {/* Group fields by medication */}
@@ -321,47 +355,179 @@ function RouteComponent() {
                       medicationGroups[groupKey].push(field);
                     });
 
-                    return Object.entries(medicationGroups).map(
-                      ([groupKey, fields]) => (
-                        <div key={groupKey} className="mb-4 last:mb-0">
-                          {Object.keys(medicationGroups).length > 1 && (
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                              Medication{" "}
-                              {parseInt(groupKey.replace("med_", "")) + 1}
-                            </p>
-                          )}
-                          <div className="grid grid-cols-5 gap-3">
-                            {fields.map((field) => (
-                              <div
-                                key={field.field}
-                                className="p-2.5 rounded-lg bg-background border border-border/50"
-                              >
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                                  {field.field
-                                    .replace(/^medication\[\d+\]\./, "")
-                                    .replace(/([A-Z])/g, " $1")}
-                                </p>
-                                <p className="text-sm font-semibold mt-0.5">
-                                  {field.value || "—"}
-                                </p>
-                                <div className="flex items-center gap-1 mt-1">
-                                  <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full rounded-full bg-primary"
-                                      style={{
-                                        width: `${field.confidence * 100}%`,
-                                      }}
-                                    />
+                    // Grid View
+                    if (viewMode === "grid") {
+                      return Object.entries(medicationGroups).map(
+                        ([groupKey, fields]) => (
+                          <div key={groupKey} className="mb-4 last:mb-0">
+                            {Object.keys(medicationGroups).length > 1 && (
+                              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                                Medication{" "}
+                                {parseInt(groupKey.replace("med_", "")) + 1}
+                              </p>
+                            )}
+                            <div className="grid grid-cols-5 gap-3">
+                              {fields.map((field) => (
+                                <div
+                                  key={field.field}
+                                  className="p-2.5 rounded-lg bg-background border border-border/50"
+                                >
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                                    {field.field
+                                      .replace(/^medication\[\d+\]\./, "")
+                                      .replace(/([A-Z])/g, " $1")}
+                                  </p>
+                                  <p className="text-sm font-semibold mt-0.5">
+                                    {field.value || "—"}
+                                  </p>
+                                  <div className="flex items-center gap-1 mt-1">
+                                    <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full rounded-full bg-primary"
+                                        style={{
+                                          width: `${field.confidence * 100}%`,
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="text-[9px] tabular-nums text-muted-foreground">
+                                      {(field.confidence * 100).toFixed(0)}%
+                                    </span>
                                   </div>
-                                  <span className="text-[9px] tabular-nums text-muted-foreground">
-                                    {(field.confidence * 100).toFixed(0)}%
-                                  </span>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
+                        ),
+                      );
+                    }
+
+                    // Table View
+                    if (viewMode === "table") {
+                      return (
+                        <div className="border border-border/50 rounded-lg overflow-hidden">
+                          <table className="w-full text-xs">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left p-2 font-semibold">
+                                  #
+                                </th>
+                                <th className="text-left p-2 font-semibold">
+                                  Name
+                                </th>
+                                <th className="text-left p-2 font-semibold">
+                                  Concentration
+                                </th>
+                                <th className="text-left p-2 font-semibold">
+                                  Form
+                                </th>
+                                <th className="text-left p-2 font-semibold">
+                                  Quantity
+                                </th>
+                                <th className="text-left p-2 font-semibold">
+                                  Expiry
+                                </th>
+                                <th className="text-left p-2 font-semibold">
+                                  Confidence
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Object.entries(medicationGroups).map(
+                                ([groupKey, fields]) => {
+                                  const medNum =
+                                    parseInt(groupKey.replace("med_", "")) + 1;
+                                  const fieldMap = Object.fromEntries(
+                                    fields.map((f) => [
+                                      f.field.replace(
+                                        /^medication\[\d+\]\./,
+                                        "",
+                                      ),
+                                      f,
+                                    ]),
+                                  );
+                                  return (
+                                    <tr
+                                      key={groupKey}
+                                      className="border-t border-border/50 hover:bg-muted/30"
+                                    >
+                                      <td className="p-2 font-medium">
+                                        {medNum}
+                                      </td>
+                                      <td className="p-2">
+                                        {fieldMap.medicationName?.value || "—"}
+                                      </td>
+                                      <td className="p-2">
+                                        {fieldMap.concentration?.value || "—"}
+                                      </td>
+                                      <td className="p-2">
+                                        {fieldMap.form?.value || "—"}
+                                      </td>
+                                      <td className="p-2">
+                                        {fieldMap.quantity?.value || "—"}
+                                      </td>
+                                      <td className="p-2">
+                                        {fieldMap.expiry?.value || "—"}
+                                      </td>
+                                      <td className="p-2">
+                                        <span className="text-[10px] tabular-nums">
+                                          {(
+                                            (fieldMap.medicationName
+                                              ?.confidence || 0) * 100
+                                          ).toFixed(0)}
+                                          %
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                },
+                              )}
+                            </tbody>
+                          </table>
                         </div>
-                      ),
+                      );
+                    }
+
+                    // List View
+                    return Object.entries(medicationGroups).map(
+                      ([groupKey, fields]) => {
+                        const medNum =
+                          parseInt(groupKey.replace("med_", "")) + 1;
+                        return (
+                          <div
+                            key={groupKey}
+                            className="mb-3 last:mb-0 p-3 rounded-lg border border-border/50 bg-background"
+                          >
+                            {Object.keys(medicationGroups).length > 1 && (
+                              <p className="text-[10px] font-semibold text-primary uppercase tracking-wide mb-2">
+                                Medication {medNum}
+                              </p>
+                            )}
+                            <div className="space-y-1.5">
+                              {fields.map((field) => (
+                                <div
+                                  key={field.field}
+                                  className="flex items-center justify-between text-xs"
+                                >
+                                  <span className="text-muted-foreground capitalize">
+                                    {field.field
+                                      .replace(/^medication\[\d+\]\./, "")
+                                      .replace(/([A-Z])/g, " $1")}
+                                    :
+                                  </span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">
+                                      {field.value || "—"}
+                                    </span>
+                                    <span className="text-[10px] tabular-nums text-muted-foreground">
+                                      ({(field.confidence * 100).toFixed(0)}%)
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      },
                     );
                   })()}
                 </div>
