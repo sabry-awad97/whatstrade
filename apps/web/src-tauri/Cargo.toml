@@ -70,7 +70,7 @@ uuid = { version = "1.23.2", features = ["serde", "v7"] }
 validator = { version = "0.20.0", features = ["derive"] }
 
 # JWT (for auth service)
-jsonwebtoken = "10.4.0"
+jsonwebtoken = "9.3.1"
 
 # Password hashing
 argon2 = "0.5.3"

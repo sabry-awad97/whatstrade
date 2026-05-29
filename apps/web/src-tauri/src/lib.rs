@@ -7,24 +7,41 @@ mod state;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub async fn run() {
     let builder = tauri::Builder::default().setup(|app| {
-        // Initialize database and services
+        // Initialize database and services synchronously in setup
         let app_handle = app.handle().clone();
 
-        // Spawn state initialization asynchronously
+        // Use a channel to wait for initialization
+        let (tx, rx) = std::sync::mpsc::channel();
+
         tauri::async_runtime::spawn(async move {
             match state::try_init_state(&app_handle).await {
                 Ok(state) => {
                     tracing::info!("Application state initialized successfully");
                     app_handle.manage(state);
+                    let _ = tx.send(Ok(()));
                 }
                 Err(e) => {
                     tracing::error!("Failed to initialize application state: {:?}", e);
-                    std::process::exit(1);
+                    let _ = tx.send(Err(e));
                 }
             }
         });
 
-        Ok(())
+        // Wait for initialization to complete
+        match rx.recv() {
+            Ok(Ok(())) => {
+                tracing::info!("State initialization completed, app ready");
+                Ok(())
+            }
+            Ok(Err(e)) => {
+                tracing::error!("State initialization failed: {:?}", e);
+                std::process::exit(1);
+            }
+            Err(e) => {
+                tracing::error!("State initialization channel error: {:?}", e);
+                std::process::exit(1);
+            }
+        }
     });
 
     let builder = builder.invoke_handler(tauri::generate_handler![
