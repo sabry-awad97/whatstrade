@@ -304,65 +304,68 @@ function RouteComponent() {
                     {result.parsed_type.toUpperCase()}
                   </Badge>
                 </div>
-                {/* Group fields by medication */}
-                {(() => {
-                  // Group fields by medication index
-                  const medicationGroups: Record<
-                    string,
-                    typeof result.parsed_fields
-                  > = {};
-                  result.parsed_fields.forEach((field) => {
-                    const match = field.field.match(/^medication\[(\d+)\]\./);
-                    const groupKey = match ? `med_${match[1]}` : "med_0";
-                    if (!medicationGroups[groupKey]) {
-                      medicationGroups[groupKey] = [];
-                    }
-                    medicationGroups[groupKey].push(field);
-                  });
+                <div className="max-h-[400px] overflow-y-auto pr-4">
+                  {/* Group fields by medication */}
+                  {(() => {
+                    // Group fields by medication index
+                    const medicationGroups: Record<
+                      string,
+                      typeof result.parsed_fields
+                    > = {};
+                    result.parsed_fields.forEach((field) => {
+                      const match = field.field.match(/^medication\[(\d+)\]\./);
+                      const groupKey = match ? `med_${match[1]}` : "med_0";
+                      if (!medicationGroups[groupKey]) {
+                        medicationGroups[groupKey] = [];
+                      }
+                      medicationGroups[groupKey].push(field);
+                    });
 
-                  return Object.entries(medicationGroups).map(
-                    ([groupKey, fields]) => (
-                      <div key={groupKey} className="mb-3 last:mb-0">
-                        {Object.keys(medicationGroups).length > 1 && (
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                            Medication {groupKey.replace("med_", "")}
-                          </p>
-                        )}
-                        <div className="grid grid-cols-5 gap-3">
-                          {fields.map((field) => (
-                            <div
-                              key={field.field}
-                              className="p-2.5 rounded-lg bg-background border border-border/50"
-                            >
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                                {field.field
-                                  .replace(/^medication\[\d+\]\./, "")
-                                  .replace(/([A-Z])/g, " $1")}
-                              </p>
-                              <p className="text-sm font-semibold mt-0.5">
-                                {field.value || "—"}
-                              </p>
-                              <div className="flex items-center gap-1 mt-1">
-                                <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full bg-primary"
-                                    style={{
-                                      width: `${field.confidence * 100}%`,
-                                    }}
-                                  />
+                    return Object.entries(medicationGroups).map(
+                      ([groupKey, fields]) => (
+                        <div key={groupKey} className="mb-4 last:mb-0">
+                          {Object.keys(medicationGroups).length > 1 && (
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                              Medication{" "}
+                              {parseInt(groupKey.replace("med_", "")) + 1}
+                            </p>
+                          )}
+                          <div className="grid grid-cols-5 gap-3">
+                            {fields.map((field) => (
+                              <div
+                                key={field.field}
+                                className="p-2.5 rounded-lg bg-background border border-border/50"
+                              >
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                                  {field.field
+                                    .replace(/^medication\[\d+\]\./, "")
+                                    .replace(/([A-Z])/g, " $1")}
+                                </p>
+                                <p className="text-sm font-semibold mt-0.5">
+                                  {field.value || "—"}
+                                </p>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full bg-primary"
+                                      style={{
+                                        width: `${field.confidence * 100}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-[9px] tabular-nums text-muted-foreground">
+                                    {(field.confidence * 100).toFixed(0)}%
+                                  </span>
                                 </div>
-                                <span className="text-[9px] tabular-nums text-muted-foreground">
-                                  {(field.confidence * 100).toFixed(0)}%
-                                </span>
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ),
-                  );
-                })()}
-                <p className="text-xs text-muted-foreground italic border-t border-border/40 pt-2">
+                      ),
+                    );
+                  })()}
+                </div>
+                <p className="text-xs text-muted-foreground italic border-t border-border/40 pt-2 mt-3">
                   {result.ai_reasoning}
                 </p>
               </div>
