@@ -78,18 +78,22 @@ pub struct Model {
     created_request_id: Option<Id>,
 
     // Relations
+    // Note: These are tracking references only, not true FK relationships
+    // The queue creates offers/requests, but doesn't own them via FK constraints
     #[sea_orm(
-        belongs_to,
+        has_one,
         relation_enum = "CreatedOffer",
         from = "created_offer_id",
-        to = "id"
+        to = "id",
+        on_delete = "NoAction"
     )]
     created_offer: Option<super::offer::Entity>,
     #[sea_orm(
-        belongs_to,
+        has_one,
         relation_enum = "CreatedRequest",
         from = "created_request_id",
-        to = "id"
+        to = "id",
+        on_delete = "NoAction"
     )]
     created_request: Option<super::request::Entity>,
 }

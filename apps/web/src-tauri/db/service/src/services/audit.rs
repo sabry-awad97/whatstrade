@@ -3,9 +3,9 @@
 use crate::{entities::audit_log, error::ServiceResult, types::CreateAuditLogDto};
 use chrono::Utc;
 use sea_orm::{DatabaseConnection, entity::*, query::*};
-use utilities::Id;
 use std::sync::Arc;
 use tracing::info;
+use utilities::Id;
 
 /// Service for managing audit logs
 pub struct AuditService {

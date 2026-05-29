@@ -139,7 +139,7 @@ pub struct CreateOfferDto {
     #[builder(default, setter(into))]
     raw_text: Option<String>,
     #[builder(default, setter(into))]
-    whatsapp_message_id: Option<Id>,
+    whatsapp_message_queue_id: Option<Id>,
     #[builder(default, setter(into))]
     whatsapp_group_id: Option<Id>,
 }
@@ -166,7 +166,7 @@ pub struct OfferResponseDto {
     #[builder(setter(into))]
     raw_text: Option<String>,
     #[builder(setter(into))]
-    whatsapp_message_id: Option<Id>,
+    whatsapp_message_queue_id: Option<Id>,
     #[builder(setter(into))]
     whatsapp_group_id: Option<Id>,
     #[builder(setter(into))]
@@ -188,7 +188,7 @@ impl From<offer::Model> for OfferResponseDto {
             .sender_phone(offer.sender_phone())
             .status(offer.status().to_string())
             .raw_text(offer.raw_text().clone())
-            .whatsapp_message_id(*offer.whatsapp_message_id())
+            .whatsapp_message_queue_id(*offer.whatsapp_message_queue_id())
             .whatsapp_group_id(*offer.whatsapp_group_id())
             .created_at(*offer.created_at())
             .updated_at(*offer.updated_at())
@@ -218,7 +218,7 @@ pub struct CreateRequestDto {
     #[builder(default, setter(into))]
     raw_text: Option<String>,
     #[builder(default, setter(into))]
-    whatsapp_message_id: Option<Id>,
+    whatsapp_message_queue_id: Option<Id>,
     #[builder(default, setter(into))]
     whatsapp_group_id: Option<Id>,
 }
@@ -245,7 +245,7 @@ pub struct RequestResponseDto {
     #[builder(setter(into))]
     raw_text: Option<String>,
     #[builder(setter(into))]
-    whatsapp_message_id: Option<Id>,
+    whatsapp_message_queue_id: Option<Id>,
     #[builder(setter(into))]
     whatsapp_group_id: Option<Id>,
     #[builder(setter(into))]
@@ -267,7 +267,7 @@ impl From<request::Model> for RequestResponseDto {
             .sender_phone(request.sender_phone())
             .status(request.status().to_string())
             .raw_text(request.raw_text().clone())
-            .whatsapp_message_id(*request.whatsapp_message_id())
+            .whatsapp_message_queue_id(*request.whatsapp_message_queue_id())
             .whatsapp_group_id(*request.whatsapp_group_id())
             .created_at(*request.created_at())
             .updated_at(*request.updated_at())

@@ -15,11 +15,7 @@ vars:
   WEB_DIR: apps/web
   SERVER_DIR: apps/server
   DB_DIR: packages/db
-  DATABASE_URL: "postgresql://postgres:password@localhost:5433/whatstrade"
   DB_CONTAINER: whatstrade-postgres
-
-env:
-  DATABASE_URL: "{{.DATABASE_URL}}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Tasks
@@ -92,7 +88,7 @@ tasks:
       - "{{.BUN}}x vitest run --coverage"
 
   test:changed:
-    desc: "� Run tests for changed files only"
+    desc: "🚀 Run tests for changed files only"
     dir: "{{.WEB_DIR}}"
     cmds:
       - "{{.BUN}}x vitest --changed"
@@ -108,7 +104,7 @@ tasks:
   # ═══════════════════════════════════════════════════════════════════════════
 
   db:start:
-    desc: "�️  Start PostgreSQL database (detached)"
+    desc: "🚀  Start PostgreSQL database (detached)"
     dir: "{{.DB_DIR}}"
     cmds:
       - docker compose up -d

@@ -1,6 +1,6 @@
-use utilities::Id;
 use derive_getters::Getters;
 use serde::Serialize;
+use utilities::Id;
 
 use crate::error::AppResult;
 

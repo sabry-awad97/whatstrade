@@ -3,7 +3,10 @@
 //! Represents authenticated users in the system.
 
 use derive_getters::Getters;
-use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    entity::prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 use utilities::Id;

@@ -11,7 +11,7 @@ pub mod types;
 
 // Re-export commonly used types
 pub use error::{ServiceError, ServiceResult};
-pub use manager::ServiceManager;
+pub use manager::{ServiceManager, ServiceManagerConfig};
 pub use migration::run_migrations;
 
 // Re-export entity types for convenience

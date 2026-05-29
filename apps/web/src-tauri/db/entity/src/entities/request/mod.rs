@@ -7,11 +7,14 @@
 
 use derive_getters::Getters;
 use rust_decimal::Decimal;
-use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    entity::prelude::*,
+};
 use serde::{Deserialize, Serialize};
-use utilities::Id;
 use std::fmt;
 use typed_builder::TypedBuilder;
+use utilities::Id;
 
 pub mod dto;
 
@@ -62,8 +65,8 @@ pub struct Model {
     status: RequestStatus,
     #[sea_orm(column_name = "raw_text")]
     raw_text: Option<String>,
-    #[sea_orm(column_name = "whatsapp_message_id")]
-    whatsapp_message_id: Option<Id>,
+    #[sea_orm(column_name = "whatsapp_message_queue_id")]
+    whatsapp_message_queue_id: Option<Id>,
     #[sea_orm(column_name = "whatsapp_group_id")]
     whatsapp_group_id: Option<Id>,
     #[sea_orm(column_name = "created_at")]
@@ -74,8 +77,8 @@ pub struct Model {
     // Relations
     #[sea_orm(has_many)]
     matches: HasMany<super::r#match::Entity>,
-    #[sea_orm(belongs_to, from = "whatsapp_message_id", to = "whatsapp_message_id")]
-    whatsapp_message: Option<super::whatsapp_message_queue::Entity>,
+    #[sea_orm(belongs_to, from = "whatsapp_message_queue_id", to = "id")]
+    whatsapp_message_queue: Option<super::whatsapp_message_queue::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}
@@ -114,7 +117,7 @@ impl ActiveModel {
             sender_phone: Set(sender_phone.into()),
             status: Set(status),
             raw_text: NotSet,
-            whatsapp_message_id: NotSet,
+            whatsapp_message_queue_id: NotSet,
             whatsapp_group_id: NotSet,
             created_at: Set(now),
             updated_at: Set(now),
@@ -139,9 +142,12 @@ impl ActiveModel {
         self
     }
 
-    /// Set the WhatsApp message ID
-    pub fn with_whatsapp_message_id(mut self, message_id: Option<impl Into<Id>>) -> Self {
-        self.whatsapp_message_id = Set(message_id.map(Into::into));
+    /// Set the WhatsApp message queue ID
+    pub fn with_whatsapp_message_queue_id(
+        mut self,
+        message_queue_id: Option<impl Into<Id>>,
+    ) -> Self {
+        self.whatsapp_message_queue_id = Set(message_queue_id.map(Into::into));
         self
     }
 

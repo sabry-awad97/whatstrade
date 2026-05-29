@@ -3,8 +3,8 @@
 use crate::{error::ServiceResult, types::JwtClaims};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use utilities::Id;
 use std::sync::Arc;
+use utilities::Id;
 
 /// JWT service for handling authentication tokens
 pub struct JwtService {

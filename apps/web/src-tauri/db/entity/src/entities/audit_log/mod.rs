@@ -4,7 +4,10 @@
 //! The operatorId is nullable to preserve audit history when users are deleted.
 
 use derive_getters::Getters;
-use sea_orm::{ActiveValue::{NotSet, Set}, entity::prelude::*};
+use sea_orm::{
+    ActiveValue::{NotSet, Set},
+    entity::prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use typed_builder::TypedBuilder;
 use utilities::Id;

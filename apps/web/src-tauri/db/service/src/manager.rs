@@ -1,13 +1,56 @@
 //! Service manager for dependency injection
 
-use crate::services::{
-    AuditService, AuthService, JwtService, MatchingService, OfferService, RequestService,
-    UserService,
+use crate::{
+    run_migrations,
+    services::{
+        AuditService, AuthService, JwtService, MatchingService, OfferService, RequestService,
+        UserService,
+    },
 };
 use derive_getters::Getters;
-use sea_orm::DatabaseConnection;
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::sync::Arc;
 use typed_builder::TypedBuilder;
+
+/// Configuration for ServiceManager initialization
+#[derive(Clone, TypedBuilder, Getters)]
+pub struct ServiceManagerConfig {
+    /// Database connection URL
+    #[builder(setter(into))]
+    database_url: String,
+
+    /// JWT secret for token signing
+    #[builder(setter(into))]
+    jwt_secret: String,
+
+    /// Access token expiry in hours (default: 1)
+    #[builder(default = 1)]
+    access_token_expiry_hours: i64,
+
+    /// Refresh token expiry in days (default: 30)
+    #[builder(default = 30)]
+    refresh_token_expiry_days: i64,
+
+    /// Maximum database connections (default: 100)
+    #[builder(default = 100)]
+    max_connections: u32,
+
+    /// Minimum database connections (default: 5)
+    #[builder(default = 5)]
+    min_connections: u32,
+
+    /// Connection timeout in seconds (default: 30)
+    #[builder(default = 30)]
+    connect_timeout_secs: u64,
+
+    /// Idle timeout in seconds (default: 600)
+    #[builder(default = 600)]
+    idle_timeout_secs: u64,
+
+    /// Enable SQLx logging (default: true)
+    #[builder(default = true)]
+    sqlx_logging: bool,
+}
 
 /// Service manager containing all application services
 ///
@@ -18,17 +61,15 @@ use typed_builder::TypedBuilder;
 /// # Example
 ///
 /// ```rust,no_run
-/// use sea_orm::Database;
-/// use db_service::ServiceManager;
+/// use db_service::{ServiceManager, ServiceManagerConfig};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let db = Database::connect("postgresql://localhost/mydb").await?;
-/// let db = Arc::new(db);
-///
-/// let manager = ServiceManager::builder()
-///     .db(db.clone())
+/// let config = ServiceManagerConfig::builder()
+///     .database_url("postgresql://localhost/mydb")
 ///     .jwt_secret("your-secret-key")
 ///     .build();
+///
+/// let manager = ServiceManager::new(config).await?;
 ///
 /// // Use services
 /// let users = manager.user_service().list(0, 10).await?;
@@ -71,15 +112,14 @@ pub struct ServiceManager {
 }
 
 impl ServiceManager {
-    /// Create a new service manager with default configuration
+    /// Create a new service manager with configuration
     ///
-    /// This is a convenience method that constructs all services with their
-    /// dependencies properly wired. For custom configuration, use the builder.
+    /// This method constructs all services with their dependencies properly wired
+    /// and connects to the database using the provided configuration.
     ///
     /// # Arguments
     ///
-    /// * `db` - Database connection
-    /// * `jwt_secret` - Secret key for JWT signing
+    /// * `config` - ServiceManager configuration
     ///
     /// # Returns
     ///
@@ -88,61 +128,55 @@ impl ServiceManager {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use sea_orm::Database;
-    /// use db_service::ServiceManager;
-    /// use std::sync::Arc;
+    /// use db_service::{ServiceManager, ServiceManagerConfig};
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let db = Database::connect("postgresql://localhost/mydb").await?;
-    /// let manager = ServiceManager::new(Arc::new(db), "your-secret-key");
+    /// let config = ServiceManagerConfig::builder()
+    ///     .database_url("postgresql://localhost/mydb")
+    ///     .jwt_secret("your-secret-key")
+    ///     .access_token_expiry_hours(2)
+    ///     .refresh_token_expiry_days(7)
+    ///     .build();
+    ///
+    /// let manager = ServiceManager::new(config).await?;
+    ///
+    /// // Use services
+    /// let users = manager.user_service().list(0, 10).await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new(db: Arc<DatabaseConnection>, jwt_secret: impl AsRef<[u8]>) -> Self {
+    pub async fn new(config: ServiceManagerConfig) -> Result<Self, sea_orm::DbErr> {
+        // Build database connection options from config
+        let mut opt = ConnectOptions::new(config.database_url.clone());
+        opt.max_connections(*config.max_connections())
+            .min_connections(*config.min_connections())
+            .connect_timeout(std::time::Duration::from_secs(
+                *config.connect_timeout_secs(),
+            ))
+            .idle_timeout(std::time::Duration::from_secs(*config.idle_timeout_secs()))
+            .sqlx_logging(*config.sqlx_logging());
+
+        // Connect to database
+        let db = Arc::new(Database::connect(opt).await?);
+
+        // Run migrations with error handling
+        match run_migrations(&db).await {
+            Ok(_) => {
+                tracing::info!("Migrations completed successfully");
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "Migration error (this might be expected if table already exists): {:?}",
+                    e
+                );
+            }
+        }
+
         // Initialize services in dependency order
-        let jwt_service = JwtService::arc(jwt_secret, None, None);
-        let audit_service = AuditService::arc(db.clone());
-        let user_service = UserService::arc(db.clone(), audit_service.clone());
-        let auth_service = AuthService::arc(db.clone(), user_service.clone(), jwt_service.clone());
-        let offer_service = OfferService::arc(db.clone(), audit_service.clone());
-        let request_service = RequestService::arc(db.clone(), audit_service.clone());
-        let matching_service = MatchingService::arc(
-            db.clone(),
-            audit_service.clone(),
-            offer_service.clone(),
-            request_service.clone(),
-        );
-
-        Self {
-            db,
-            jwt_service,
-            audit_service,
-            user_service,
-            auth_service,
-            offer_service,
-            request_service,
-            matching_service,
-        }
-    }
-
-    /// Create a new service manager with custom JWT token expiry
-    ///
-    /// # Arguments
-    ///
-    /// * `db` - Database connection
-    /// * `jwt_secret` - Secret key for JWT signing
-    /// * `access_token_expiry_hours` - Access token expiry in hours
-    /// * `refresh_token_expiry_days` - Refresh token expiry in days
-    pub fn with_custom_jwt_expiry(
-        db: Arc<DatabaseConnection>,
-        jwt_secret: impl AsRef<[u8]>,
-        access_token_expiry_hours: i64,
-        refresh_token_expiry_days: i64,
-    ) -> Self {
         let jwt_service = JwtService::arc(
-            jwt_secret,
-            Some(access_token_expiry_hours),
-            Some(refresh_token_expiry_days),
+            config.jwt_secret(),
+            Some(*config.access_token_expiry_hours()),
+            Some(*config.refresh_token_expiry_days()),
         );
         let audit_service = AuditService::arc(db.clone());
         let user_service = UserService::arc(db.clone(), audit_service.clone());
@@ -156,7 +190,7 @@ impl ServiceManager {
             request_service.clone(),
         );
 
-        Self {
+        Ok(Self {
             db,
             jwt_service,
             audit_service,
@@ -165,6 +199,6 @@ impl ServiceManager {
             offer_service,
             request_service,
             matching_service,
-        }
+        })
     }
 }

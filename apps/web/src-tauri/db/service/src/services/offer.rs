@@ -71,7 +71,7 @@ impl OfferService {
         .with_dosage(dto.dosage().clone())
         .with_price(*dto.price())
         .with_raw_text(dto.raw_text().clone())
-        .with_whatsapp_message_id(*dto.whatsapp_message_id())
+        .with_whatsapp_message_queue_id(*dto.whatsapp_message_queue_id())
         .with_whatsapp_group_id(*dto.whatsapp_group_id())
         .with_created_at(now)
         .with_updated_at(now);
