@@ -4,11 +4,7 @@ Provider-agnostic WhatsApp integration layer for the WhatsTrade application.
 
 ## Overview
 
-This crate provides a unified interface for WhatsApp operations through the `WhatsAppProvider` trait. It supports multiple backend implementations:
-
-- **GoServiceProvider** - HTTP-based communication with external Go WhatsApp service (temporary)
-- **WaRsProvider** - Native Rust implementation using wa-rs library (future)
-- **MockWhatsAppProvider** - Testing mock with configurable behavior
+This crate provides a unified interface for WhatsApp operations through the `WhatsAppProvider` trait. Currently being implemented with the wa-rs native Rust library.
 
 ## Architecture
 
@@ -24,58 +20,36 @@ This crate provides a unified interface for WhatsApp operations through the `Wha
 │  (Domain Interface - this crate)    │
 └──────────────┬──────────────────────┘
                │ implemented by
-       ┌───────┴────────┬──────────────┐
-       ▼                ▼              ▼
-┌─────────────┐  ┌─────────────┐  ┌──────────┐
-│ GoService   │  │   WaRs      │  │   Mock   │
-│  Provider   │  │  Provider   │  │ Provider │
-└─────────────┘  └─────────────┘  └──────────┘
+               ▼
+         ┌─────────────┐
+         │   WaRs      │
+         │  Provider   │
+         └─────────────┘
 ```
 
 ## Usage
 
-### Using Go Service Provider (Current)
+### Using WaRs Provider (In Development)
 
 ```rust
-use whatsapp::{GoServiceProvider, WhatsAppProvider, SyncConfig};
+use whatsapp::{WaRsProvider, WhatsAppProvider, SyncConfig};
 
-let provider = GoServiceProvider::new("http://localhost:8080");
+// TODO: Once wa-rs is fully implemented
+let provider = WaRsProvider::new().await?;
 let groups = provider.sync_groups(&SyncConfig::default()).await?;
 ```
 
-### Using Mock Provider (Testing)
+### Integration with Service Layer
+
+The service layer accepts any `Arc<dyn WhatsAppProvider>`:
 
 ```rust
-use whatsapp::{MockWhatsAppProvider, GroupInfo};
+use whatsapp::WaRsProvider;
 
-let groups = vec![
-    GroupInfo {
-        jid: "123@g.us".to_string(),
-        name: "Test Group".to_string(),
-        participant_count: 5,
-        description: None,
-        created_at: None,
-    }
-];
+// Initialize provider
+let provider: Arc<dyn WhatsAppProvider> = Arc::new(WaRsProvider::new().await?);
 
-let provider = MockWhatsAppProvider::with_groups(groups);
-let status = provider.get_status().await?;
-```
-
-### Switching Providers
-
-The service layer accepts any `Arc<dyn WhatsAppProvider>`, making it easy to switch:
-
-```rust
-// Development with mock
-let provider: Arc<dyn WhatsAppProvider> = Arc::new(MockWhatsAppProvider::new());
-
-// Production with Go service
-let provider: Arc<dyn WhatsAppProvider> = Arc::new(GoServiceProvider::new(url));
-
-// Future with wa-rs
-// let provider: Arc<dyn WhatsAppProvider> = Arc::new(WaRsProvider::new().await?);
-
+// Pass to service
 let service = WhatsAppService::new(db, provider);
 ```
 
@@ -106,64 +80,28 @@ Error types:
 - `Internal` - Internal provider error
 - `Serialization` - Data parsing error
 
-## Testing
+## Implementation Status
 
-The mock provider supports various testing scenarios:
-
-```rust
-// Success case
-let provider = MockWhatsAppProvider::new();
-
-// Disconnected state
-let provider = MockWhatsAppProvider::disconnected();
-
-// Failure simulation
-let provider = MockWhatsAppProvider::failing("Network error");
-
-// Custom groups
-let provider = MockWhatsAppProvider::with_groups(groups);
-
-// Dynamic state changes
-provider.set_connected(false);
-provider.set_should_fail(true);
-
-// Message tracking
-provider.send_message(&msg).await?;
-let sent = provider.get_sent_messages();
-```
-
-## Migration Path
-
-### Phase 1: Current (Go Service)
+### Current Status
 
 - ✅ Trait defined
-- ✅ GoServiceProvider implemented
-- ✅ Mock provider for testing
-- ✅ Service layer uses trait
+- ✅ Domain types defined
+- ✅ Error handling
+- 🔄 WaRsProvider implementation (in progress)
 
-### Phase 2: Transition (Both)
+### Next Steps
 
-- 🔄 wa-rs integration started
-- 🔄 WaRsProvider implementation
-- 🔄 Feature flag to switch providers
-- 🔄 Parallel testing
-
-### Phase 3: Future (wa-rs only)
-
-- ⏳ Remove GoServiceProvider
-- ⏳ Remove Go service dependency
-- ⏳ wa-rs as default
+1. Add wa-rs dependency to Cargo.toml
+2. Implement WaRsProvider methods:
+   - `sync_groups()` - Fetch groups from WhatsApp
+   - `get_status()` - Check connection status
+   - `get_qr_code()` - Get QR code for authentication
+   - `send_message()` - Send messages to groups
+   - `logout()` - Disconnect from WhatsApp
+3. Add integration tests
+4. Update service layer to use WaRsProvider
 
 ## Development
-
-### Adding a New Provider
-
-1. Create a new file in `src/` (e.g., `my_provider.rs`)
-2. Implement `WhatsAppProvider` trait
-3. Map provider-specific types to domain types
-4. Handle errors by converting to `ProviderError`
-5. Export in `lib.rs`
-6. Add tests
 
 ### Running Tests
 
@@ -184,7 +122,7 @@ cargo build -p whatsapp
 - `serde` - Serialization
 - `thiserror` - Error handling
 - `tokio` - Async runtime
-- `reqwest` - HTTP client (for GoServiceProvider)
+- `reqwest` - HTTP client (temporary, will be removed)
 - `tracing` - Logging
 
 ## License

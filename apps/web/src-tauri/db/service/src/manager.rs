@@ -73,14 +73,6 @@ pub struct ServiceManagerConfig {
     #[builder(default = false)]
     sqlx_logging: bool,
 
-    /// Go WhatsApp service URL
-    #[builder(default, setter(into))]
-    go_whatsapp_service_url: Option<String>,
-
-    /// WhatsApp provider type ("go", "mock", or "wa-rs" in the future)
-    #[builder(default, setter(into))]
-    whatsapp_provider_type: Option<String>,
-
     /// AI client configuration
     #[builder(default, setter(into))]
     ai_config: Option<ai_client::Config>,
@@ -305,14 +297,15 @@ impl ServiceManager {
             ai_client.clone(),
         );
 
-        // Initialize WhatsApp provider based on configuration
+        // Initialize WhatsApp provider (wa-rs)
+        // TODO: Once wa-rs is fully implemented, initialize with proper config
         let whatsapp_provider: Arc<dyn whatsapp::WhatsAppProvider> =
-            Arc::new(whatsapp::GoServiceProvider::new(
-                config
-                    .go_whatsapp_service_url()
-                    .clone()
-                    .unwrap_or_else(|| "http://localhost:8080".to_string()),
-            ));
+            Arc::new(whatsapp::WaRsProvider::new().await.map_err(|e| {
+                InitializationError::Database(sea_orm::DbErr::Custom(format!(
+                    "Failed to initialize WhatsApp provider: {}",
+                    e
+                )))
+            })?);
         let whatsapp_service = WhatsAppService::arc(db.clone(), whatsapp_provider);
 
         Ok(Self {
