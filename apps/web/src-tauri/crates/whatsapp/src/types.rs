@@ -17,12 +17,6 @@ pub struct GroupInfo {
 
     /// Number of participants in the group
     pub participant_count: usize,
-
-    /// Group description (if available)
-    pub description: Option<String>,
-
-    /// Group creation timestamp (if available)
-    pub created_at: Option<DateTime<Utc>>,
 }
 
 /// WhatsApp connection status

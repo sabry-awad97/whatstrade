@@ -203,6 +203,34 @@ pub async fn whatsapp_logout(app: AppHandle) -> IpcResponse<()> {
     .into()
 }
 
+/// Response for sync groups
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SyncGroupsResponse {
+    /// Whether sync was successful
+    pub success: bool,
+
+    /// Number of groups synced
+    pub count: u64,
+}
+
+/// Sync WhatsApp groups from WhatsApp to database
+#[tauri::command]
+pub async fn whatsapp_sync_groups(app: AppHandle) -> IpcResponse<SyncGroupsResponse> {
+    async {
+        let state = app.state::<AppState>();
+        let service = state.service_manager().whatsapp_service();
+
+        let result = service.sync_groups().await?;
+
+        Ok(SyncGroupsResponse {
+            success: result.success,
+            count: result.count,
+        })
+    }
+    .await
+    .into()
+}
+
 /// Start listening to WhatsApp events and emit them to the frontend
 ///
 /// This should be called once when the app starts to set up event streaming.

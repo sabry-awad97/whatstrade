@@ -215,12 +215,28 @@ impl WhatsAppProvider for WaRsProvider {
             return Err(ProviderError::authentication("Client not logged in"));
         }
 
-        // TODO: Implement group fetching using wa-rs client
-        // The wa-rs library should provide methods to fetch groups
-        // For now, return empty list as placeholder
+        // Fetch all participating groups using wa-rs client
+        let groups_map = self
+            .client
+            .groups()
+            .get_participating()
+            .await
+            .map_err(|e| ProviderError::internal(format!("Failed to fetch groups: {}", e)))?;
 
-        debug!("Group sync not yet fully implemented");
-        Ok(vec![])
+        debug!("Fetched {} groups from WhatsApp", groups_map.len());
+
+        // Convert wa-rs GroupMetadata to our GroupInfo type
+        let groups: Vec<GroupInfo> = groups_map
+            .into_values()
+            .map(|metadata| GroupInfo {
+                jid: metadata.id.to_string(),
+                name: metadata.subject,
+                participant_count: metadata.participants.len(),
+            })
+            .collect();
+
+        info!("Successfully synced {} groups", groups.len());
+        Ok(groups)
     }
 
     async fn get_status(&self) -> ProviderResult<ConnectionStatus> {

@@ -135,20 +135,10 @@ export async function retryMessage(id: string): Promise<WhatsAppMessageQueue> {
 
 /**
  * Sync WhatsApp groups
- *
- * NOTE: This is a placeholder implementation. The Tauri commands need to be created.
  */
 export async function syncGroups(): Promise<SyncGroupsResponse> {
   logger.info("Syncing WhatsApp groups");
-
-  // TODO: Implement when Tauri command is created
-  // return invokeCommand("sync_groups", syncGroupsResponseSchema);
-
-  logger.warn("syncGroups: Tauri command not yet implemented");
-  return Promise.resolve({
-    success: false,
-    count: 0,
-  });
+  return invokeCommand("whatsapp_sync_groups", syncGroupsResponseSchema);
 }
 
 /**

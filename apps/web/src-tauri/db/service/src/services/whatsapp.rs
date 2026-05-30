@@ -164,18 +164,54 @@ impl WhatsAppService {
         let provider = self.get_or_init_provider().await?;
 
         // Call provider to sync groups
-        let _groups = provider
+        let groups = provider
             .sync_groups(&SyncConfig::default())
             .await
             .map_err(|e| ServiceError::internal(format!("Provider sync failed: {}", e)))?;
 
-        // TODO: Save groups to database
-        // This would involve inserting/updating group records based on the synced data
+        info!(fetched_count = groups.len(), "Fetched groups from WhatsApp");
+
+        // Save groups to database in a transaction
+        let txn = self.db.begin().await?;
+
+        for group_info in groups {
+            // Upsert group: insert or update if exists
+            let existing = group::Entity::find()
+                .filter(group::Column::Jid.eq(&group_info.jid))
+                .one(&txn)
+                .await?;
+
+            if let Some(existing_group) = existing {
+                // Update existing group
+                let mut active_model: group::ActiveModel = existing_group.into();
+                active_model.name = Set(group_info.name);
+                active_model.member_count = Set(group_info.participant_count as i32);
+                active_model.updated_at = Set(chrono::Utc::now());
+
+                active_model.update(&txn).await?;
+            } else {
+                // Insert new group (not monitored by default)
+                let new_group = group::ActiveModel {
+                    id: Set(Id::new()),
+                    jid: Set(group_info.jid),
+                    name: Set(group_info.name),
+                    is_monitored: Set(false),
+                    member_count: Set(group_info.participant_count as i32),
+                    last_message_at: Set(None),
+                    created_at: Set(chrono::Utc::now()),
+                    updated_at: Set(chrono::Utc::now()),
+                };
+
+                new_group.insert(&txn).await?;
+            }
+        }
+
+        txn.commit().await?;
 
         // Get updated group count from database
         let count = group::Entity::find().count(self.db.as_ref()).await?;
 
-        info!(group_count = count, "Groups synced from WhatsApp");
+        info!(group_count = count, "Groups synced to database");
 
         Ok(SyncGroupsResponseDto {
             success: true,

@@ -90,6 +90,7 @@ pub async fn run() {
         ipc::commands::whatsapp_request_pair_code,
         ipc::commands::whatsapp_send_message,
         ipc::commands::whatsapp_logout,
+        ipc::commands::whatsapp_sync_groups,
     ]);
 
     builder
