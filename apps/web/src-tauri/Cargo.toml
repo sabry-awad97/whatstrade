@@ -57,6 +57,7 @@ rust_decimal = { version = "1.42.0", features = ["serde"] }
 # SeaORM v2 dependencies
 sea-orm = { version = "2.0.0-rc", features = [
     "sqlx-postgres",
+    "sqlx-sqlite",
     "runtime-tokio-rustls",
     "macros",
     "entity-registry",

@@ -8,6 +8,7 @@ import {
   FlaskConical,
   GitMerge,
   LayoutDashboard,
+  MessageSquare,
   Package,
   ShoppingCart,
   SlidersHorizontal,
@@ -60,6 +61,12 @@ export const navItems: NavItem[] = [
     icon: Users,
     label: "Groups",
     description: "Manage pharmacy groups",
+  },
+  {
+    path: "/whatsapp",
+    icon: MessageSquare,
+    label: "WhatsApp",
+    description: "WhatsApp integration",
   },
   {
     path: "/weights",
