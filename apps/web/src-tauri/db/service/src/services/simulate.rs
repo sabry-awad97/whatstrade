@@ -220,18 +220,18 @@ impl SimulateService {
         sender_phone: Option<&str>,
         message_type_hint: Option<&str>,
     ) -> ServiceResult<ExtractedData> {
-        // Build prompts using Tera templates
-        let system_prompt = Self::build_system_prompt()
+        // Build prompts using builder pattern
+        let prompt_builder = PromptBuilder::new();
+        let system_prompt = prompt_builder
+            .build_system_prompt()
             .map_err(|e| ServiceError::internal(format!("Failed to build system prompt: {}", e)))?;
 
-        let user_prompt = Self::build_user_prompt(
-            raw_text,
-            sender_phone,
-            group_name.unwrap_or("Simulation"),
-            None,
-            None,
-        )
-        .map_err(|e| ServiceError::internal(format!("Failed to build user prompt: {}", e)))?;
+        let user_prompt = prompt_builder
+            .with_content(raw_text)
+            .with_group(group_name.unwrap_or("Simulation"))
+            .with_sender(sender_phone)
+            .build_user_prompt()
+            .map_err(|e| ServiceError::internal(format!("Failed to build user prompt: {}", e)))?;
 
         // Clone the AI client and add system prompt
         let client_with_prompt = self
@@ -253,68 +253,6 @@ impl SimulateService {
 
         // Convert PharmaMessage to ExtractedData
         Self::convert_pharma_to_extracted(pharma_response, message_type_hint)
-    }
-
-    /// Build system prompt using Tera template
-    fn build_system_prompt() -> Result<String, tera::Error> {
-        let mut tera = Tera::default();
-        let system_template = include_str!("../prompts/pharma_system.txt");
-        tera.add_raw_template("system", system_template)?;
-
-        let now = chrono::Utc::now();
-        let current_year = now.year();
-        let current_year_short = current_year % 100;
-        let max_year = current_year + 10;
-        let max_year_short = max_year % 100;
-
-        let mut context = Context::new();
-        context.insert("current_year", &current_year);
-        context.insert("current_year_short", &current_year_short);
-        context.insert("max_year", &max_year);
-        context.insert("max_year_short", &max_year_short);
-
-        tera.render("system", &context)
-    }
-
-    /// Build user prompt using Tera template
-    fn build_user_prompt(
-        content: &str,
-        sender_name: Option<&str>,
-        group_name: &str,
-        reply_to: Option<&str>,
-        medication_mappings: Option<&[String]>,
-    ) -> Result<String, tera::Error> {
-        let mut tera = Tera::default();
-        let user_template = include_str!("../prompts/pharma_user.txt");
-        tera.add_raw_template("user", user_template)?;
-
-        let now = chrono::Utc::now();
-        let current_year = now.year();
-        let current_year_short = current_year % 100;
-        let max_year = current_year + 10;
-        let max_year_short = max_year % 100;
-
-        let mut context = Context::new();
-        context.insert("current_year", &current_year);
-        context.insert("current_year_short", &current_year_short);
-        context.insert("max_year", &max_year);
-        context.insert("max_year_short", &max_year_short);
-        context.insert("content", content);
-        context.insert("group_name", group_name);
-
-        if let Some(sender) = sender_name {
-            context.insert("sender_name", sender);
-        }
-
-        if let Some(reply) = reply_to {
-            context.insert("reply_to", reply);
-        }
-
-        if let Some(mappings) = medication_mappings {
-            context.insert("medication_mappings", mappings);
-        }
-
-        tera.render("user", &context)
     }
 
     /// Convert PharmaMessage to ExtractedData
@@ -407,9 +345,14 @@ impl SimulateService {
         let extracted_params = MatchParams::from_extracted(extracted, &now);
 
         if is_offer {
-            // Score against requests
+            // Score against requests with smart pre-filtering
+            // Filter by medication name prefix for better performance
             let requests = request::Entity::find()
                 .filter(request::Column::Status.eq(request::RequestStatus::Active))
+                .filter(
+                    request::Column::MedicationName
+                        .contains(extracted.medication_name.to_lowercase()),
+                )
                 .limit(MAX_CANDIDATES)
                 .all(self.db.as_ref())
                 .await?;
@@ -431,9 +374,13 @@ impl SimulateService {
                 }
             }
         } else {
-            // Score against offers
+            // Score against offers with smart pre-filtering
             let offers = offer::Entity::find()
                 .filter(offer::Column::Status.eq(offer::OfferStatus::Active))
+                .filter(
+                    offer::Column::MedicationName
+                        .contains(extracted.medication_name.to_lowercase()),
+                )
                 .limit(MAX_CANDIDATES)
                 .all(self.db.as_ref())
                 .await?;
@@ -712,4 +659,114 @@ pub struct PharmaMessage {
     pub urgency: String,
     pub reason: String,
     pub medications: Vec<Medication>,
+}
+
+// ============================================================================
+// Prompt Builder Pattern
+// ============================================================================
+
+/// Builder for constructing AI prompts with fluent API
+#[derive(Default)]
+pub struct PromptBuilder {
+    content: Option<String>,
+    sender_name: Option<String>,
+    group_name: Option<String>,
+    reply_to: Option<String>,
+    medication_mappings: Option<Vec<String>>,
+}
+
+impl PromptBuilder {
+    /// Create a new prompt builder
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the message content
+    pub fn with_content(mut self, content: &str) -> Self {
+        self.content = Some(content.to_string());
+        self
+    }
+
+    /// Set the sender name
+    pub fn with_sender(mut self, sender: Option<&str>) -> Self {
+        self.sender_name = sender.map(|s| s.to_string());
+        self
+    }
+
+    /// Set the group name
+    pub fn with_group(mut self, group: &str) -> Self {
+        self.group_name = Some(group.to_string());
+        self
+    }
+
+    /// Set the reply-to message
+    pub fn with_reply_to(mut self, reply: Option<&str>) -> Self {
+        self.reply_to = reply.map(|r| r.to_string());
+        self
+    }
+
+    /// Set medication mappings
+    pub fn with_medication_mappings(mut self, mappings: Vec<String>) -> Self {
+        self.medication_mappings = Some(mappings);
+        self
+    }
+
+    /// Build the system prompt
+    pub fn build_system_prompt(&self) -> Result<String, tera::Error> {
+        let mut tera = Tera::default();
+        let system_template = include_str!("../prompts/pharma_system.txt");
+        tera.add_raw_template("system", system_template)?;
+
+        let now = chrono::Utc::now();
+        let current_year = now.year();
+        let current_year_short = current_year % 100;
+        let max_year = current_year + 10;
+        let max_year_short = max_year % 100;
+
+        let mut context = Context::new();
+        context.insert("current_year", &current_year);
+        context.insert("current_year_short", &current_year_short);
+        context.insert("max_year", &max_year);
+        context.insert("max_year_short", &max_year_short);
+
+        tera.render("system", &context)
+    }
+
+    /// Build the user prompt
+    pub fn build_user_prompt(&self) -> Result<String, tera::Error> {
+        let mut tera = Tera::default();
+        let user_template = include_str!("../prompts/pharma_user.txt");
+        tera.add_raw_template("user", user_template)?;
+
+        let now = chrono::Utc::now();
+        let current_year = now.year();
+        let current_year_short = current_year % 100;
+        let max_year = current_year + 10;
+        let max_year_short = max_year % 100;
+
+        let mut context = Context::new();
+        context.insert("current_year", &current_year);
+        context.insert("current_year_short", &current_year_short);
+        context.insert("max_year", &max_year);
+        context.insert("max_year_short", &max_year_short);
+        context.insert("content", self.content.as_deref().unwrap_or(""));
+        context.insert(
+            "group_name",
+            self.group_name.as_deref().unwrap_or("Unknown"),
+        );
+
+        if let Some(sender) = &self.sender_name {
+            context.insert("sender_name", sender);
+        }
+
+        if let Some(reply) = &self.reply_to {
+            context.insert("reply_to", reply);
+        }
+
+        if let Some(mappings) = &self.medication_mappings {
+            context.insert("medication_mappings", mappings);
+        }
+
+        tera.render("user", &context)
+    }
 }

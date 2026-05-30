@@ -1,21 +1,20 @@
 /**
  * Simulate Components
  *
- * Barrel export for all simulate-related components.
+ * Public components for the simulate route.
+ * Only exports components and utilities used by index.tsx.
+ * Internal-only items are not exported.
  */
 
+// UI Components
 export { ConfidenceRing } from "./confidence-ring";
 export { MatchCard } from "./match-card";
 export { PipelineStepRow } from "./pipeline-step-row";
-export { SAMPLE_MESSAGES, BAND_COLORS, BAND_BG } from "./constants";
 
-// Re-export PipelineStep type from API layer (single source of truth)
-export type { PipelineStep } from "@/api/simulate";
+// Constants
+export { SAMPLE_MESSAGES } from "./constants";
+// BAND_COLORS and BAND_BG are internal to ConfidenceRing - not exported
 
-// Re-export view strategies
-export {
-  viewStrategies,
-  groupMedicationsByIndex,
-  type ViewMode,
-  type MedicationGroup,
-} from "./view-strategies";
+// View Strategies (used by main component)
+export { viewStrategies, type ViewMode } from "./view-strategies";
+// groupMedicationsByIndex and MedicationGroup are internal - not exported

@@ -35,9 +35,9 @@ import {
   PipelineStepRow,
   SAMPLE_MESSAGES,
   viewStrategies,
-  groupMedicationsByIndex,
   type ViewMode,
 } from "./-components";
+import { useMedicationGrouping, usePipelineObserver } from "./-hooks";
 
 // Constants
 const ANIMATION_DELAY_MS = 180;
@@ -66,10 +66,21 @@ function RouteComponent() {
   const resultRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Use PipelineObserver for event-driven step updates
+  const pipelineObserverRef = usePipelineObserver((steps) => {
+    setSimulationState((prev) => ({
+      ...prev,
+      streamingSteps: steps,
+    }));
+  });
+
   const simulateMutation = useSimulateMessage();
 
   const { result, streamingSteps, selectedCandidateIdx } = simulationState;
   const topCandidate = result?.candidates[selectedCandidateIdx] ?? null;
+
+  // Memoized medication grouping - only recalculates when fields change
+  const medicationGroups = useMedicationGrouping(result?.parsed_fields ?? []);
 
   // Cleanup abort controller on unmount
   useEffect(() => {
@@ -77,6 +88,8 @@ function RouteComponent() {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
+      // Clear pipeline observer
+      pipelineObserverRef.current.clearListeners();
     };
   }, []);
 
@@ -100,18 +113,22 @@ function RouteComponent() {
       abortControllerRef.current.abort();
     }
 
-    setSimulationState({
-      result: null,
-      streamingSteps: [
-        {
-          step: "Sending to AI…",
-          status: "pending",
-          detail: "Parsing Arabic message",
-          duration_ms: 0,
-        },
-      ],
-      selectedCandidateIdx: 0,
+    // Clear and initialize pipeline observer
+    const observer = pipelineObserverRef.current;
+    observer.clear();
+    observer.addStep({
+      step: "Sending to AI…",
+      status: "pending",
+      detail: "Parsing Arabic message",
+      duration_ms: 0,
     });
+
+    // Reset result state
+    setSimulationState((prev) => ({
+      ...prev,
+      result: null,
+      selectedCandidateIdx: 0,
+    }));
 
     simulateMutation.mutate(
       {
@@ -128,21 +145,16 @@ function RouteComponent() {
           const backendSteps = data.pipeline_steps;
 
           try {
-            // Animate steps appearing with abort check
-            setSimulationState((prev) => ({
-              ...prev,
-              streamingSteps: [],
-            }));
+            // Animate steps appearing with abort check using observer
+            observer.clear();
 
             for (let i = 0; i < backendSteps.length; i++) {
               if (abortController.signal.aborted) return;
               await new Promise((r) => setTimeout(r, ANIMATION_DELAY_MS));
               if (abortController.signal.aborted) return;
 
-              setSimulationState((prev) => ({
-                ...prev,
-                streamingSteps: [...prev.streamingSteps, backendSteps[i]],
-              }));
+              // Use observer to add step (automatically notifies subscribers)
+              observer.addStep(backendSteps[i]);
             }
 
             if (abortController.signal.aborted) return;
@@ -170,10 +182,7 @@ function RouteComponent() {
           toast.error("Simulation failed", {
             description: error.message,
           });
-          setSimulationState((prev) => ({
-            ...prev,
-            streamingSteps: [],
-          }));
+          pipelineObserverRef.current.clear();
         },
       },
     );
@@ -385,10 +394,8 @@ function RouteComponent() {
                   </div>
                 </div>
                 <div className="max-h-[400px] overflow-y-auto pr-4">
-                  {/* Render using Strategy Pattern */}
-                  {viewStrategies
-                    .get(viewMode)
-                    ?.render(groupMedicationsByIndex(result.parsed_fields))}
+                  {/* Render using Strategy Pattern with memoized groups */}
+                  {viewStrategies.get(viewMode)?.render(medicationGroups)}
                 </div>
                 <p className="text-xs text-muted-foreground italic border-t border-border/40 pt-2 mt-3">
                   {result.ai_reasoning}
@@ -475,7 +482,7 @@ function RouteComponent() {
                                   ? "suggest"
                                   : topCandidate.score >= 0.5
                                     ? "review"
-                                    : "reject"
+                                    : "none"
                             }
                           />
                           <p className="text-[10px] text-muted-foreground text-center">
