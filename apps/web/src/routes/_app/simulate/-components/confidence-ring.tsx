@@ -19,8 +19,8 @@ export function ConfidenceRing({ score, band }: ConfidenceRingProps) {
   const r = 54;
   const circ = 2 * Math.PI * r;
   const pct = score * circ;
-  const color = BAND_COLORS[band];
-  const colorAlpha = BAND_COLORS_ALPHA[band];
+  const color = BAND_COLORS[band] ?? BAND_COLORS.none;
+  const colorAlpha = BAND_COLORS_ALPHA[band] ?? BAND_COLORS_ALPHA.none;
 
   return (
     <div className="relative w-36 h-36 flex items-center justify-center">

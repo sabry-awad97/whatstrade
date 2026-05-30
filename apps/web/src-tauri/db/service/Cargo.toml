@@ -23,3 +23,4 @@ tera.workspace = true
 ai-client.workspace = true
 db_entity.workspace = true
 utilities.workspace = true
+whatsapp.workspace = true

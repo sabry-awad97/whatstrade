@@ -1,6 +1,7 @@
 //! WhatsApp service for WhatsApp integration
 //!
-//! Handles communication with Go WhatsApp service and message queue operations.
+//! Handles WhatsApp operations and message queue management using a provider-based architecture.
+//! The service is decoupled from specific WhatsApp implementations through the WhatsAppProvider trait.
 
 use crate::{
     entities::{
@@ -16,11 +17,12 @@ use sea_orm::{DatabaseConnection, TransactionTrait, entity::*, query::*};
 use std::sync::Arc;
 use tracing::info;
 use utilities::Id;
+use whatsapp::{SyncConfig, WhatsAppProvider};
 
 /// Service for WhatsApp integration
 pub struct WhatsAppService {
     db: Arc<DatabaseConnection>,
-    go_service_url: String,
+    provider: Arc<dyn WhatsAppProvider>,
 }
 
 impl WhatsAppService {
@@ -29,42 +31,34 @@ impl WhatsAppService {
     /// # Arguments
     ///
     /// * `db` - Database connection
-    /// * `go_service_url` - URL of the Go WhatsApp service
-    pub fn new(db: Arc<DatabaseConnection>, go_service_url: String) -> Self {
-        Self { db, go_service_url }
+    /// * `provider` - WhatsApp provider implementation (Go service, wa-rs, or mock)
+    pub fn new(db: Arc<DatabaseConnection>, provider: Arc<dyn WhatsAppProvider>) -> Self {
+        Self { db, provider }
     }
 
     /// Create an Arc-wrapped WhatsApp service for dependency injection
-    pub fn arc(db: Arc<DatabaseConnection>, go_service_url: String) -> Arc<Self> {
-        Arc::new(Self::new(db, go_service_url))
+    pub fn arc(db: Arc<DatabaseConnection>, provider: Arc<dyn WhatsAppProvider>) -> Arc<Self> {
+        Arc::new(Self::new(db, provider))
     }
 
     /// Sync groups from WhatsApp
     ///
-    /// Calls Go service to fetch latest group list and updates database.
+    /// Calls provider to fetch latest group list and updates database.
     ///
     /// # Returns
     ///
     /// * `Ok(SyncGroupsResponseDto)` - Sync result with group count
     /// * `Err(ServiceError)` - If sync fails
     pub async fn sync_groups(&self) -> ServiceResult<SyncGroupsResponseDto> {
-        // Call Go service to trigger sync
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/whatsapp/groups/sync", self.go_service_url);
-
-        let response = client
-            .post(&url)
-            .timeout(std::time::Duration::from_secs(30))
-            .send()
+        // Call provider to sync groups
+        let _groups = self
+            .provider
+            .sync_groups(&SyncConfig::default())
             .await
-            .map_err(|e| ServiceError::internal(format!("Go service request failed: {}", e)))?;
+            .map_err(|e| ServiceError::internal(format!("Provider sync failed: {}", e)))?;
 
-        if !response.status().is_success() {
-            return Err(ServiceError::internal(format!(
-                "Go service returned status {}",
-                response.status()
-            )));
-        }
+        // TODO: Save groups to database
+        // This would involve inserting/updating group records based on the synced data
 
         // Get updated group count from database
         let count = group::Entity::find().count(self.db.as_ref()).await?;
@@ -190,78 +184,43 @@ impl WhatsAppService {
         Ok(Self::model_to_dto(updated_message))
     }
 
-    /// Fetch WhatsApp status from Go service
+    /// Fetch WhatsApp status from provider
     ///
     /// # Returns
     ///
     /// * `Ok(WhatsAppStatusDto)` - Current status
     /// * `Err(ServiceError)` - If request fails
     pub async fn fetch_status(&self) -> ServiceResult<WhatsAppStatusDto> {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/whatsapp/status", self.go_service_url);
-
-        let response = client
-            .get(&url)
-            .timeout(std::time::Duration::from_secs(5))
-            .send()
-            .await
-            .map_err(|e| ServiceError::internal(format!("Go service request failed: {}", e)))?;
-
-        if !response.status().is_success() {
-            return Err(ServiceError::internal(format!(
-                "Go service returned status {}",
-                response.status()
-            )));
-        }
-
-        let status: GoServiceStatus = response
-            .json()
-            .await
-            .map_err(|e| ServiceError::internal(format!("Failed to parse response: {}", e)))?;
+        let status =
+            self.provider.get_status().await.map_err(|e| {
+                ServiceError::internal(format!("Provider status check failed: {}", e))
+            })?;
 
         Ok(WhatsAppStatusDto {
             connected: status.connected,
             logged_in: status.logged_in,
-            timestamp: chrono::Utc::now(),
+            timestamp: status.timestamp,
         })
     }
 
-    /// Fetch QR code from Go service
+    /// Fetch QR code from provider
     ///
     /// # Returns
     ///
     /// * `Ok(QRCodeDto)` - QR code data
     /// * `Err(ServiceError)` - If request fails or already logged in
     pub async fn fetch_qr_code(&self) -> ServiceResult<QRCodeDto> {
-        let client = reqwest::Client::new();
-        let url = format!("{}/api/whatsapp/qr", self.go_service_url);
-
-        let response = client
-            .get(&url)
-            .timeout(std::time::Duration::from_secs(10))
-            .send()
-            .await
-            .map_err(|e| ServiceError::internal(format!("Go service request failed: {}", e)))?;
-
-        if response.status() == 400 {
-            return Err(ServiceError::validation("Already logged in"));
-        }
-
-        if !response.status().is_success() {
-            return Err(ServiceError::internal(format!(
-                "Go service returned status {}",
-                response.status()
-            )));
-        }
-
-        let qr_data: GoServiceQRCode = response
-            .json()
-            .await
-            .map_err(|e| ServiceError::internal(format!("Failed to parse response: {}", e)))?;
+        let qr_code = self.provider.get_qr_code().await.map_err(|e| {
+            // Map authentication errors to validation errors
+            match e {
+                whatsapp::ProviderError::Authentication(msg) => ServiceError::validation(msg),
+                _ => ServiceError::internal(format!("Provider QR code fetch failed: {}", e)),
+            }
+        })?;
 
         Ok(QRCodeDto {
-            qr_code: qr_data.qr_code,
-            expires_at: chrono::Utc::now() + chrono::Duration::seconds(60),
+            qr_code: qr_code.data,
+            expires_at: qr_code.expires_at,
         })
     }
 
@@ -296,18 +255,6 @@ impl WhatsAppService {
             .created_request_id(*message.created_request_id())
             .build()
     }
-}
-
-// Go service response types
-#[derive(Debug, serde::Deserialize)]
-struct GoServiceStatus {
-    connected: bool,
-    logged_in: bool,
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct GoServiceQRCode {
-    qr_code: String,
 }
 
 // Response DTOs

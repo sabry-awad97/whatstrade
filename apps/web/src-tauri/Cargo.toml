@@ -25,6 +25,7 @@ ai-client = { workspace = true }
 db_entity = { workspace = true }
 db_service = { workspace = true }
 utilities = { workspace = true }
+whatsapp = { workspace = true }
 
 derive-getters.workspace = true
 dotenvy.workspace = true
@@ -44,6 +45,7 @@ db_entity = { path = "db/entity" }
 db_service = { path = "db/service" }
 utilities = { path = "crates/utilities" }
 ai-client = { path = "crates/ai-client" }
+whatsapp = { path = "crates/whatsapp" }
 
 chrono = { version = "0.4.44", features = ["serde"] }
 dotenvy = "0.15.7"

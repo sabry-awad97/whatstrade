@@ -77,6 +77,10 @@ pub struct ServiceManagerConfig {
     #[builder(default, setter(into))]
     go_whatsapp_service_url: Option<String>,
 
+    /// WhatsApp provider type ("go", "mock", or "wa-rs" in the future)
+    #[builder(default, setter(into))]
+    whatsapp_provider_type: Option<String>,
+
     /// AI client configuration
     #[builder(default, setter(into))]
     ai_config: Option<ai_client::Config>,
@@ -300,13 +304,16 @@ impl ServiceManager {
             request_service.clone(),
             ai_client.clone(),
         );
-        let whatsapp_service = WhatsAppService::arc(
-            db.clone(),
-            config
-                .go_whatsapp_service_url()
-                .clone()
-                .unwrap_or_else(|| "http://localhost:8080".to_string()),
-        );
+
+        // Initialize WhatsApp provider based on configuration
+        let whatsapp_provider: Arc<dyn whatsapp::WhatsAppProvider> =
+            Arc::new(whatsapp::GoServiceProvider::new(
+                config
+                    .go_whatsapp_service_url()
+                    .clone()
+                    .unwrap_or_else(|| "http://localhost:8080".to_string()),
+            ));
+        let whatsapp_service = WhatsAppService::arc(db.clone(), whatsapp_provider);
 
         Ok(Self {
             db,

@@ -11,7 +11,12 @@ use ai_client::AiClient;
 use chrono::Datelike;
 use rust_decimal::Decimal;
 use schemars::JsonSchema;
-use sea_orm::{DatabaseConnection, entity::*, query::*};
+use sea_orm::{
+    DatabaseConnection,
+    entity::*,
+    query::*,
+    sea_query::{Expr, extension::postgres::PgExpr},
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tera::{Context, Tera};
@@ -103,11 +108,11 @@ impl SimulateService {
             return Err(ServiceError::validation("Raw text cannot be empty"));
         }
 
-        if raw_text.len() > MAX_MESSAGE_LENGTH {
+        let char_len = raw_text.chars().count();
+        if char_len > MAX_MESSAGE_LENGTH {
             return Err(ServiceError::validation(format!(
                 "Raw text too long ({} chars, max {})",
-                raw_text.len(),
-                MAX_MESSAGE_LENGTH
+                char_len, MAX_MESSAGE_LENGTH
             )));
         }
         pipeline_steps.push(PipelineStepDto {
@@ -346,12 +351,12 @@ impl SimulateService {
 
         if is_offer {
             // Score against requests with smart pre-filtering
-            // Filter by medication name prefix for better performance
+            // Filter by medication name prefix for better performance (case-insensitive)
             let requests = request::Entity::find()
                 .filter(request::Column::Status.eq(request::RequestStatus::Active))
                 .filter(
-                    request::Column::MedicationName
-                        .contains(extracted.medication_name.to_lowercase()),
+                    Expr::col(request::Column::MedicationName)
+                        .ilike(format!("%{}%", extracted.medication_name)),
                 )
                 .limit(MAX_CANDIDATES)
                 .all(self.db.as_ref())
@@ -374,12 +379,12 @@ impl SimulateService {
                 }
             }
         } else {
-            // Score against offers with smart pre-filtering
+            // Score against offers with smart pre-filtering (case-insensitive)
             let offers = offer::Entity::find()
                 .filter(offer::Column::Status.eq(offer::OfferStatus::Active))
                 .filter(
-                    offer::Column::MedicationName
-                        .contains(extracted.medication_name.to_lowercase()),
+                    Expr::col(offer::Column::MedicationName)
+                        .ilike(format!("%{}%", extracted.medication_name)),
                 )
                 .limit(MAX_CANDIDATES)
                 .all(self.db.as_ref())
