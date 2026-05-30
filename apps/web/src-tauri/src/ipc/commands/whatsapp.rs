@@ -211,11 +211,19 @@ pub async fn whatsapp_logout(app: AppHandle) -> IpcResponse<()> {
 pub async fn start_whatsapp_event_listener(
     app: AppHandle,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let state = app.state::<AppState>();
+
+    // Check if listener is already running to prevent duplicates
+    if state.has_whatsapp_listener().await {
+        tracing::warn!("WhatsApp event listener is already running, skipping duplicate spawn");
+        return Ok(());
+    }
+
     // Clone app handle for the spawned task
     let app_clone = app.clone();
 
     // Spawn a task that continuously listens for events with reconnection
-    tokio::spawn(async move {
+    let handle = tokio::spawn(async move {
         let state = app_clone.state::<AppState>();
         let service = state.service_manager().whatsapp_service();
 
@@ -269,6 +277,9 @@ pub async fn start_whatsapp_event_listener(
             }
         }
     });
+
+    // Store the handle for graceful shutdown
+    state.set_whatsapp_listener_handle(handle).await;
 
     Ok(())
 }

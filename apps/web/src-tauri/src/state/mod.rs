@@ -1,4 +1,6 @@
 use derive_getters::Getters;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use typed_builder::TypedBuilder;
 
 use crate::error::AppResult;
@@ -8,6 +10,36 @@ use crate::error::AppResult;
 pub struct AppState {
     #[builder(setter(into))]
     service_manager: db_service::ServiceManager,
+
+    /// WhatsApp event listener task handle (for graceful shutdown)
+    #[builder(default = Arc::new(Mutex::new(None)))]
+    #[getter(skip)]
+    whatsapp_listener_handle: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+}
+
+impl AppState {
+    /// Store the WhatsApp event listener task handle
+    #[allow(dead_code)]
+    pub async fn set_whatsapp_listener_handle(&self, handle: tokio::task::JoinHandle<()>) {
+        let mut guard = self.whatsapp_listener_handle.lock().await;
+        *guard = Some(handle);
+    }
+
+    /// Check if WhatsApp event listener is already running
+    #[allow(dead_code)]
+    pub async fn has_whatsapp_listener(&self) -> bool {
+        let guard = self.whatsapp_listener_handle.lock().await;
+        guard.is_some()
+    }
+
+    /// Stop the WhatsApp event listener
+    #[allow(dead_code)]
+    pub async fn stop_whatsapp_listener(&self) {
+        let mut guard = self.whatsapp_listener_handle.lock().await;
+        if let Some(handle) = guard.take() {
+            handle.abort();
+        }
+    }
 }
 
 /// Initialize application state

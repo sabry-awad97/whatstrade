@@ -319,12 +319,15 @@ impl ServiceManager {
 
         let whatsapp_service = WhatsAppService::arc(db.clone(), whatsapp_config);
 
-        // Auto-connect if configured
+        // Auto-connect if configured (spawn as background task to avoid blocking startup)
         if *config.whatsapp_auto_connect() {
-            tracing::info!("Auto-connecting to WhatsApp");
-            if let Err(e) = whatsapp_service.connect().await {
-                tracing::error!("Failed to auto-connect WhatsApp: {:?}", e);
-            }
+            let whatsapp_service_clone = whatsapp_service.clone();
+            tokio::spawn(async move {
+                tracing::info!("Auto-connecting to WhatsApp");
+                if let Err(e) = whatsapp_service_clone.connect().await {
+                    tracing::error!("Failed to auto-connect WhatsApp: {:?}", e);
+                }
+            });
         }
         Ok(Self {
             db,

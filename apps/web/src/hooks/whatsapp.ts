@@ -354,6 +354,23 @@ export function useWhatsAppEvents(maxEvents = 50) {
  * @param eventType The specific event type to listen for
  * @returns The last event of the specified type, or null
  */
+
+// Map event types to backend event names
+// Backend uses shortened names for some events
+const eventNameMap: Record<string, string> = {
+  state_changed: "whatsapp:state",
+  qr_code: "whatsapp:qr",
+  pair_code: "whatsapp:pair-code",
+  pair_success: "whatsapp:pair-success",
+  pair_error: "whatsapp:pair-error",
+  message: "whatsapp:message",
+  receipt: "whatsapp:receipt",
+  presence: "whatsapp:presence",
+  chat_state: "whatsapp:chat-state",
+  groups_synced: "whatsapp:groups-synced",
+  error: "whatsapp:error",
+};
+
 export function useWhatsAppEvent<T extends WhatsAppEvent["type"]>(
   eventType: T,
 ): Extract<WhatsAppEvent, { type: T }> | null {
@@ -363,22 +380,6 @@ export function useWhatsAppEvent<T extends WhatsAppEvent["type"]>(
   > | null>(null);
 
   useEffect(() => {
-    // Map event types to backend event names
-    // Backend uses shortened names for some events
-    const eventNameMap: Record<string, string> = {
-      state_changed: "whatsapp:state",
-      qr_code: "whatsapp:qr",
-      pair_code: "whatsapp:pair-code",
-      pair_success: "whatsapp:pair-success",
-      pair_error: "whatsapp:pair-error",
-      message: "whatsapp:message",
-      receipt: "whatsapp:receipt",
-      presence: "whatsapp:presence",
-      chat_state: "whatsapp:chat-state",
-      groups_synced: "whatsapp:groups-synced",
-      error: "whatsapp:error",
-    };
-
     const eventName =
       eventNameMap[eventType] || `whatsapp:${eventType.replace(/_/g, "-")}`;
     let unlistenFn: UnlistenFn | null = null;

@@ -89,8 +89,12 @@ impl WaRsProvider {
             })?,
         );
 
-        // Create broadcast channel for events - queues up to 100 events for subscribers
-        // This prevents race conditions where QR codes are emitted before frontend subscribes
+        // Create broadcast channel for events
+        // NOTE: tokio::sync::broadcast only delivers messages to receivers that are already
+        // subscribed at the time of sending. Events emitted before event_stream() is called
+        // will be lost. The capacity (100) is a ring buffer for lagging existing receivers.
+        // Frontend should call get_qr_code() or fetch_status() after subscribing to ensure
+        // it receives the current state.
         let (event_tx, _) = broadcast::channel(100);
         let event_tx_clone = event_tx.clone();
 
@@ -389,7 +393,7 @@ fn map_wa_rs_event(event: WaRsEvent) -> Option<WhatsAppEvent> {
         WaRsEvent::TemporaryBan(inner) => Some(WhatsAppEvent::StateChanged(StateChangeEvent {
             state: ConnectionState::TemporaryBan {
                 reason: format!("{:?}", inner.code),
-                expires_in_secs: inner.expire.num_seconds() as u64,
+                expires_in_secs: inner.expire.num_seconds().max(0) as u64,
             },
             timestamp: Utc::now(),
         })),
