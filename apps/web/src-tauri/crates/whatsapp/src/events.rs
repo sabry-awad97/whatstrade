@@ -142,7 +142,7 @@ pub struct MessageEvent {
     pub from_me: bool,
 
     /// Message timestamp
-    pub timestamp_ms: i64,
+    pub timestamp: DateTime<Utc>,
 
     /// Message kind
     pub kind: MessageKind,
@@ -204,8 +204,8 @@ pub struct PresenceEvent {
     /// Whether online
     pub online: bool,
 
-    /// Last seen timestamp (milliseconds)
-    pub last_seen_ms: Option<i64>,
+    /// Last seen timestamp
+    pub last_seen: Option<DateTime<Utc>>,
 
     /// Timestamp
     pub timestamp: DateTime<Utc>,

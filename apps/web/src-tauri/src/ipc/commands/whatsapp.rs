@@ -207,13 +207,14 @@ pub async fn whatsapp_logout(app: AppHandle) -> IpcResponse<()> {
 ///
 /// This should be called once when the app starts to set up event streaming.
 /// If the provider is not initialized yet, this will wait until it is.
+/// The listener will automatically reconnect if the stream ends or errors.
 pub async fn start_whatsapp_event_listener(
     app: AppHandle,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // Clone app handle for the spawned task
     let app_clone = app.clone();
 
-    // Spawn a task that waits for provider initialization
+    // Spawn a task that continuously listens for events with reconnection
     tokio::spawn(async move {
         let state = app_clone.state::<AppState>();
         let service = state.service_manager().whatsapp_service();
@@ -250,12 +251,15 @@ pub async fn start_whatsapp_event_listener(
                             }
                         }
 
-                        tracing::info!("WhatsApp event listener stopped");
-                        break;
+                        // Stream ended, treat as transient disconnect
+                        tracing::warn!("WhatsApp event stream ended, will retry in 2 seconds");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                        // Continue to retry by looping back
                     }
                     Err(e) => {
-                        tracing::error!("Failed to get event stream: {}", e);
-                        break;
+                        tracing::error!("Failed to get event stream: {}, retrying in 5 seconds", e);
+                        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                        // Continue to retry by looping back
                     }
                 }
             } else {

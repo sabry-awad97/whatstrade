@@ -101,7 +101,7 @@ export const messageEventSchema = z.object({
   chat: z.string(),
   sender: z.string(),
   from_me: z.boolean(),
-  timestamp_ms: z.number(),
+  timestamp: z.coerce.date(),
   kind: messageKindSchema,
   text: z.string().nullable(),
   caption: z.string().nullable(),
@@ -120,7 +120,7 @@ export const receiptEventSchema = z.object({
 export const presenceEventSchema = z.object({
   from: z.string(),
   online: z.boolean(),
-  last_seen_ms: z.number().nullable(),
+  last_seen: z.coerce.date().nullable(),
   timestamp: z.coerce.date(),
 });
 

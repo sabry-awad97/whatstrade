@@ -22,6 +22,15 @@ import { createLogger } from "@/lib/logger";
 const logger = createLogger("WhatsAppHooks");
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Polling interval for WhatsApp status in milliseconds
+ */
+export const WHATSAPP_STATUS_REFETCH_INTERVAL = 5000;
+
+// ============================================================================
 // Query Keys
 // ============================================================================
 
@@ -58,7 +67,7 @@ export function useWhatsAppStatus() {
       logger.info("Query: fetching WhatsApp status");
       return getWhatsAppStatus();
     },
-    refetchInterval: 5000, // Poll every 5 seconds
+    refetchInterval: WHATSAPP_STATUS_REFETCH_INTERVAL,
   });
 }
 
@@ -354,7 +363,24 @@ export function useWhatsAppEvent<T extends WhatsAppEvent["type"]>(
   > | null>(null);
 
   useEffect(() => {
-    const eventName = `whatsapp:${eventType.replace(/_/g, "-")}`;
+    // Map event types to backend event names
+    // Backend uses shortened names for some events
+    const eventNameMap: Record<string, string> = {
+      state_changed: "whatsapp:state",
+      qr_code: "whatsapp:qr",
+      pair_code: "whatsapp:pair-code",
+      pair_success: "whatsapp:pair-success",
+      pair_error: "whatsapp:pair-error",
+      message: "whatsapp:message",
+      receipt: "whatsapp:receipt",
+      presence: "whatsapp:presence",
+      chat_state: "whatsapp:chat-state",
+      groups_synced: "whatsapp:groups-synced",
+      error: "whatsapp:error",
+    };
+
+    const eventName =
+      eventNameMap[eventType] || `whatsapp:${eventType.replace(/_/g, "-")}`;
     let unlistenFn: UnlistenFn | null = null;
 
     listen<unknown>(eventName, (event) => {

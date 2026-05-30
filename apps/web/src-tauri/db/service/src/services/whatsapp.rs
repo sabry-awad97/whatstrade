@@ -82,9 +82,38 @@ impl WhatsAppService {
     /// * `Ok(())` - Successfully connected or already connected
     /// * `Err(ServiceError)` - If connection fails
     pub async fn connect(&self) -> ServiceResult<()> {
-        self.get_or_init_provider().await?;
-        info!("WhatsApp provider connected");
-        Ok(())
+        let provider = self.get_or_init_provider().await?;
+
+        // Wait for the provider to be ready with timeout and retry
+        let max_attempts = 30; // 30 attempts * 500ms = 15 seconds total
+        let retry_delay = tokio::time::Duration::from_millis(500);
+
+        for attempt in 1..=max_attempts {
+            match provider.is_ready().await {
+                Ok(true) => {
+                    info!("WhatsApp provider connected and ready");
+                    return Ok(());
+                }
+                Ok(false) => {
+                    if attempt == max_attempts {
+                        return Err(ServiceError::internal(
+                            "WhatsApp provider failed to become ready within timeout",
+                        ));
+                    }
+                    tokio::time::sleep(retry_delay).await;
+                }
+                Err(e) => {
+                    return Err(ServiceError::internal(format!(
+                        "Failed to check provider readiness: {}",
+                        e
+                    )));
+                }
+            }
+        }
+
+        Err(ServiceError::internal(
+            "WhatsApp provider failed to become ready",
+        ))
     }
 
     /// Disconnect from WhatsApp

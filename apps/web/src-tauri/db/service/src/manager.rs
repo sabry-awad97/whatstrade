@@ -77,6 +77,10 @@ pub struct ServiceManagerConfig {
     #[builder(default = false)]
     whatsapp_auto_connect: bool,
 
+    /// WhatsApp data directory path (optional, defaults to current directory)
+    #[builder(default, setter(into))]
+    whatsapp_data_dir: Option<std::path::PathBuf>,
+
     /// AI client configuration
     #[builder(default, setter(into))]
     ai_config: Option<ai_client::Config>,
@@ -302,10 +306,15 @@ impl ServiceManager {
         );
 
         // Initialize WhatsApp service with configuration (lazy initialization)
-        let whatsapp_config = whatsapp::WaRsConfig {
-            db_path: std::path::PathBuf::from("whatsapp.db"),
-            device_id: 1,
-            skip_history_sync: true,
+        let whatsapp_config = {
+            let mut wa_config = whatsapp::WaRsConfig::default();
+
+            // Set db_path based on provided data directory or use default
+            if let Some(data_dir) = config.whatsapp_data_dir() {
+                wa_config.db_path = data_dir.join("whatsapp.db");
+            }
+
+            wa_config
         };
 
         let whatsapp_service = WhatsAppService::arc(db.clone(), whatsapp_config);

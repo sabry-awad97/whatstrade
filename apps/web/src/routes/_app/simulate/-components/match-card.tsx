@@ -22,7 +22,7 @@ export function MatchCard({ candidate, parsedType }: MatchCardProps) {
         ? "suggest"
         : candidate.score >= 0.5
           ? "review"
-          : "reject";
+          : "none";
 
   return (
     <div

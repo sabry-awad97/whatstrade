@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useWhatsAppStatus, useWhatsAppQrCode } from "@/hooks/whatsapp";
+import {
+  useWhatsAppStatus,
+  useWhatsAppQrCode,
+  WHATSAPP_STATUS_REFETCH_INTERVAL,
+} from "@/hooks/whatsapp";
 import {
   ConnectionStatusBadge,
   QRCodeDisplay,
@@ -129,7 +133,8 @@ function RouteComponent() {
           <div className="rounded-lg border bg-muted/50 p-4">
             <p className="text-sm text-muted-foreground">
               <strong>Note:</strong> Connection status updates automatically
-              every 5 seconds. No manual refresh required.
+              every {Math.floor(WHATSAPP_STATUS_REFETCH_INTERVAL / 1000)}{" "}
+              seconds. No manual refresh required.
               {connected && !loggedIn && (
                 <span>
                   {" "}

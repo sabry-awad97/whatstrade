@@ -9,10 +9,9 @@ use crate::{
     types::{ConnectionStatus, GroupInfo, MessageId, OutgoingMessage, QRCode, SyncConfig},
 };
 use async_trait::async_trait;
-use futures::stream::StreamExt;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::watch;
 use tracing::{debug, error, info, warn};
 use wa_rs::Client;
 use wa_rs::bot::Bot;
@@ -48,7 +47,8 @@ impl Default for WaRsConfig {
 /// Provider that uses wa-rs library
 pub struct WaRsProvider {
     client: Arc<Client>,
-    event_tx: broadcast::Sender<WhatsAppEvent>,
+    event_tx: watch::Sender<Option<WhatsAppEvent>>,
+    bot_task: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 impl WaRsProvider {
@@ -88,8 +88,8 @@ impl WaRsProvider {
             })?,
         );
 
-        // Create broadcast channel for events
-        let (event_tx, _) = broadcast::channel(1000);
+        // Create watch channel for events - holds the latest event
+        let (event_tx, _) = watch::channel(None);
         let event_tx_clone = event_tx.clone();
 
         // Build the bot with wa-rs components and event handler
@@ -101,9 +101,9 @@ impl WaRsProvider {
                 let tx = event_tx_clone.clone();
                 async move {
                     if let Some(domain_event) = map_wa_rs_event(event)
-                        && let Err(e) = tx.send(domain_event)
+                        && let Err(e) = tx.send(Some(domain_event))
                     {
-                        warn!("Failed to broadcast event: {}", e);
+                        warn!("Failed to send event: {}", e);
                     }
                 }
             });
@@ -120,7 +120,7 @@ impl WaRsProvider {
         let client = bot.client();
 
         // Spawn the bot run loop in the background
-        tokio::spawn(async move {
+        let bot_task = tokio::spawn(async move {
             match bot.run().await {
                 Ok(handle) => {
                     if let Err(e) = handle.await {
@@ -135,7 +135,11 @@ impl WaRsProvider {
 
         info!("WaRsProvider initialized successfully");
 
-        Ok(Self { client, event_tx })
+        Ok(Self {
+            client,
+            event_tx,
+            bot_task: tokio::sync::Mutex::new(Some(bot_task)),
+        })
     }
 
     /// Create a new provider with default configuration
@@ -155,17 +159,24 @@ impl WaRsProvider {
 #[async_trait]
 impl WhatsAppProvider for WaRsProvider {
     fn event_stream(&self) -> ProviderResult<EventStream> {
-        let rx = self.event_tx.subscribe();
-        let stream =
-            tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(|result| async move {
-                match result {
-                    Ok(event) => Some(event),
-                    Err(e) => {
-                        warn!("Event stream error: {}", e);
-                        None
-                    }
+        let mut rx = self.event_tx.subscribe();
+        let stream = async_stream::stream! {
+            // Yield the current value if it exists
+            {
+                let current = rx.borrow_and_update().clone();
+                if let Some(event) = current {
+                    yield event;
                 }
-            });
+            }
+
+            // Then yield all future changes
+            while rx.changed().await.is_ok() {
+                let event = rx.borrow_and_update().clone();
+                if let Some(event) = event {
+                    yield event;
+                }
+            }
+        };
 
         Ok(Box::pin(stream))
     }
@@ -273,7 +284,23 @@ impl WhatsAppProvider for WaRsProvider {
     async fn logout(&self) -> ProviderResult<()> {
         debug!("Logging out from WhatsApp");
 
+        // Disconnect the client
         self.client.disconnect().await;
+
+        // Abort the bot run loop task
+        let mut bot_task = self.bot_task.lock().await;
+        if let Some(handle) = bot_task.take() {
+            debug!("Aborting bot run loop task");
+            handle.abort();
+
+            // Wait for the task to finish with a timeout
+            match tokio::time::timeout(std::time::Duration::from_secs(5), handle).await {
+                Ok(Ok(())) => debug!("Bot task completed successfully"),
+                Ok(Err(e)) if e.is_cancelled() => debug!("Bot task aborted successfully"),
+                Ok(Err(e)) => warn!("Bot task panicked: {:?}", e),
+                Err(_) => warn!("Bot task abort timed out"),
+            }
+        }
 
         info!("Successfully logged out");
         Ok(())
@@ -342,8 +369,8 @@ fn map_wa_rs_event(event: WaRsEvent) -> Option<WhatsAppEvent> {
 
         WaRsEvent::TemporaryBan(inner) => Some(WhatsAppEvent::StateChanged(StateChangeEvent {
             state: ConnectionState::TemporaryBan {
-                reason: format!("{:?}", inner),
-                expires_in_secs: 0,
+                reason: format!("{:?}", inner.code),
+                expires_in_secs: inner.expire.num_seconds() as u64,
             },
             timestamp: Utc::now(),
         })),
