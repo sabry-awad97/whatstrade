@@ -15,30 +15,112 @@ use crate::{
 };
 use sea_orm::{DatabaseConnection, TransactionTrait, entity::*, query::*};
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::info;
 use utilities::Id;
-use whatsapp::{SyncConfig, WhatsAppProvider};
+use whatsapp::{SyncConfig, WaRsConfig, WaRsProvider, WhatsAppProvider};
 
 /// Service for WhatsApp integration
 pub struct WhatsAppService {
     db: Arc<DatabaseConnection>,
-    provider: Arc<dyn WhatsAppProvider>,
+    provider: Arc<RwLock<Option<Arc<dyn WhatsAppProvider>>>>,
+    config: WaRsConfig,
 }
 
 impl WhatsAppService {
-    /// Create a new WhatsApp service
+    /// Create a new WhatsApp service (provider not initialized yet)
     ///
     /// # Arguments
     ///
     /// * `db` - Database connection
-    /// * `provider` - WhatsApp provider implementation (Go service, wa-rs, or mock)
-    pub fn new(db: Arc<DatabaseConnection>, provider: Arc<dyn WhatsAppProvider>) -> Self {
-        Self { db, provider }
+    /// * `config` - Configuration for wa-rs provider
+    pub fn new(db: Arc<DatabaseConnection>, config: WaRsConfig) -> Self {
+        Self {
+            db,
+            provider: Arc::new(RwLock::new(None)),
+            config,
+        }
     }
 
     /// Create an Arc-wrapped WhatsApp service for dependency injection
-    pub fn arc(db: Arc<DatabaseConnection>, provider: Arc<dyn WhatsAppProvider>) -> Arc<Self> {
-        Arc::new(Self::new(db, provider))
+    pub fn arc(db: Arc<DatabaseConnection>, config: WaRsConfig) -> Arc<Self> {
+        Arc::new(Self::new(db, config))
+    }
+
+    /// Get the provider, initializing it if necessary
+    async fn get_or_init_provider(&self) -> ServiceResult<Arc<dyn WhatsAppProvider>> {
+        // Fast path: provider already initialized
+        {
+            let provider = self.provider.read().await;
+            if let Some(p) = provider.as_ref() {
+                return Ok(p.clone());
+            }
+        }
+
+        // Slow path: initialize provider
+        let mut provider = self.provider.write().await;
+
+        // Double-check in case another task initialized it
+        if let Some(p) = provider.as_ref() {
+            return Ok(p.clone());
+        }
+
+        info!("Initializing WhatsApp provider");
+        let new_provider: Arc<dyn WhatsAppProvider> =
+            Arc::new(WaRsProvider::new(self.config.clone()).await.map_err(|e| {
+                ServiceError::internal(format!("Failed to initialize WhatsApp provider: {}", e))
+            })?);
+
+        *provider = Some(new_provider.clone());
+        Ok(new_provider)
+    }
+
+    /// Connect to WhatsApp (initialize provider if not already done)
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Successfully connected or already connected
+    /// * `Err(ServiceError)` - If connection fails
+    pub async fn connect(&self) -> ServiceResult<()> {
+        self.get_or_init_provider().await?;
+        info!("WhatsApp provider connected");
+        Ok(())
+    }
+
+    /// Disconnect from WhatsApp
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(())` - Successfully disconnected
+    /// * `Err(ServiceError)` - If disconnect fails
+    pub async fn disconnect(&self) -> ServiceResult<()> {
+        let mut provider = self.provider.write().await;
+
+        if let Some(p) = provider.take() {
+            p.logout()
+                .await
+                .map_err(|e| ServiceError::internal(format!("Failed to disconnect: {}", e)))?;
+            info!("WhatsApp provider disconnected");
+        }
+
+        Ok(())
+    }
+
+    /// Check if provider is initialized and connected
+    pub async fn is_connected(&self) -> bool {
+        let provider = self.provider.read().await;
+        if let Some(p) = provider.as_ref() {
+            p.is_ready().await.unwrap_or(false)
+        } else {
+            false
+        }
+    }
+
+    /// Get the provider (for direct access by commands)
+    ///
+    /// Returns None if not yet initialized
+    pub async fn provider(&self) -> Option<Arc<dyn WhatsAppProvider>> {
+        self.provider.read().await.clone()
     }
 
     /// Sync groups from WhatsApp
@@ -50,9 +132,10 @@ impl WhatsAppService {
     /// * `Ok(SyncGroupsResponseDto)` - Sync result with group count
     /// * `Err(ServiceError)` - If sync fails
     pub async fn sync_groups(&self) -> ServiceResult<SyncGroupsResponseDto> {
+        let provider = self.get_or_init_provider().await?;
+
         // Call provider to sync groups
-        let _groups = self
-            .provider
+        let _groups = provider
             .sync_groups(&SyncConfig::default())
             .await
             .map_err(|e| ServiceError::internal(format!("Provider sync failed: {}", e)))?;
@@ -191,10 +274,12 @@ impl WhatsAppService {
     /// * `Ok(WhatsAppStatusDto)` - Current status
     /// * `Err(ServiceError)` - If request fails
     pub async fn fetch_status(&self) -> ServiceResult<WhatsAppStatusDto> {
-        let status =
-            self.provider.get_status().await.map_err(|e| {
-                ServiceError::internal(format!("Provider status check failed: {}", e))
-            })?;
+        let provider = self.get_or_init_provider().await?;
+
+        let status = provider
+            .get_status()
+            .await
+            .map_err(|e| ServiceError::internal(format!("Provider status check failed: {}", e)))?;
 
         Ok(WhatsAppStatusDto {
             connected: status.connected,
@@ -210,7 +295,9 @@ impl WhatsAppService {
     /// * `Ok(QRCodeDto)` - QR code data
     /// * `Err(ServiceError)` - If request fails or already logged in
     pub async fn fetch_qr_code(&self) -> ServiceResult<QRCodeDto> {
-        let qr_code = self.provider.get_qr_code().await.map_err(|e| {
+        let provider = self.get_or_init_provider().await?;
+
+        let qr_code = provider.get_qr_code().await.map_err(|e| {
             // Map authentication errors to validation errors
             match e {
                 whatsapp::ProviderError::Authentication(msg) => ServiceError::validation(msg),

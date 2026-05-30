@@ -73,6 +73,10 @@ pub struct ServiceManagerConfig {
     #[builder(default = false)]
     sqlx_logging: bool,
 
+    /// WhatsApp auto-connect on startup (default: false)
+    #[builder(default = false)]
+    whatsapp_auto_connect: bool,
+
     /// AI client configuration
     #[builder(default, setter(into))]
     ai_config: Option<ai_client::Config>,
@@ -297,17 +301,22 @@ impl ServiceManager {
             ai_client.clone(),
         );
 
-        // Initialize WhatsApp provider (wa-rs)
-        // TODO: Once wa-rs is fully implemented, initialize with proper config
-        let whatsapp_provider: Arc<dyn whatsapp::WhatsAppProvider> =
-            Arc::new(whatsapp::WaRsProvider::new().await.map_err(|e| {
-                InitializationError::Database(sea_orm::DbErr::Custom(format!(
-                    "Failed to initialize WhatsApp provider: {}",
-                    e
-                )))
-            })?);
-        let whatsapp_service = WhatsAppService::arc(db.clone(), whatsapp_provider);
+        // Initialize WhatsApp service with configuration (lazy initialization)
+        let whatsapp_config = whatsapp::WaRsConfig {
+            db_path: std::path::PathBuf::from("whatsapp.db"),
+            device_id: 1,
+            skip_history_sync: true,
+        };
 
+        let whatsapp_service = WhatsAppService::arc(db.clone(), whatsapp_config);
+
+        // Auto-connect if configured
+        if *config.whatsapp_auto_connect() {
+            tracing::info!("Auto-connecting to WhatsApp");
+            if let Err(e) = whatsapp_service.connect().await {
+                tracing::error!("Failed to auto-connect WhatsApp: {:?}", e);
+            }
+        }
         Ok(Self {
             db,
             jwt_service,

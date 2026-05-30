@@ -5,9 +5,9 @@ import {
   CardTitle,
 } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { useQueueStats } from "@/hooks/whatsapp";
 import { Clock, AlertCircle, CheckCircle, Loader2, Skull } from "lucide-react";
 import { useSpring, animated } from "@react-spring/web";
+import { useQueueStats } from "@/hooks/message-queue";
 
 interface StatCardProps {
   title: string;
@@ -67,49 +67,49 @@ function StatCard({
 }
 
 export function QueueStatsCards() {
-  const stats = useQueueStats();
+  const { data: stats, isLoading } = useQueueStats();
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       <StatCard
         title="Pending"
-        value={stats.pending}
-        total={stats.total}
+        value={stats?.pending || 0}
+        total={stats?.total || 0}
         icon={<Clock className="h-4 w-4" />}
         color="text-blue-600"
-        isLoading={stats.isConnecting}
+        isLoading={isLoading}
       />
       <StatCard
         title="Processing"
-        value={stats.processing}
-        total={stats.total}
+        value={stats?.processing || 0}
+        total={stats?.total || 0}
         icon={<Loader2 className="h-4 w-4 animate-spin" />}
         color="text-yellow-600"
-        isLoading={stats.isConnecting}
+        isLoading={isLoading}
       />
       <StatCard
         title="Failed"
-        value={stats.failed}
-        total={stats.total}
+        value={stats?.failed || 0}
+        total={stats?.total || 0}
         icon={<AlertCircle className="h-4 w-4" />}
         color="text-red-600"
-        isLoading={stats.isConnecting}
+        isLoading={isLoading}
       />
       <StatCard
         title="Completed"
-        value={stats.completed}
-        total={stats.total}
+        value={stats?.completed || 0}
+        total={stats?.total || 0}
         icon={<CheckCircle className="h-4 w-4" />}
         color="text-green-600"
-        isLoading={stats.isConnecting}
+        isLoading={isLoading}
       />
       <StatCard
         title="Dead Letter"
-        value={stats.deadLetter}
-        total={stats.total}
+        value={stats?.dead_letter || 0}
+        total={stats?.total || 0}
         icon={<Skull className="h-4 w-4" />}
         color="text-gray-600"
-        isLoading={stats.isConnecting}
+        isLoading={isLoading}
       />
     </div>
   );

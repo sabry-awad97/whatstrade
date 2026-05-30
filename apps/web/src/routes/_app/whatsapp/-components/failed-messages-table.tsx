@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useGetFailedMessages, useRetryMessage } from "@/hooks/whatsapp";
 import {
   Table,
   TableBody,
@@ -18,6 +17,7 @@ import {
 } from "@workspace/ui/components/collapsible";
 import { RefreshCw, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useGetFailedMessages, useRetryMessage } from "@/hooks/message-queue";
 
 export function FailedMessagesTable() {
   const [page, setPage] = useState(0);

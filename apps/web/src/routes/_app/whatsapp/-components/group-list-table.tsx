@@ -4,7 +4,6 @@ import {
   useToggleGroupMonitoring,
   useBulkToggleGroupMonitoring,
 } from "@/hooks/groups";
-import { useSyncGroups } from "@/hooks/whatsapp";
 import {
   Table,
   TableBody,
@@ -29,6 +28,7 @@ import {
 } from "@workspace/ui/components/alert-dialog";
 import { RefreshCw, Search, CheckCircle, XCircle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useSyncGroups } from "@/hooks/message-queue";
 
 export function GroupListTable() {
   const { data: groups, isLoading } = useListGroups();

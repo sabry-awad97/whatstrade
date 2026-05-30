@@ -18,6 +18,17 @@ pub async fn run() {
                 Ok(state) => {
                     tracing::info!("Application state initialized successfully");
                     app_handle.manage(state);
+
+                    // Start WhatsApp event listener
+                    let app_clone = app_handle.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Err(e) =
+                            ipc::commands::start_whatsapp_event_listener(app_clone).await
+                        {
+                            tracing::error!("Failed to start WhatsApp event listener: {:?}", e);
+                        }
+                    });
+
                     let _ = tx.send(Ok(()));
                 }
                 Err(e) => {
@@ -72,9 +83,13 @@ pub async fn run() {
         ipc::commands::list_audit_log,
         ipc::commands::get_dashboard_stats,
         ipc::commands::simulate_message,
-        ipc::commands::sync_groups,
-        ipc::commands::get_failed_messages,
-        ipc::commands::retry_message,
+        // WhatsApp commands
+        ipc::commands::whatsapp_status,
+        ipc::commands::whatsapp_connect,
+        ipc::commands::whatsapp_disconnect,
+        ipc::commands::whatsapp_request_pair_code,
+        ipc::commands::whatsapp_send_message,
+        ipc::commands::whatsapp_logout,
     ]);
 
     builder

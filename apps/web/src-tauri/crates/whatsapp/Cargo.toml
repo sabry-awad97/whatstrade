@@ -11,7 +11,15 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
-reqwest = { workspace = true }
 
-[dev-dependencies]
-tokio = { workspace = true, features = ["test-util"] }
+# Async streams
+futures = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
+
+# wa-rs client stack
+wa-rs = { version = "0.2.0", default-features = true }
+wa-rs-core = "0.2.0"
+wa-rs-proto = "0.2.0"
+wa-rs-sqlite-storage = "0.2.0"
+wa-rs-tokio-transport = "0.2.0"
+wa-rs-ureq-http = "0.2.0"

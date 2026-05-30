@@ -6,6 +6,8 @@ pub enum AppError {
     /// Database service error
     #[error(transparent)]
     Service(#[from] db_service::ServiceError),
+    #[error(transparent)]
+    WhatsAppProvider(#[from] whatsapp::ProviderError),
     /// Generic parsing error
     #[error("{0}")]
     ParseError(String),

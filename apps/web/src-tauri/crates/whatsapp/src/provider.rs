@@ -5,18 +5,39 @@
 
 use crate::{
     error::ProviderResult,
+    events::WhatsAppEvent,
     types::{ConnectionStatus, GroupInfo, MessageId, OutgoingMessage, QRCode, SyncConfig},
 };
 use async_trait::async_trait;
+use futures::Stream;
+use std::pin::Pin;
+
+/// Type alias for event stream
+pub type EventStream = Pin<Box<dyn Stream<Item = WhatsAppEvent> + Send>>;
 
 /// Trait for WhatsApp provider implementations
 ///
 /// This trait provides a unified interface for different WhatsApp backends:
-/// - Go service (HTTP-based, temporary)
-/// - wa-rs (native Rust library, future)
+/// - wa-rs (native Rust library)
 /// - Mock (for testing)
 #[async_trait]
 pub trait WhatsAppProvider: Send + Sync {
+    /// Get an event stream for WhatsApp events
+    ///
+    /// This stream emits events like:
+    /// - Connection state changes
+    /// - QR codes for authentication
+    /// - Pairing codes
+    /// - Incoming messages
+    /// - Receipts
+    /// - Presence updates
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(EventStream)` - Stream of WhatsApp events
+    /// * `Err(ProviderError)` - If stream creation fails
+    fn event_stream(&self) -> ProviderResult<EventStream>;
+
     /// Sync groups from WhatsApp
     ///
     /// Fetches the latest list of groups the user is part of.
@@ -43,8 +64,8 @@ pub trait WhatsAppProvider: Send + Sync {
 
     /// Get QR code for authentication
     ///
-    /// Generates a QR code that can be scanned with WhatsApp mobile app
-    /// to authenticate the client.
+    /// Note: In wa-rs, QR codes are emitted through events automatically.
+    /// This method may return an error directing you to use the event stream.
     ///
     /// # Returns
     ///
@@ -86,4 +107,18 @@ pub trait WhatsAppProvider: Send + Sync {
     /// * `Ok(false)` - Provider is not ready
     /// * `Err(ProviderError)` - If health check fails
     async fn is_ready(&self) -> ProviderResult<bool>;
+
+    /// Request a pairing code for phone number authentication
+    ///
+    /// This is an alternative to QR code scanning.
+    ///
+    /// # Arguments
+    ///
+    /// * `phone_number` - Phone number with country code (e.g., "+1234567890")
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(String)` - 8-character pairing code
+    /// * `Err(ProviderError)` - If request fails
+    async fn request_pair_code(&self, phone_number: String) -> ProviderResult<String>;
 }

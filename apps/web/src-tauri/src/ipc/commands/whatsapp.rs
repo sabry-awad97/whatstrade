@@ -1,84 +1,270 @@
-use serde::Deserialize;
-use tauri::{AppHandle, Manager};
-use utilities::{GetParams, ListParams};
+//! WhatsApp Tauri commands
+//!
+//! Provides IPC commands for WhatsApp operations with proper event streaming to the frontend.
 
 use crate::ipc::response::IpcResponse;
 use crate::state::AppState;
-use db_service::entities::whatsapp_message_queue::dto::WhatsAppMessageQueueDto;
-use db_service::services::whatsapp::{FailedMessagesDto, SyncGroupsResponseDto};
+use chrono::{DateTime, Utc};
+use futures::StreamExt;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager};
+use utilities::CreateParams;
+use whatsapp::{OutgoingMessage, WhatsAppEvent};
 
-// ============================================================================
-// Filter Forms
-// ============================================================================
+/// Request to send a WhatsApp message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SendMessageRequest {
+    /// Recipient JID (e.g., "1234567890@s.whatsapp.net" or "123456789@g.us")
+    pub recipient_jid: String,
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct FailedMessagesFilter {
-    group_name: Option<String>,
+    /// Message text
+    pub text: String,
 }
 
-// ============================================================================
-// Commands
-// ============================================================================
+/// Request to pair with phone number
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PairCodeRequest {
+    /// Phone number with country code (e.g., "+1234567890")
+    pub phone_number: String,
+}
 
-/// Sync WhatsApp groups from Go service
+/// Response for pair code request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PairCodeResponse {
+    /// 8-character pairing code
+    pub code: String,
+}
+
+/// Response for send message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SendMessageResponse {
+    /// Message ID
+    pub message_id: String,
+
+    /// Timestamp
+    pub timestamp: DateTime<Utc>,
+}
+
+/// Response for WhatsApp status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WhatsAppStatusResponse {
+    /// Whether connected to WhatsApp servers
+    pub connected: bool,
+
+    /// Whether logged in (authenticated)
+    pub logged_in: bool,
+
+    /// Phone number (if logged in)
+    pub phone_number: Option<String>,
+
+    /// Timestamp
+    pub timestamp: DateTime<Utc>,
+}
+
+/// Get WhatsApp connection status
 #[tauri::command]
-pub async fn sync_groups(app: AppHandle) -> IpcResponse<SyncGroupsResponseDto> {
+pub async fn whatsapp_status(app: AppHandle) -> IpcResponse<WhatsAppStatusResponse> {
     async {
         let state = app.state::<AppState>();
-        let whatsapp_service = state.service_manager().whatsapp_service();
+        let service = state.service_manager().whatsapp_service();
 
-        let result = whatsapp_service.sync_groups().await?;
+        // Check if provider is initialized
+        if let Some(provider) = service.provider().await {
+            let status = provider.get_status().await?;
 
-        Ok(result)
+            Ok(WhatsAppStatusResponse {
+                connected: status.connected,
+                logged_in: status.logged_in,
+                phone_number: status.phone_number,
+                timestamp: status.timestamp,
+            })
+        } else {
+            // Provider not initialized yet
+            Ok(WhatsAppStatusResponse {
+                connected: false,
+                logged_in: false,
+                phone_number: None,
+                timestamp: Utc::now(),
+            })
+        }
     }
     .await
     .into()
 }
 
-/// Get failed messages with optional filtering and pagination
+/// Connect to WhatsApp (initialize provider if needed)
 #[tauri::command]
-pub async fn get_failed_messages(
-    app: AppHandle,
-    params: ListParams<FailedMessagesFilter>,
-) -> IpcResponse<FailedMessagesDto> {
+pub async fn whatsapp_connect(app: AppHandle) -> IpcResponse<()> {
     async {
         let state = app.state::<AppState>();
-        let whatsapp_service = state.service_manager().whatsapp_service();
+        let service = state.service_manager().whatsapp_service();
 
-        // Extract pagination parameters or use defaults
-        let (page, limit) = if let Some(pagination) = params.pagination() {
-            (*pagination.page(), *pagination.page_size())
-        } else {
-            (0, 20) // Default: first page, 20 items
-        };
+        service.connect().await?;
 
-        // Extract group name filter if provided
-        let group_name = params.filter().as_ref().and_then(|f| f.group_name.clone());
+        Ok(())
+    }
+    .await
+    .into()
+}
 
-        let result = whatsapp_service
-            .get_failed_messages(page, limit, group_name)
+/// Disconnect from WhatsApp
+#[tauri::command]
+pub async fn whatsapp_disconnect(app: AppHandle) -> IpcResponse<()> {
+    async {
+        let state = app.state::<AppState>();
+        let service = state.service_manager().whatsapp_service();
+
+        service.disconnect().await?;
+
+        Ok(())
+    }
+    .await
+    .into()
+}
+
+/// Request a pairing code for phone number authentication
+#[tauri::command]
+pub async fn whatsapp_request_pair_code(
+    app: AppHandle,
+    params: CreateParams<PairCodeRequest>,
+) -> IpcResponse<PairCodeResponse> {
+    async {
+        let state = app.state::<AppState>();
+        let service = state.service_manager().whatsapp_service();
+
+        // Get or initialize provider
+        let provider = service.provider().await.ok_or_else(|| {
+            db_service::error::ServiceError::internal(
+                "WhatsApp provider not initialized. Call whatsapp_connect first.".to_string(),
+            )
+        })?;
+
+        let data = params.data();
+        let code = provider
+            .request_pair_code(data.phone_number.clone())
             .await?;
 
-        Ok(result)
+        Ok(PairCodeResponse { code })
     }
     .await
     .into()
 }
 
-/// Retry a failed message
+/// Send a WhatsApp message
 #[tauri::command]
-pub async fn retry_message(
+pub async fn whatsapp_send_message(
     app: AppHandle,
-    params: GetParams,
-) -> IpcResponse<WhatsAppMessageQueueDto> {
+    params: CreateParams<SendMessageRequest>,
+) -> IpcResponse<SendMessageResponse> {
     async {
         let state = app.state::<AppState>();
-        let whatsapp_service = state.service_manager().whatsapp_service();
+        let service = state.service_manager().whatsapp_service();
 
-        let message = whatsapp_service.retry_message(*params.id()).await?;
+        // Get or initialize provider
+        let provider = service.provider().await.ok_or_else(|| {
+            db_service::error::ServiceError::internal(
+                "WhatsApp provider not initialized. Call whatsapp_connect first.".to_string(),
+            )
+        })?;
 
-        Ok(message)
+        let data = params.data();
+        let message = OutgoingMessage::text(&data.recipient_jid, &data.text);
+
+        let result = provider.send_message(&message).await?;
+
+        Ok(SendMessageResponse {
+            message_id: result.id,
+            timestamp: result.timestamp,
+        })
     }
     .await
     .into()
+}
+
+/// Logout from WhatsApp
+#[tauri::command]
+pub async fn whatsapp_logout(app: AppHandle) -> IpcResponse<()> {
+    async {
+        let state = app.state::<AppState>();
+        let service = state.service_manager().whatsapp_service();
+
+        // Get or initialize provider
+        let provider = service.provider().await.ok_or_else(|| {
+            db_service::error::ServiceError::internal(
+                "WhatsApp provider not initialized. Call whatsapp_connect first.".to_string(),
+            )
+        })?;
+
+        provider.logout().await?;
+
+        Ok(())
+    }
+    .await
+    .into()
+}
+
+/// Start listening to WhatsApp events and emit them to the frontend
+///
+/// This should be called once when the app starts to set up event streaming.
+/// If the provider is not initialized yet, this will wait until it is.
+pub async fn start_whatsapp_event_listener(
+    app: AppHandle,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Clone app handle for the spawned task
+    let app_clone = app.clone();
+
+    // Spawn a task that waits for provider initialization
+    tokio::spawn(async move {
+        let state = app_clone.state::<AppState>();
+        let service = state.service_manager().whatsapp_service();
+
+        loop {
+            // Check if provider is initialized
+            if let Some(provider) = service.provider().await {
+                tracing::info!("WhatsApp provider initialized, starting event listener");
+
+                match provider.event_stream() {
+                    Ok(mut event_stream) => {
+                        // Listen to events and emit them to the frontend
+                        while let Some(event) = event_stream.next().await {
+                            let event_name = match &event {
+                                WhatsAppEvent::StateChanged(_) => "whatsapp:state",
+                                WhatsAppEvent::QrCode(_) => "whatsapp:qr",
+                                WhatsAppEvent::PairCode(_) => "whatsapp:pair-code",
+                                WhatsAppEvent::PairSuccess(_) => "whatsapp:pair-success",
+                                WhatsAppEvent::PairError(_) => "whatsapp:pair-error",
+                                WhatsAppEvent::Message(_) => "whatsapp:message",
+                                WhatsAppEvent::Receipt(_) => "whatsapp:receipt",
+                                WhatsAppEvent::Presence(_) => "whatsapp:presence",
+                                WhatsAppEvent::ChatState(_) => "whatsapp:chat-state",
+                                WhatsAppEvent::GroupsSynced(_) => "whatsapp:groups-synced",
+                                WhatsAppEvent::Error(_) => "whatsapp:error",
+                            };
+
+                            if let Err(e) = app_clone.emit(event_name, &event) {
+                                tracing::error!(
+                                    "Failed to emit WhatsApp event {}: {}",
+                                    event_name,
+                                    e
+                                );
+                            }
+                        }
+
+                        tracing::info!("WhatsApp event listener stopped");
+                        break;
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to get event stream: {}", e);
+                        break;
+                    }
+                }
+            } else {
+                // Provider not initialized yet, wait and retry
+                tracing::debug!("WhatsApp provider not initialized yet, waiting...");
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            }
+        }
+    });
+
+    Ok(())
 }

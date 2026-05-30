@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useWhatsAppStatus, useQRCode, useQueueStats } from "@/hooks/whatsapp";
+import { useWhatsAppStatus, useWhatsAppQrCode } from "@/hooks/whatsapp";
 import {
   ConnectionStatusBadge,
   QRCodeDisplay,
@@ -8,15 +8,31 @@ import {
   QueueStatsCards,
   FailedMessagesTable,
 } from "./-components";
+import { useQueueStats } from "@/hooks/message-queue";
 
 export const Route = createFileRoute("/_app/whatsapp/")({
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const status = useWhatsAppStatus();
-  const { qr } = useQRCode({ enabled: status.connected && !status.loggedIn });
-  const stats = useQueueStats();
+  const { data: status, isLoading: statusLoading } = useWhatsAppStatus();
+  const qrCodeEvent = useWhatsAppQrCode();
+  const { data: stats, isLoading: statsLoading } = useQueueStats();
+
+  // Default values for status
+  const connected = status?.connected ?? false;
+  const loggedIn = status?.logged_in ?? false;
+  const timestamp = status?.timestamp ?? new Date();
+
+  // Transform QR code event to match component expectations
+  const qrCode = qrCodeEvent
+    ? {
+        qrCode: qrCodeEvent.code,
+        expiresAt: new Date(
+          qrCodeEvent.timestamp.getTime() + qrCodeEvent.timeout_secs * 1000,
+        ),
+      }
+    : null;
 
   return (
     <div className="flex flex-col h-full">
@@ -27,8 +43,12 @@ function RouteComponent() {
             <h1 className="text-xl font-semibold">WhatsApp Integration</h1>
           </div>
           <ConnectionStatusBadge
-            status={status}
-            isConnecting={status.isConnecting}
+            status={{
+              connected,
+              loggedIn,
+              timestamp,
+            }}
+            isConnecting={statusLoading}
           />
         </div>
       </div>
@@ -37,9 +57,7 @@ function RouteComponent() {
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* QR Code Pairing - Show when connected but not logged in */}
-          {status.connected && !status.loggedIn && qr && (
-            <QRCodeDisplay qr={qr} />
-          )}
+          {connected && !loggedIn && qrCode && <QRCodeDisplay qr={qrCode} />}
 
           {/* Connection Status Card */}
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -51,7 +69,7 @@ function RouteComponent() {
                     Connected:
                   </dt>
                   <dd className="text-sm font-semibold">
-                    {status.connected ? (
+                    {connected ? (
                       <span className="text-green-600">Yes</span>
                     ) : (
                       <span className="text-red-600">No</span>
@@ -63,7 +81,7 @@ function RouteComponent() {
                     Logged In:
                   </dt>
                   <dd className="text-sm font-semibold">
-                    {status.loggedIn ? (
+                    {loggedIn ? (
                       <span className="text-green-600">Yes</span>
                     ) : (
                       <span className="text-red-600">No</span>
@@ -75,7 +93,7 @@ function RouteComponent() {
                     Last Update:
                   </dt>
                   <dd className="text-sm font-mono">
-                    {status.timestamp.toLocaleTimeString()}
+                    {timestamp.toLocaleTimeString()}
                   </dd>
                 </div>
               </dl>
@@ -83,7 +101,7 @@ function RouteComponent() {
           </div>
 
           {/* Groups Section - Show when logged in */}
-          {status.loggedIn && (
+          {loggedIn && (
             <>
               {/* Queue Stats */}
               <div className="space-y-4">
@@ -92,7 +110,7 @@ function RouteComponent() {
               </div>
 
               {/* Failed Messages - Show when there are failed messages */}
-              {stats.failed > 0 && (
+              {(stats?.failed ?? 0) > 0 && (
                 <div className="space-y-4">
                   <h2 className="text-2xl font-semibold">Failed Messages</h2>
                   <FailedMessagesTable />
@@ -111,13 +129,12 @@ function RouteComponent() {
           <div className="rounded-lg border bg-muted/50 p-4">
             <p className="text-sm text-muted-foreground">
               <strong>Note:</strong> Connection status updates automatically
-              every 2 seconds via Server-Sent Events (SSE). No manual refresh
-              required.
-              {status.connected && !status.loggedIn && (
+              every 5 seconds. No manual refresh required.
+              {connected && !loggedIn && (
                 <span>
                   {" "}
-                  QR code refreshes automatically every 50 seconds before
-                  expiry.
+                  QR code will appear automatically when you connect to
+                  WhatsApp.
                 </span>
               )}
             </p>
