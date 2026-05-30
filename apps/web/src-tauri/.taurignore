@@ -1,0 +1,8 @@
+# Ignore database files to prevent hot-reload during WhatsApp operations
+*.db
+*.db-shm
+*.db-wal
+
+# Ignore other temporary files
+*.tmp
+*.log

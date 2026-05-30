@@ -49,3 +49,8 @@ coverage
 .cache
 tmp
 temp
+
+# WhatsApp database files (contains session data)
+apps/web/src-tauri/whatsapp.db
+apps/web/src-tauri/whatsapp.db-shm
+apps/web/src-tauri/whatsapp.db-wal

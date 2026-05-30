@@ -11,12 +11,13 @@ use crate::{
 use async_trait::async_trait;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::watch;
+use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 use wa_rs::Client;
 use wa_rs::bot::Bot;
 use wa_rs::pair_code::PairCodeOptions;
 use wa_rs::types::events::Event as WaRsEvent;
+use wa_rs_proto::whatsapp::device_props::{AppVersion, PlatformType};
 use wa_rs_sqlite_storage::SqliteStore;
 use wa_rs_tokio_transport::TokioWebSocketTransportFactory;
 use wa_rs_ureq_http::UreqHttpClient;
@@ -47,7 +48,7 @@ impl Default for WaRsConfig {
 /// Provider that uses wa-rs library
 pub struct WaRsProvider {
     client: Arc<Client>,
-    event_tx: watch::Sender<Option<WhatsAppEvent>>,
+    event_tx: broadcast::Sender<WhatsAppEvent>,
     bot_task: tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
@@ -88,8 +89,9 @@ impl WaRsProvider {
             })?,
         );
 
-        // Create watch channel for events - holds the latest event
-        let (event_tx, _) = watch::channel(None);
+        // Create broadcast channel for events - queues up to 100 events for subscribers
+        // This prevents race conditions where QR codes are emitted before frontend subscribes
+        let (event_tx, _) = broadcast::channel(100);
         let event_tx_clone = event_tx.clone();
 
         // Build the bot with wa-rs components and event handler
@@ -97,13 +99,30 @@ impl WaRsProvider {
             .with_backend(backend)
             .with_transport_factory(TokioWebSocketTransportFactory::new())
             .with_http_client(UreqHttpClient::new())
+            .with_device_props(
+                Some("Windows".to_string()),
+                Some(AppVersion {
+                    primary: Some(2),
+                    secondary: Some(3000),
+                    tertiary: Some(1015901307),
+                    ..Default::default()
+                }),
+                Some(PlatformType::Chrome),
+            )
             .on_event(move |event, _client| {
                 let tx = event_tx_clone.clone();
                 async move {
-                    if let Some(domain_event) = map_wa_rs_event(event)
-                        && let Err(e) = tx.send(Some(domain_event))
-                    {
-                        warn!("Failed to send event: {}", e);
+                    if let Some(domain_event) = map_wa_rs_event(event) {
+                        // Attempt to send event - broadcast returns Ok(receiver_count) or Err
+                        match tx.send(domain_event) {
+                            Ok(receiver_count) => {
+                                debug!("Event sent to {} active receiver(s)", receiver_count);
+                            }
+                            Err(_) => {
+                                // Debug level since this is expected when no receivers are listening
+                                debug!("No active event listeners (event queued for future subscribers)");
+                            }
+                        }
                     }
                 }
             });
@@ -161,19 +180,19 @@ impl WhatsAppProvider for WaRsProvider {
     fn event_stream(&self) -> ProviderResult<EventStream> {
         let mut rx = self.event_tx.subscribe();
         let stream = async_stream::stream! {
-            // Yield the current value if it exists
-            {
-                let current = rx.borrow_and_update().clone();
-                if let Some(event) = current {
-                    yield event;
-                }
-            }
-
-            // Then yield all future changes
-            while rx.changed().await.is_ok() {
-                let event = rx.borrow_and_update().clone();
-                if let Some(event) = event {
-                    yield event;
+            // Yield all events from the broadcast channel
+            loop {
+                match rx.recv().await {
+                    Ok(event) => yield event,
+                    Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                        // Receiver is too slow, some events were skipped
+                        warn!("Event stream lagged, skipped {} events", skipped);
+                        continue;
+                    }
+                    Err(broadcast::error::RecvError::Closed) => {
+                        // Channel closed, end the stream
+                        break;
+                    }
                 }
             }
         };

@@ -217,7 +217,7 @@ export async function getWhatsAppStatus(): Promise<WhatsAppStatusResponse> {
  */
 export async function connectWhatsApp(): Promise<void> {
   logger.info("Connecting to WhatsApp");
-  return invokeCommand("whatsapp_connect", z.void());
+  return invokeCommand("whatsapp_connect", z.null());
 }
 
 /**
@@ -225,7 +225,7 @@ export async function connectWhatsApp(): Promise<void> {
  */
 export async function disconnectWhatsApp(): Promise<void> {
   logger.info("Disconnecting from WhatsApp");
-  return invokeCommand("whatsapp_disconnect", z.void());
+  return invokeCommand("whatsapp_disconnect", z.null());
 }
 
 /**
@@ -257,5 +257,5 @@ export async function sendWhatsAppMessage(
  */
 export async function logoutWhatsApp(): Promise<void> {
   logger.info("Logging out from WhatsApp");
-  return invokeCommand("whatsapp_logout", z.void());
+  return invokeCommand("whatsapp_logout", z.null());
 }
